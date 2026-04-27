@@ -40,9 +40,9 @@ k8s/overlays/dev/        example overlay (1 replica, dev hostname)
       defers to the default — works on local-path, longhorn, cephfs, rbd, etc.
 - [ ] DNS for your chosen domain points to one of the worker nodes (or to the
       LoadBalancer / NodePort the Ingress controller advertises)
-- [ ] The image `ghcr.io/omdawbas2015/wow-refund-platform:latest` has been
+- [ ] The image `ghcr.io/omdawbas2015/wow-refund:latest` has been
       built at least once by `.github/workflows/docker-build.yml` (visible at
-      <https://github.com/omdawbas2015/wow-refund-platform/pkgs/container/wow-refund-platform>)
+      <https://github.com/omdawbas2015/wow-refund/pkgs/container/wow-refund>)
 
 If the GHCR image is private, also create a pull secret and reference it:
 
@@ -138,7 +138,7 @@ CI pushes a new image on every commit. To roll a new image into prod:
 
 ```bash
 # Pin to a specific SHA (recommended over :latest):
-kubectl -n wow-refund set image deploy/wow-web web=ghcr.io/omdawbas2015/wow-refund-platform:sha-<short>
+kubectl -n wow-refund set image deploy/wow-web web=ghcr.io/omdawbas2015/wow-refund:sha-<short>
 kubectl -n wow-refund rollout status deploy/wow-web
 
 # Or simply restart to re-pull :latest:

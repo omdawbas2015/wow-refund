@@ -1,113 +1,114 @@
-# WOW Refund v2 — Enterprise Refund Management Platform
+# WOW Refund — Enterprise Refund Management Platform
 
-Production-grade rebuild of the refund platform for multi-country, multi-brand operations with Power Automate email integration.
+Production-grade refund platform for multi-country, multi-brand operations with Power Automate email integration. Self-hosted Docker + Kubernetes ready.
 
 ## Stack
 
-- **Framework:** Next.js 15 (App Router, RSC, Server Actions)
+- **Framework:** Next.js 15 (App Router, RSC, Server Actions, standalone output)
 - **API:** tRPC v11 (type-safe, end-to-end)
-- **Database:** Prisma 6 + PostgreSQL (Neon managed) · SQLite for local dev
+- **Database:** Prisma 6 + PostgreSQL · SQLite for local dev
 - **Auth:** Auth.js v5 (credentials) with admin-approval signup flow
 - **UI:** shadcn/ui + Tailwind v4 + Radix primitives
-- **Design:** Stripe-inspired visual language (Inter font, blue-tinted multi-layer shadows)
 - **i18n:** next-intl (Arabic + English, full RTL support)
 - **Email:** Power Automate webhooks (outbound + inbound replies)
-- **Cache/Realtime:** Redis (Upstash) for notifications, exchange rates, rate limiting
-- **Observability:** Sentry (errors + session replay)
-- **Hosting:** Vercel (web) + Neon (database)
+- **Cache/Realtime:** Redis for notifications fan-out, exchange rates, rate limiting
+- **Observability:** Sentry (errors + session replay) · Pino-shaped structured logs
+- **Hosting:** Self-hosted Docker / Kubernetes (1 master + N workers)
 - **Monorepo:** Turborepo + pnpm workspaces
 
-## Monorepo Layout
+## Repo Layout
 
 ```
-v2/
+.
 ├── apps/
-│   └── web/                    # Next.js 15 application
+│   └── web/                # Next.js 15 application
 ├── packages/
-│   ├── db/                     # Prisma schema, client, migrations, seed
-│   ├── ui/                     # Shared React components
-│   ├── validators/             # Shared Zod schemas
-│   └── config/                 # Shared TS / ESLint / Tailwind configs
-├── DESIGN.md                   # Visual design system (Stripe-inspired)
-├── ARCHITECTURE.md             # System architecture & flows
-├── AGENTS.md                   # Per-project agent operating rules
-└── README.md
+│   ├── db/                 # Prisma schemas (sqlite + postgres), client, migrations, seed
+│   ├── ui/                 # Shared React components
+│   ├── validators/         # Shared Zod schemas
+│   └── config/             # Shared TS / ESLint / Tailwind configs
+├── k8s/
+│   ├── base/               # Kustomize base (namespace, configmap, postgres, redis, web, jobs)
+│   └── overlays/dev/       # Example dev overlay
+├── docs/
+│   ├── DOCKER.md           # Operator manual: Dockerfile, compose, GHCR, schema sync
+│   └── K8S.md              # Operator manual: apply order, secrets, backups, rolling deploys
+├── Dockerfile              # 4-stage production build (Next.js standalone, ~283MB)
+├── docker-compose.yml      # Postgres-only for local dev
+├── docker-compose.full.yml # Full prod-like stack (postgres + redis + web)
+└── HANDOVER.md             # Project memory: state, sprints, what's done / what's next
 ```
 
-## Quick Start
+## Quick start — local development
 
 ```bash
-# From v2/ directory
 pnpm install
-
-# Generate Prisma client + apply migrations to local SQLite
-pnpm db:generate
-pnpm db:migrate           # dev: runs `prisma migrate dev` (creates DB if needed)
-SEED_DEMO_CASES=1 pnpm db:seed
-
-# Start dev server
-pnpm dev
+pnpm db:migrate                    # Prisma migrations against local SQLite (dev.db)
+SEED_DEMO_CASES=1 pnpm db:seed     # 69 currencies, 142 countries, RBAC, 5 demo cases, admin user
+pnpm dev                           # Next.js on http://localhost:3000
 ```
 
-`pnpm db:push` is still available for fast schema iteration but real
-production deploys must use `pnpm db:migrate:deploy` to apply versioned
-migrations from `packages/db/prisma/migrations/`.
+Default admin: `admin@wow.local` / `admin123`
 
-Local URL: <http://localhost:3000>
+## Quick start — production-like local stack (Docker)
 
-Default admin (from seed):
-- Email: `admin@wow.local`
-- Password: `admin123` (change immediately in production)
+```bash
+docker compose -f docker-compose.full.yml up -d
+# postgres:16-alpine + redis:7-alpine + the production image, all wired together.
+# /api/health → http://localhost:3000/api/health
+```
 
-## Scripts
+Full Docker reference: <a href="docs/DOCKER.md"><code>docs/DOCKER.md</code></a>.
 
-- `pnpm dev` — run all apps in dev mode
-- `pnpm build` — build all packages + apps
-- `pnpm lint` — lint all packages
-- `pnpm typecheck` — type-check everything
-- `pnpm test` — run all tests
-- `pnpm db:studio` — open Prisma Studio
-- `pnpm format` — format all files with Prettier
+## Quick start — Kubernetes (self-hosted)
 
-## Environment
+```bash
+# 1. CI builds + pushes the image to ghcr.io/omdawbas2015/wow-refund on every push (see .github/workflows/docker-build.yml).
 
-See `apps/web/.env.example` for required variables. Minimal local setup works with the defaults (SQLite + stubbed Power Automate).
+# 2. Apply manifests:
+kubectl apply -f k8s/base/namespace.yaml
+kubectl apply -f k8s/base/configmap.yaml
 
-For production:
-- `DATABASE_URL` — PostgreSQL connection string (Neon recommended)
-- `AUTH_SECRET` — NextAuth secret (generate via `openssl rand -hex 32`)
-- `POWER_AUTOMATE_WEBHOOK_URL` — outbound email webhook
-- `POWER_AUTOMATE_SIGNING_SECRET` — HMAC shared secret
-- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — Redis for
-  rate limiting and notifications. The auth rate limiter (5 attempts /
-  5 min / IP / scope) silently falls back to in-memory when these are
-  unset, but production deployments behind multiple replicas MUST set
-  them so the limiter is consistent across instances.
-- `SENTRY_DSN` — error + session replay (optional but recommended).
+# 3. Create the real Secret (do NOT commit values):
+kubectl -n wow-refund create secret generic wow-secrets \
+  --from-literal=DATABASE_URL='postgresql://wow:STRONG@wow-postgres:5432/wow_refund?schema=public' \
+  --from-literal=DIRECT_DATABASE_URL='postgresql://wow:STRONG@wow-postgres:5432/wow_refund?schema=public' \
+  --from-literal=POSTGRES_PASSWORD='STRONG' \
+  --from-literal=AUTH_SECRET="$(openssl rand -base64 32)" \
+  --from-literal=CRON_SECRET="$(openssl rand -hex 24)" \
+  --from-literal=PII_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+  --from-literal=POWER_AUTOMATE_SIGNING_SECRET=''
 
-## Project Memory
+# 4. Bring up the rest:
+kubectl apply -k k8s/base
+kubectl -n wow-refund wait --for=condition=ready pod -l app.kubernetes.io/component=postgres --timeout=2m
+kubectl -n wow-refund wait --for=condition=complete job/wow-migrate --timeout=5m
+kubectl -n wow-refund rollout status deploy/wow-web
+```
 
-- `HANDOFF.md` — current implementation state
-- `ARCHITECTURE.md` — target architecture and flows
-- `DESIGN.md` — design system reference
-- `AGENTS.md` — agent operating rules
+Full K8s reference: <a href="docs/K8S.md"><code>docs/K8S.md</code></a>.
 
-Read these before making durable changes.
+## What's guaranteed in production
 
-## Status
+| Risk | Mitigation |
+|---|---|
+| Pod hang / crash | `liveness` probe on `/api/health` restarts the pod |
+| Node disk failure | 3 replicas + `topologySpreadConstraints` + PDB `minAvailable=2` |
+| Traffic spike | HPA 3–10 replicas, CPU 70% / mem 80% targets |
+| Rolling deploys | `maxSurge=1`, `maxUnavailable=1`, 5 s `preStop` drain |
+| DB data loss | Nightly `pg_dump` CronJob → 14-day retention on a separate PVC |
+| Security exposure | Non-root containers (1001:1001), `drop ALL` caps, secrets in K8s `Secret` |
+| Cron failure | `concurrencyPolicy: Forbid`, `backoffLimit`, history retention 3-7 |
 
-**Phase 7+ — substantially complete.** 50+ routes verified 200 OK,
-typecheck 100% across 4 packages, demo data seeded. Sprints A → E from
-the HANDOVER roadmap (bulk operations, KPI sparklines, scheduled
-reports, command palette, currencies/branches/batch-schedules/
-automation-rules/backup admin pages, module on/off toggles, three-layer
-design tokens, exchange-rate cache, Prisma indexes, AUDITOR/FINANCE
-RBAC helpers, /api/auth rate limiting, real Prisma migrations) have
-landed. Sprint F (Upstash, Sentry, Vercel + Neon) is gated on
-owner-provided secrets.
+## Test & quality
 
-For the authoritative current state, the 34-item roadmap, and the
-next-Devin onboarding guide, **read [`/HANDOVER.md`](../HANDOVER.md)**
-at the repo root first. Original phase roadmap is in
-[`v2/HANDOFF.md`](./HANDOFF.md) and
-[`v2/docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+```bash
+pnpm typecheck     # 4/4 packages
+pnpm test          # 29 files / 257 tests
+pnpm lint          # tracked separately, not a deploy blocker
+```
+
+## Source of truth
+
+`HANDOVER.md` records every sprint, every commit, what's done, and what's next.  
+Read it before starting any new work.

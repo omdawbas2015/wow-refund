@@ -148,10 +148,10 @@ The GitHub Actions workflow at `.github/workflows/docker-build.yml`
 builds and pushes the image to GHCR on every push:
 
 ```
-ghcr.io/omdawbas2015/wow-refund-platform:latest    # active branch
-ghcr.io/omdawbas2015/wow-refund-platform:<short-sha>
-ghcr.io/omdawbas2015/wow-refund-platform:<branch>
-ghcr.io/omdawbas2015/wow-refund-platform:v<tag>    # on tag push
+ghcr.io/omdawbas2015/wow-refund:latest    # active branch
+ghcr.io/omdawbas2015/wow-refund:<short-sha>
+ghcr.io/omdawbas2015/wow-refund:<branch>
+ghcr.io/omdawbas2015/wow-refund:v<tag>    # on tag push
 ```
 
 GHCR is free for public repos. The workflow uses the built-in
