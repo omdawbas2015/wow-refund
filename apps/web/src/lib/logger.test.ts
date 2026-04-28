@@ -1,16 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('lib/logger', () => {
-  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  const originalWrite = process.stdout.write;
+  let writeCallCount = 0;
 
   beforeEach(() => {
     vi.resetModules();
     delete process.env['LOG_LEVEL'];
-    stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    writeCallCount = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    process.stdout.write = ((...args: any[]) => {
+      writeCallCount++;
+      return originalWrite.apply(process.stdout, args as [string]);
+    }) as typeof process.stdout.write;
   });
 
   afterEach(() => {
-    stdoutSpy.mockRestore();
+    process.stdout.write = originalWrite;
   });
 
   it('emits structured output via pino', async () => {
@@ -18,8 +24,7 @@ describe('lib/logger', () => {
     logger.info('hello');
     logger.warn('careful');
     logger.error('boom');
-    // pino writes directly to process.stdout
-    expect(stdoutSpy).toHaveBeenCalled();
+    expect(writeCallCount).toBeGreaterThan(0);
   });
 
   it('child(bindings) returns a logger with same API', async () => {
@@ -29,7 +34,7 @@ describe('lib/logger', () => {
     expect(typeof scoped.info).toBe('function');
     expect(typeof scoped.error).toBe('function');
     scoped.info({ caseId: 'c1' }, 'created');
-    expect(stdoutSpy).toHaveBeenCalled();
+    expect(writeCallCount).toBeGreaterThan(0);
   });
 
   it('exports Logger type', async () => {

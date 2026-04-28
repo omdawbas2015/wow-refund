@@ -48,3 +48,6 @@ coverage/
 # Temp
 tmp/
 temp/
+
+*storybook.log
+storybook-static
