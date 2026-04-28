@@ -29,9 +29,49 @@ declare module 'next-auth' {
   }
 }
 
+const IS_PROD = process.env['NODE_ENV'] === 'production';
+
 export const authConfig: NextAuthConfig = {
   session: { strategy: 'jwt', maxAge: 60 * 60 * 8 }, // 8h
   trustHost: true,
+  // Explicit cookie hardening. NextAuth's defaults are already secure
+  // when NEXTAUTH_URL is https, but making them explicit documents the
+  // security contract and protects against misconfiguration.
+  //   - httpOnly:  JS can't read the cookie, mitigates XSS session theft.
+  //   - sameSite=lax: not sent on cross-site POSTs, mitigates CSRF on
+  //     state-changing endpoints. 'lax' (not 'strict') so top-level
+  //     navigations to /login from email links still authenticate.
+  //   - secure in prod: cookie only travels over HTTPS. Dev over http
+  //     keeps secure=false so the cookie actually gets set.
+  cookies: {
+    sessionToken: {
+      name: IS_PROD ? '__Secure-authjs.session-token' : 'authjs.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: IS_PROD,
+      },
+    },
+    csrfToken: {
+      name: IS_PROD ? '__Host-authjs.csrf-token' : 'authjs.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: IS_PROD,
+      },
+    },
+    callbackUrl: {
+      name: IS_PROD ? '__Secure-authjs.callback-url' : 'authjs.callback-url',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: IS_PROD,
+      },
+    },
+  },
   pages: {
     signIn: '/login',
     error: '/login',
