@@ -58,16 +58,29 @@ function resolveRegion(): string {
   return region;
 }
 
-function resolveEndpoint(bucket: string, region: string): { host: string; baseUrl: string } {
+function resolveEndpoint(
+  bucket: string,
+  region: string,
+): { host: string; baseUrl: string; canonicalUriPrefix: string } {
   const override = process.env['BACKUP_S3_ENDPOINT'];
   if (override) {
     // path-style for custom endpoints (MinIO, Cloudflare R2, Wasabi).
+    // SigV4 must canonicalize against the actual request path, which
+    // includes the bucket segment for path-style URLs — otherwise the
+    // server reconstructs `/bucket/key` and our signature over `/key`
+    // mismatches, producing SignatureDoesNotMatch.
     const base = override.replace(/\/+$/, '');
     const host = new URL(base).host;
-    return { host, baseUrl: `${base}/${bucket}` };
+    return {
+      host,
+      baseUrl: `${base}/${bucket}`,
+      canonicalUriPrefix: `/${uriEncode(bucket, true)}`,
+    };
   }
+  // virtual-hosted-style: the bucket is in the host, NOT the path, so
+  // the canonical URI starts at the key.
   const host = `${bucket}.s3.${region}.amazonaws.com`;
-  return { host, baseUrl: `https://${host}` };
+  return { host, baseUrl: `https://${host}`, canonicalUriPrefix: '' };
 }
 
 function sha256Hex(input: Buffer | string): string {
@@ -102,10 +115,10 @@ function uriEncode(input: string, encodeSlash = true): string {
 export async function putS3Object(input: PutS3ObjectInput): Promise<void> {
   const creds = resolveCredentials();
   const region = resolveRegion();
-  const { host, baseUrl } = resolveEndpoint(input.bucket, region);
+  const { host, baseUrl, canonicalUriPrefix } = resolveEndpoint(input.bucket, region);
 
   const encodedKey = uriEncode(input.key, false);
-  const canonicalUri = `/${encodedKey}`;
+  const canonicalUri = `${canonicalUriPrefix}/${encodedKey}`;
   const contentType = input.contentType ?? 'application/octet-stream';
   const payloadHash = sha256Hex(input.body);
   const { amz, date } = amzDate();
