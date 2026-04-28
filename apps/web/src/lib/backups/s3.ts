@@ -151,13 +151,17 @@ export async function putS3Object(input: PutS3ObjectInput): Promise<void> {
     `SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
   const putUrl = `${baseUrl.replace(/\/$/, '')}/${encodedKey}`;
-  // Wrap the buffer in a Blob so the fetch types are satisfied across
-  // Node versions. Blob accepts Buffer as an array member on Node 22+.
-  const blob = new Blob([input.body], { type: contentType });
+  // Node's Buffer widened its type to `Buffer<ArrayBufferLike>` in recent
+  // @types/node, which breaks assignment to both `BodyInit` and
+  // `BlobPart`. Copy into a fresh Uint8Array backed by a plain ArrayBuffer
+  // so the fetch body type resolves unambiguously to BodyInit.
+  const bodyBuf = input.body;
+  const bodyBytes = new Uint8Array(bodyBuf.byteLength);
+  bodyBytes.set(bodyBuf);
   const res = await fetch(putUrl, {
     method: 'PUT',
     headers: { ...headers, Authorization: authorization },
-    body: blob,
+    body: bodyBytes,
   });
 
   if (!res.ok) {
