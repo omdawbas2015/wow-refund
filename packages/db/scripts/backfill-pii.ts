@@ -19,7 +19,7 @@
  * the impact.
  */
 import { PrismaClient } from '@prisma/client';
-import { encryptPii } from '../src/pii-crypto';
+import { encryptPii, decryptPii } from '../src/pii-crypto';
 import { hashEmailDb, hashPhoneDb } from '../src/pii-hash-db';
 
 const BATCH = 500;
@@ -65,24 +65,25 @@ async function main() {
 
       const data: Record<string, unknown> = {};
       if (emailNeedsWrite) {
+        // Recover plaintext via decryptPii() if the row is already
+        // encrypted but missing its hash — hashing the empty string
+        // produced a useless null write before this fix.
         const plainEmail = row.customerEmail.startsWith(CIPHER_PREFIX)
-          ? row.customerEmail // already encrypted but hash missing
+          ? decryptPii(row.customerEmail)
           : row.customerEmail;
-        // Only (re-)encrypt if still plaintext; otherwise just fill hash.
         if (!row.customerEmail.startsWith(CIPHER_PREFIX)) {
           data['customerEmail'] = encryptPii(plainEmail);
         }
-        data['customerEmailHash'] = hashEmailDb(
-          row.customerEmail.startsWith(CIPHER_PREFIX) ? '' : plainEmail,
-        );
+        data['customerEmailHash'] = hashEmailDb(plainEmail);
       }
       if (phoneNeedsWrite && row.customerPhone) {
+        const plainPhone = row.customerPhone.startsWith(CIPHER_PREFIX)
+          ? decryptPii(row.customerPhone)
+          : row.customerPhone;
         if (!row.customerPhone.startsWith(CIPHER_PREFIX)) {
-          data['customerPhone'] = encryptPii(row.customerPhone);
+          data['customerPhone'] = encryptPii(plainPhone);
         }
-        data['customerPhoneHash'] = hashPhoneDb(
-          row.customerPhone.startsWith(CIPHER_PREFIX) ? '' : row.customerPhone,
-        );
+        data['customerPhoneHash'] = hashPhoneDb(plainPhone);
       }
       // Write via raw client (bypass the extension so we don't
       // double-encrypt a row we already encrypted in-loop above).
@@ -107,18 +108,15 @@ async function main() {
       promoCount += 1;
       if (dryRun) continue;
       const data: Record<string, unknown> = {};
+      // Same recovery path as RefundCase: decryptPii() handles both
+      // already-encrypted-with-missing-hash and plaintext rows.
+      const plainEmail = row.customerEmail.startsWith(CIPHER_PREFIX)
+        ? decryptPii(row.customerEmail)
+        : row.customerEmail;
       if (!row.customerEmail.startsWith(CIPHER_PREFIX)) {
-        data['customerEmail'] = encryptPii(row.customerEmail);
-        data['customerEmailHash'] = hashEmailDb(row.customerEmail);
-      } else {
-        // Already encrypted — no way to recover plaintext for hash, so
-        // the row must be re-ingested via the app or left with a null
-        // hash (lookups by email won't find it). Log and skip.
-        console.warn(
-          `[backfill] promo_allocation ${row.id} has ciphertext but no hash; plaintext unavailable — skipping hash.`,
-        );
-        continue;
+        data['customerEmail'] = encryptPii(plainEmail);
       }
+      data['customerEmailHash'] = hashEmailDb(plainEmail);
       await raw.promoAllocation.update({ where: { id: row.id }, data });
     }
     skip += batch.length;

@@ -69,8 +69,11 @@ export async function GET(req: NextRequest) {
       if (hash) {
         orBranches.push({ customerEmailHash: hash });
       } else {
-        // Hash key not configured → plaintext path still works.
-        orBranches.push({ customerEmail: q });
+        // Hash key not configured → fall back to the legacy substring
+        // search so behavior matches pre-PII-rollout. SQLite's `contains`
+        // is implicitly case-insensitive for ASCII, which preserves the
+        // search ergonomics admins relied on.
+        orBranches.push({ customerEmail: { contains: q } });
       }
     }
     andConditions.push({ OR: orBranches });
