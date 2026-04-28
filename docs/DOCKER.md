@@ -1,11 +1,18 @@
-# Running v2 with Docker
+# Running WOW Refund with Docker
+
+> **Repo layout note:** this repository is the flattened standalone
+> version of the WOW Refund platform. All paths below that previously
+> read `v2/<something>` now live at the **repo root** (e.g. the
+> Dockerfile is `Dockerfile`, manifests are `k8s/`, app source is
+> `apps/web/`). Some wording still says "v2" for continuity with older
+> session notes — read every `v2/<x>` as `<x>`.
 
 This document covers the **production container image** and the local
 **docker-compose** stack. For Kubernetes see [`K8S.md`](./K8S.md).
 
 ---
 
-## 1. The image (`v2/Dockerfile`)
+## 1. The image (`Dockerfile`)
 
 A 4-stage build that produces a ~150MB image:
 
@@ -19,7 +26,7 @@ A 4-stage build that produces a ~150MB image:
 ### Build locally
 
 ```bash
-cd v2
+# (run from repo root — was `cd v2` in the legacy layout)
 docker build -f Dockerfile -t wow-refund-web:local .
 ```
 
@@ -47,7 +54,7 @@ docker run --rm -e DATABASE_URL='postgresql://...' wow-refund-web:local \
 
 ---
 
-## 2. Full local stack (`v2/docker-compose.full.yml`)
+## 2. Full local stack (`docker-compose.full.yml`)
 
 Brings up Postgres + Redis + the production image in one command. Use
 this as a smoke test of the production container before deploying to K8s.
@@ -55,7 +62,7 @@ this as a smoke test of the production container before deploying to K8s.
 ### One-time bootstrap
 
 ```bash
-cd v2
+# (run from repo root — was `cd v2` in the legacy layout)
 docker compose -f docker-compose.full.yml build
 docker compose -f docker-compose.full.yml up -d
 
@@ -99,7 +106,7 @@ If you only want to hack on the app, the team's existing flow is still
 the fastest:
 
 ```bash
-cd v2
+# (run from repo root — was `cd v2` in the legacy layout)
 pnpm install
 pnpm db:migrate          # uses prisma/schema.prisma (sqlite)
 SEED_DEMO_CASES=1 pnpm db:seed

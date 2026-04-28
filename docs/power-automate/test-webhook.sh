@@ -5,6 +5,13 @@
 # APP_URL (default: http://localhost:3000) and the inbound secret to
 # match POWER_AUTOMATE_INBOUND_SECRET (default: empty = no auth).
 #
+# The script signs each request body with HMAC-SHA256(body, secret) and
+# sends the hex digest in the `x-wow-signature` header — that's the
+# contract the route enforces when the secret is set. For backward
+# compatibility the route still accepts the plaintext secret as the
+# header value (the route logs a deprecation warning in that case); set
+# `LEGACY_AUTH=1` to use that mode explicitly.
+#
 # The test prints the classified `intent` for each payload. On a fresh
 # database the approval / KNET / Aura payloads will report `IGNORED`
 # (with reason "unknown ... batch") — that's correct behavior, not a
@@ -12,43 +19,59 @@
 # batches via the operations desk and update the sample subjects.
 #
 # Usage:
-#   ./test-webhook.sh                               # localhost, no secret
+#   ./test-webhook.sh                                # localhost, no secret
 #   APP_URL=https://staging.example.com ./test-webhook.sh
 #   INBOUND_SECRET=$(cat .secret) ./test-webhook.sh
+#   LEGACY_AUTH=1 INBOUND_SECRET=$(cat .secret) ./test-webhook.sh
 
 set -euo pipefail
 
 APP_URL="${APP_URL:-http://localhost:3000}"
 INBOUND_SECRET="${INBOUND_SECRET:-${POWER_AUTOMATE_INBOUND_SECRET:-}}"
+LEGACY_AUTH="${LEGACY_AUTH:-0}"
 ENDPOINT="$APP_URL/api/webhooks/power-automate"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SAMPLES="$SCRIPT_DIR/sample-payloads"
 
+hmac_hex() {
+  # $1 = body, $2 = secret → lowercase hex digest of HMAC-SHA256.
+  printf '%s' "$1" | openssl dgst -sha256 -hmac "$2" | awk '{print $NF}'
+}
+
 post_one() {
   local label="$1"
   local file="$2"
 
+  local body
+  body=$(cat "$file")
+
   local headers=(-H "Content-Type: application/json")
   if [[ -n "$INBOUND_SECRET" ]]; then
-    headers+=(-H "x-wow-signature: $INBOUND_SECRET")
+    local sig_value
+    if [[ "$LEGACY_AUTH" == "1" ]]; then
+      sig_value="$INBOUND_SECRET"
+    else
+      sig_value=$(hmac_hex "$body" "$INBOUND_SECRET")
+    fi
+    headers+=(-H "x-wow-signature: $sig_value")
   fi
 
   local http_code
-  local body
+  local resp_body
   local resp
   resp=$(curl -sS -X POST "$ENDPOINT" \
     -w '\n%{http_code}' \
     "${headers[@]}" \
-    --data-binary "@$file" || true)
+    --data-binary "$body" || true)
 
   http_code=$(printf '%s' "$resp" | tail -n1)
-  body=$(printf '%s' "$resp" | sed '$d')
+  resp_body=$(printf '%s' "$resp" | sed '$d')
 
   local intent ok reason
-  intent=$(printf '%s' "$body" | jq -r '.intent // "—"' 2>/dev/null || echo "—")
-  ok=$(printf '%s' "$body" | jq -r '.ok // "—"' 2>/dev/null || echo "—")
-  reason=$(printf '%s' "$body" | jq -r '.payload.reason // empty' 2>/dev/null || true)
+  intent=$(printf '%s' "$resp_body" | jq -r '.intent // "—"' 2>/dev/null || echo "—")
+  ok=$(printf '%s' "$resp_body" | jq -r '.ok // "—"' 2>/dev/null || echo "—")
+  reason=$(printf '%s' "$resp_body" | jq -r '.payload.reason // empty' 2>/dev/null || true)
 
   printf '→ %-22s  status=%s  ok=%-5s  intent=%-20s' \
     "$label" "$http_code" "$ok" "$intent"
@@ -60,7 +83,11 @@ post_one() {
 
 echo "POSTing sample payloads to $ENDPOINT"
 if [[ -n "$INBOUND_SECRET" ]]; then
-  echo "(signing with INBOUND_SECRET)"
+  if [[ "$LEGACY_AUTH" == "1" ]]; then
+    echo "(using LEGACY plaintext x-wow-signature — route will log a deprecation warning)"
+  else
+    echo "(signing with HMAC-SHA256 using INBOUND_SECRET)"
+  fi
 else
   echo "(no INBOUND_SECRET — webhook will accept unsigned, only OK in dev)"
 fi

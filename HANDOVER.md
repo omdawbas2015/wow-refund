@@ -1,9 +1,16 @@
 # WOW Refund Platform — HANDOVER for the next Devin session
 
+> **Repo layout note (2026-04-28):** this repository is now the
+> *flattened standalone* version of the platform (`omdawbas2015/wow-refund`).
+> The old `v2/` directory nesting is gone — the Next.js app is at
+> `apps/web/`, the Prisma package at `packages/db/`, manifests at
+> `k8s/`, the Dockerfile at the repo root. When older notes below say
+> `v2/<path>`, read it as `<path>`. There is no longer a legacy
+> Vite/Express root to avoid.
+>
 > **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-27 03:40 UTC.
 >
 > **Active branch:** `devin/1777249813-continue-roadmap` (HEAD = `7afb059`, ~121 commits ahead of `main`).
-> **Source of truth:** v2/ directory only. The Vite/Express code at the repo root is **legacy and frozen** — do not touch it.
 
 ---
 

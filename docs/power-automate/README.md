@@ -41,10 +41,19 @@ You need the following before you can wire up the flows:
    work; use a tunnel (ngrok, Cloudflare Tunnel) for testing.
 3. Two **shared secrets** — generate any two random 32-character
    strings (e.g. `openssl rand -hex 32`):
-   - `OUTBOUND_SIGNING_SECRET` — app sets this header on every outbound
-     POST; the **Outbound** flow checks it.
-   - `INBOUND_SECRET` — Power Automate adds this header on every
-     inbound POST; the webhook checks it.
+   - `OUTBOUND_SIGNING_SECRET` — the app computes
+     `HMAC-SHA256(rawBody, OUTBOUND_SIGNING_SECRET)` and sends the hex
+     digest in the `x-wow-signature` header on every outbound POST; the
+     **Outbound** flow verifies the same HMAC before doing any work.
+   - `INBOUND_SECRET` — the inbound **Flow** computes
+     `HMAC-SHA256(rawBody, INBOUND_SECRET)` and sends the hex digest in
+     the `x-wow-signature` header; the webhook verifies it the same way.
+
+   > **Backward compatibility:** the inbound route still accepts a
+   > plaintext `x-wow-signature: <INBOUND_SECRET>` header for Flows
+   > imported before HMAC was required. A deprecation warning is logged
+   > in that case — roll the Flow over to HMAC at your earliest
+   > convenience (see section 2 for the Flow expression).
 
    Put both into your platform's `.env`:
 
@@ -155,7 +164,7 @@ Headers:
 
 ```
 Content-Type: application/json
-x-wow-signature: <INBOUND_SECRET>
+x-wow-signature: <hex HMAC-SHA256(rawBody, INBOUND_SECRET)>
 ```
 
 Successful classification returns:
@@ -188,13 +197,35 @@ Successful classification returns:
    - Compared with `equal to true`.
    - **If no** branch: leave empty (terminate).
 5. Inside **If yes**:
+   - Add a **Compose** action `Request_body_json` that materializes the
+     exact JSON body you'll POST (so the HMAC step signs the same bytes
+     the webhook will verify). Inputs:
+     ```json
+     {
+       "fromEmail": "@{triggerOutputs()?['body/from']}",
+       "toEmail": "@{triggerOutputs()?['body/to']}",
+       "subject": "@{triggerOutputs()?['body/subject']}",
+       "rawBody": "@{triggerOutputs()?['body/bodyPreview']}",
+       "powerAutomateRunId": "@{workflow().run.name}"
+     }
+     ```
+   - Add a second **Compose** action `Hmac_signature` that computes the
+     HMAC-SHA256 hex digest of the body using `INBOUND_SECRET`. Inputs:
+     `@{concat('', dataUriToString(encodeUriComponent(...)))}` isn't
+     available in Power Automate, so use the built-in `base64ToBinary`
+     + `createHmac` pattern — or call a lightweight Azure Function /
+     inline JavaScript action that exposes:
+     `hmacSha256Hex(Request_body_json, INBOUND_SECRET)`.
+     (The sample packages under `docs/power-automate/packages/` wire
+     this up; import those and you won't need to author the HMAC step
+     yourself.)
    - Add **HTTP** action `POST_to_webhook`:
      - **Method**: `POST`
      - **URI**: `https://<your-app>/api/webhooks/power-automate`
      - **Headers**:
        ```
        Content-Type: application/json
-       x-wow-signature: <INBOUND_SECRET>
+       x-wow-signature: @{outputs('Hmac_signature')}
        ```
      - **Body**:
        ```json

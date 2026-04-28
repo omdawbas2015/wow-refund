@@ -11,6 +11,7 @@ import {
 } from '@wow/validators';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { dispatchEmail } from '@/lib/email/dispatcher';
 
 type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -86,8 +87,9 @@ export async function allocatePromoAction(input: unknown): Promise<
     // Claim-and-allocate in a single transaction so we never leave a code
     // stuck as ALLOCATED without a matching allocation row. Matches the
     // pattern used by cases.ts / batches.ts for multi-step mutations.
+    type CodeRow = { id: string; code: string; expiresAt: Date | null };
     type TxResult =
-      | { kind: 'ok'; code: string; allocationId: string }
+      | { kind: 'ok'; code: string; allocationId: string; codeRow: CodeRow }
       | { kind: 'out_of_stock' }
       | { kind: 'race' };
     const outcome = await prisma.$transaction(async (tx): Promise<TxResult> => {
@@ -99,7 +101,7 @@ export async function allocatePromoAction(input: unknown): Promise<
           OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         },
         orderBy: { uploadedAt: 'asc' },
-        select: { id: true, code: true },
+        select: { id: true, code: true, expiresAt: true },
       });
       if (!candidate) return { kind: 'out_of_stock' };
 
@@ -110,6 +112,8 @@ export async function allocatePromoAction(input: unknown): Promise<
       });
       if (claim.count === 0) return { kind: 'race' };
 
+      // Don't stamp `emailedAt` inside the transaction — we only know it was
+      // delivered after `dispatchEmail()` returns, which happens below.
       const allocation = await tx.promoAllocation.create({
         data: {
           codeId: candidate.id,
@@ -118,11 +122,11 @@ export async function allocatePromoAction(input: unknown): Promise<
           customerName: data.customerName ?? null,
           requestedById: user.id,
           reason: data.reason ?? null,
-          emailedAt: pool.type === 'CUSTOMER_COMPENSATION' ? new Date() : null,
+          emailedAt: null,
         },
       });
 
-      return { kind: 'ok', code: candidate.code, allocationId: allocation.id };
+      return { kind: 'ok', code: candidate.code, allocationId: allocation.id, codeRow: candidate };
     });
 
     if (outcome.kind === 'out_of_stock') {
@@ -132,9 +136,39 @@ export async function allocatePromoAction(input: unknown): Promise<
       return { ok: false, error: 'Another allocation just claimed that code. Please retry.' };
     }
 
-    // TODO(phase-4.2): dispatch real email via Power Automate for
-    // CUSTOMER_COMPENSATION pools. For now the `emailedAt` timestamp doubles
-    // as a demo marker so the UI can surface "emailed" state.
+    // Dispatch the customer-compensation email *outside* the transaction so
+    // the HTTP call to Power Automate can't extend a DB lock. `dispatchEmail`
+    // always creates an EmailLog row (SENT or FAILED) so the UI can surface
+    // the real delivery state. `emailedAt` is stamped only on success; on
+    // failure we leave it null and let the operator resend from /admin/email-log.
+    if (pool.type === 'CUSTOMER_COMPENSATION') {
+      try {
+        const result = await dispatchEmail({
+          templateKey: 'CUSTOMER_PROMO_COMPENSATION',
+          locale: 'en',
+          to: data.customerEmail,
+          variables: {
+            customerName: data.customerName ?? '',
+            brandName: pool.brand?.name ?? '',
+            promoCode: outcome.code,
+            value: pool.value,
+            currency: pool.currency,
+            expiresAt: outcome.codeRow.expiresAt ? outcome.codeRow.expiresAt.toISOString().slice(0, 10) : '',
+          },
+          context: { type: 'PROMO', id: outcome.allocationId },
+        });
+        if (result.delivered) {
+          await prisma.promoAllocation.update({
+            where: { id: outcome.allocationId },
+            data: { emailedAt: new Date(), powerAutomateRunId: result.runId ?? null },
+          });
+        }
+      } catch (err) {
+        // dispatchEmail already logs FAILED to EmailLog; never block the
+        // allocation response on email delivery.
+        console.error('[allocatePromoAction] email dispatch failed', err);
+      }
+    }
 
     revalidatePath('/promo');
     revalidatePath('/promo/allocate');
