@@ -5,13 +5,21 @@
  * forcing pino into the bundle. pino is heavy, edge-incompatible, and
  * the next-edge runtime panics if you pull it in via the wrong barrel.
  *
- * Sprint G #28 will swap this for pino + a real OTel export when we
- * have a destination for the logs (Vercel Log Drains, Datadog, etc.).
- * Until then this writes structured JSON to stdout in production and
- * falls back to a colourless console.log in development for grep-ability.
+ * Writes structured JSON to stdout in production (parseable by any log
+ * drain / OTel collector) and a human-friendly console line in dev.
+ *
+ * Every emit is additionally:
+ *   1. Redacted: secrets and PII-shaped fields are masked before they
+ *      leave the process — see lib/observability/redact.ts.
+ *   2. Exported to OTLP: when OTEL_EXPORTER_OTLP_ENDPOINT is set, the
+ *      record is batched and POSTed as OTLP/HTTP logs (Datadog Agent,
+ *      Grafana, Honeycomb, self-hosted collector all accept this).
  *
  * API mirrors pino: logger.info(obj, msg), logger.warn, logger.error.
  */
+
+import { redact } from './observability/redact';
+import { otlpRecord } from './observability/otlp';
 
 type Level = 'debug' | 'info' | 'warn' | 'error';
 
@@ -25,20 +33,20 @@ const isProd = process.env.NODE_ENV === 'production';
 
 function emit(level: Level, payload: Record<string, unknown> | string, msg?: string) {
   if (LEVELS[level] < LEVELS[minLevel]) return;
-  const base = {
+  const message = typeof payload === 'string' ? payload : msg;
+  const raw = {
     level,
     time: new Date().toISOString(),
     pid: typeof process !== 'undefined' ? process.pid : undefined,
-    msg: typeof payload === 'string' ? payload : msg,
+    msg: message,
     ...(typeof payload === 'object' && payload !== null ? payload : {}),
   };
+  const base = redact(raw);
   if (isProd) {
     // Structured JSON line — log drains / OTel collectors can parse this.
     // eslint-disable-next-line no-console
     console.log(JSON.stringify(base));
   } else {
-    // Human-friendly in dev. Keep it on a single console call so the
-    // call site is reported correctly by the runtime.
     const fn =
       level === 'error'
         ? console.error
@@ -47,6 +55,8 @@ function emit(level: Level, payload: Record<string, unknown> | string, msg?: str
           : console.log;
     fn(`[${level}] ${base.msg ?? ''}`, base);
   }
+  // Fire-and-forget OTLP export. Cheap no-op when unconfigured.
+  otlpRecord(level, base as Record<string, unknown>, message ?? '');
 }
 
 export const logger = {
