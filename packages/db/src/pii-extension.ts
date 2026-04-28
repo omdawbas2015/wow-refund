@@ -325,6 +325,34 @@ function buildModelHandlers(opts: { phone?: boolean } = {}) {
       if (ctx.args.where) ctx.args.where = rewriteWhere(ctx.args.where) as never;
       return unwrap(await ctx.query(ctx.args));
     },
+    // count / aggregate / groupBy don't return rows so they don't need
+    // unwrap, but they DO accept where clauses that can reference the
+    // plaintext customerEmail / customerPhone — without rewriteWhere
+    // those clauses match against the AES-GCM ciphertext column and
+    // always return 0. The fraud-signal check in promo.ts (count of
+    // recent allocations for the same customerEmail) is the canonical
+    // example: silently disabling it would let the same customer get
+    // unlimited promo allocations without tripping the gate.
+    async count(ctx: { args: { where?: unknown }; query: (a: unknown) => Promise<unknown> }) {
+      if (ctx.args.where) ctx.args.where = rewriteWhere(ctx.args.where) as never;
+      return ctx.query(ctx.args);
+    },
+    async aggregate(ctx: { args: { where?: unknown }; query: (a: unknown) => Promise<unknown> }) {
+      if (ctx.args.where) ctx.args.where = rewriteWhere(ctx.args.where) as never;
+      return ctx.query(ctx.args);
+    },
+    async groupBy(ctx: { args: { where?: unknown }; query: (a: unknown) => Promise<unknown> }) {
+      if (ctx.args.where) ctx.args.where = rewriteWhere(ctx.args.where) as never;
+      return ctx.query(ctx.args);
+    },
+    async delete(ctx: { args: { where?: unknown }; query: (a: unknown) => Promise<unknown> }) {
+      if (ctx.args.where) ctx.args.where = rewriteWhere(ctx.args.where) as never;
+      return ctx.query(ctx.args);
+    },
+    async deleteMany(ctx: { args: { where?: unknown }; query: (a: unknown) => Promise<unknown> }) {
+      if (ctx.args.where) ctx.args.where = rewriteWhere(ctx.args.where) as never;
+      return ctx.query(ctx.args);
+    },
   };
 }
 

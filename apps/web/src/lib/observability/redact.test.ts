@@ -71,4 +71,34 @@ describe('redact', () => {
     redact(input);
     expect(input.password).toBe('p');
   });
+
+  it('preserves Date / Buffer / Error / Map / Set values instead of recursing into empty objects', () => {
+    const date = new Date('2026-04-28T12:34:56Z');
+    const buffer = Buffer.from('hello', 'utf8');
+    const error = new Error('boom');
+    const map = new Map([['k', 1]]);
+    const set = new Set([1, 2]);
+
+    const r = redact({
+      createdAt: date,
+      payload: buffer,
+      err: error,
+      m: map,
+      s: set,
+      nested: { stamp: date },
+    });
+
+    expect(r.createdAt).toBe(date);
+    expect((r.createdAt as Date).toISOString()).toBe('2026-04-28T12:34:56.000Z');
+    expect(r.payload).toBe(buffer);
+    expect(r.err).toBe(error);
+    expect(r.m).toBe(map);
+    expect(r.s).toBe(set);
+    expect((r.nested as { stamp: Date }).stamp).toBe(date);
+  });
+
+  it('returns a top-level Date unchanged', () => {
+    const date = new Date('2026-04-28T12:34:56Z');
+    expect(redact(date)).toBe(date);
+  });
 });

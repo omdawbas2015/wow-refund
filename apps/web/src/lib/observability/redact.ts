@@ -34,10 +34,31 @@ function maskPhone(value: string): string {
   return `${digits.slice(0, 2)}***${digits.slice(-2)}`;
 }
 
+// Object types whose own enumerable properties don't reflect their value
+// (e.g. Date stringifies via toISOString, Buffer / Error have a meaningful
+// shape that recursing into would obliterate). Returning them as-is means
+// the downstream JSON.stringify renders them correctly — Date → ISO
+// string, Buffer → array shape, Error → { name, message, stack } via the
+// custom toJSON if any. Without this guard, redact() would replace
+// `{ createdAt: someDate }` with `{ createdAt: {} }` because Date has no
+// own enumerable properties.
+function isOpaqueObject(value: object): boolean {
+  return (
+    value instanceof Date ||
+    value instanceof RegExp ||
+    value instanceof Error ||
+    value instanceof Map ||
+    value instanceof Set ||
+    (typeof Buffer !== 'undefined' && value instanceof Buffer) ||
+    ArrayBuffer.isView(value)
+  );
+}
+
 export function redact<T>(input: T, seen: WeakSet<object> = new WeakSet()): T {
   if (input === null || input === undefined) return input;
   if (typeof input === 'string' || typeof input === 'number' || typeof input === 'boolean') return input;
   if (typeof input !== 'object') return input;
+  if (isOpaqueObject(input as object)) return input;
   if (seen.has(input as object)) return input;
   seen.add(input as object);
 
@@ -60,6 +81,10 @@ export function redact<T>(input: T, seen: WeakSet<object> = new WeakSet()): T {
       continue;
     }
     if (value && typeof value === 'object') {
+      if (isOpaqueObject(value)) {
+        out[key] = value;
+        continue;
+      }
       out[key] = redact(value, seen);
       continue;
     }
