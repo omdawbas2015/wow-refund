@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
  * The component renders inert copy by default; pass `action` to embed
  * a primary CTA (e.g. a "New report" button) below the description.
  */
-export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   /** Primary message; rendered as a paragraph in heading color. */
   title: React.ReactNode;
   /** Optional secondary copy in muted color. */
