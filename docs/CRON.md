@@ -31,6 +31,8 @@ secret value works for both paths.
 | ----------------------------------- | --------------- | -------------------------------------------- |
 | `/api/cron/sla-breach-scan`         | `*/15 * * * *`  | SLA breach + warning sweep                   |
 | `/api/cron/fraud-scan`              | `0 * * * *`     | Fraud heuristic sweep                        |
+| `/api/cron/scheduled-reports`       | `5 * * * *`     | Scheduled email reports dispatcher           |
+| `/api/cron/backup`                  | `0 * * * *`     | DB backup runner (reads BackupSettings)      |
 
 The 15-minute SLA cadence is safe because every sweep dedupes notifications
 within a 24h window per `(case, type)`. The fraud sweep uses the same
