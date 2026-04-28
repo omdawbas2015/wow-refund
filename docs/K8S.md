@@ -1,7 +1,13 @@
-# Deploying v2 to Kubernetes
+# Deploying WOW Refund to Kubernetes
+
+> **Repo layout note:** this is the flattened standalone repo. Paths
+> that used to say `v2/<something>` now live at the repo root — the
+> manifests are `k8s/`, the Dockerfile is `Dockerfile`, the app is
+> `apps/web/`. Some wording still reads "v2" for continuity with older
+> session notes.
 
 Tailored for a self-hosted **1-master + 2-worker** cluster.
-Manifests live under [`v2/k8s/`](../k8s) as a Kustomize base + overlays.
+Manifests live under [`k8s/`](../k8s) as a Kustomize base + overlays.
 For the Docker image build itself see [`DOCKER.md`](./DOCKER.md).
 
 ---
@@ -60,7 +66,7 @@ Then add `imagePullSecrets: [{ name: ghcr-pull }]` to the web Deployment.
 ## 3. Apply order
 
 ```bash
-cd v2
+# (run from repo root — was `cd v2` in the legacy layout)
 
 # 3.1 Namespace + non-secret config
 kubectl apply -f k8s/base/namespace.yaml
@@ -83,7 +89,7 @@ kubectl -n wow-refund wait --for=condition=ready pod -l app.kubernetes.io/compon
 
 # 3.4 Run the migration Job. First deploy ever:
 #   - generate the initial Postgres migration history locally:
-#       cd v2 && DATABASE_URL='postgresql://wow:STRONG@HOST:5432/wow_refund' \
+#       DATABASE_URL='postgresql://wow:STRONG@HOST:5432/wow_refund' \
 #         pnpm --filter @wow/db migrate:dev:pg --name init
 #       (this commits packages/db/prisma/postgres/migrations/)
 #     Push, let CI rebuild the image, then run the migrate Job.
@@ -104,7 +110,7 @@ kubectl apply -f k8s/base/jobs/cronjobs.yaml
 Or, with Kustomize (one shot):
 
 ```bash
-kubectl apply -k v2/k8s/base
+kubectl apply -k k8s/base
 ```
 
 ---

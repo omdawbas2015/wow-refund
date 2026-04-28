@@ -11,6 +11,7 @@
 
 import { prisma } from '@wow/db';
 import { renderTemplate } from './render';
+import { signBody } from '@/lib/security/signature';
 
 export interface EmailPayload {
   templateKey: string;
@@ -105,26 +106,42 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
     return { logId: log.id, delivered: true, runId: 'dev-stub' };
   }
 
-  // Production: POST to Power Automate
+  // Production: POST to Power Automate.
+  // The outbound body is HMAC-SHA256-signed with POWER_AUTOMATE_SIGNING_SECRET
+  // and placed in `X-Wow-Signature`. If the secret is missing in production we
+  // fail loudly so an un-authenticated webhook doesn't silently get a raw
+  // payload — use the dev console fallback (blank WEBHOOK_URL) for local dev.
+  if (!SIGNING_SECRET && process.env.NODE_ENV === 'production') {
+    const message = 'POWER_AUTOMATE_SIGNING_SECRET is required when POWER_AUTOMATE_WEBHOOK_URL is configured';
+    await prisma.emailLog.update({
+      where: { id: log.id },
+      data: { status: 'FAILED', failureReason: message },
+    });
+    return { logId: log.id, delivered: false, error: message };
+  }
+
+  const outboundBody = JSON.stringify({
+    templateKey: payload.templateKey,
+    to: payload.to,
+    cc: payload.cc,
+    bcc: payload.bcc,
+    subject,
+    body,
+    logId: log.id,
+    contextType: payload.context?.type,
+    contextId: payload.context?.id,
+    variables: payload.variables,
+  });
+  const signature = SIGNING_SECRET ? signBody(outboundBody, SIGNING_SECRET) : '';
+
   try {
     const res = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Wow-Signature': SIGNING_SECRET,
+        'X-Wow-Signature': signature,
       },
-      body: JSON.stringify({
-        templateKey: payload.templateKey,
-        to: payload.to,
-        cc: payload.cc,
-        bcc: payload.bcc,
-        subject,
-        body,
-        logId: log.id,
-        contextType: payload.context?.type,
-        contextId: payload.context?.id,
-        variables: payload.variables,
-      }),
+      body: outboundBody,
     });
 
     if (!res.ok) {
