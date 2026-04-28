@@ -52,8 +52,15 @@ function headers(): Record<string, string> {
   const raw = process.env['OTEL_EXPORTER_OTLP_HEADERS'] ?? '';
   const parsed: Record<string, string> = { 'Content-Type': 'application/json' };
   if (raw) {
+    // Per the OTLP spec, header values may legitimately contain `=`
+    // (e.g. base64-padded API keys like `hcaik_...==`). split('=') on
+    // the first `=` only — splitting on every `=` would silently drop
+    // padding bytes from auth tokens and break authentication.
     for (const pair of raw.split(',')) {
-      const [k, v] = pair.split('=').map((s) => s?.trim());
+      const idx = pair.indexOf('=');
+      if (idx < 0) continue;
+      const k = pair.slice(0, idx).trim();
+      const v = pair.slice(idx + 1).trim();
       if (k && v) parsed[k] = v;
     }
   }
@@ -71,6 +78,18 @@ function scheduleFlush(): void {
     flushTimer = null;
     void flush();
   }, FLUSH_INTERVAL_MS);
+  // Don't keep the Node event loop alive just for the pending flush:
+  // a serverless function or CLI process should exit cleanly even if a
+  // flush timer is mid-flight. unref() is Node-only; guard for browser/Edge
+  // builds where setTimeout returns a number.
+  if (
+    flushTimer &&
+    typeof flushTimer === 'object' &&
+    'unref' in flushTimer &&
+    typeof (flushTimer as { unref: () => void }).unref === 'function'
+  ) {
+    (flushTimer as { unref: () => void }).unref();
+  }
 }
 
 async function flush(): Promise<void> {
