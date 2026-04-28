@@ -929,6 +929,7 @@ model InboundEmail {
 
   @@index([parseStatus])
   @@index([receivedAt])
+  @@index([powerAutomateRunId])
   @@map("inbound_email")
 }
 

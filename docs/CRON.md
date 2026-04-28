@@ -33,6 +33,7 @@ secret value works for both paths.
 | `/api/cron/fraud-scan`              | `0 * * * *`     | Fraud heuristic sweep                        |
 | `/api/cron/scheduled-reports`       | `5 * * * *`     | Scheduled email reports dispatcher           |
 | `/api/cron/backup`                  | `0 * * * *`     | DB backup runner (reads BackupSettings)      |
+| `/api/cron/email-retry`             | `*/15 * * * *`  | Automatic retry of FAILED EmailLog rows      |
 
 The 15-minute SLA cadence is safe because every sweep dedupes notifications
 within a 24h window per `(case, type)`. The fraud sweep uses the same
