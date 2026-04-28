@@ -7,10 +7,9 @@
 #
 # The script signs each request body with HMAC-SHA256(body, secret) and
 # sends the hex digest in the `x-wow-signature` header — that's the
-# contract the route enforces when the secret is set. For backward
-# compatibility the route still accepts the plaintext secret as the
-# header value (the route logs a deprecation warning in that case); set
-# `LEGACY_AUTH=1` to use that mode explicitly.
+# only contract the route accepts when the secret is set. (The legacy
+# plaintext-secret-as-header fallback was removed; upgrade old Flows
+# to use HMAC.)
 #
 # The test prints the classified `intent` for each payload. On a fresh
 # database the approval / KNET / Aura payloads will report `IGNORED`
@@ -22,13 +21,11 @@
 #   ./test-webhook.sh                                # localhost, no secret
 #   APP_URL=https://staging.example.com ./test-webhook.sh
 #   INBOUND_SECRET=$(cat .secret) ./test-webhook.sh
-#   LEGACY_AUTH=1 INBOUND_SECRET=$(cat .secret) ./test-webhook.sh
 
 set -euo pipefail
 
 APP_URL="${APP_URL:-http://localhost:3000}"
 INBOUND_SECRET="${INBOUND_SECRET:-${POWER_AUTOMATE_INBOUND_SECRET:-}}"
-LEGACY_AUTH="${LEGACY_AUTH:-0}"
 ENDPOINT="$APP_URL/api/webhooks/power-automate"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -49,11 +46,7 @@ post_one() {
   local headers=(-H "Content-Type: application/json")
   if [[ -n "$INBOUND_SECRET" ]]; then
     local sig_value
-    if [[ "$LEGACY_AUTH" == "1" ]]; then
-      sig_value="$INBOUND_SECRET"
-    else
-      sig_value=$(hmac_hex "$body" "$INBOUND_SECRET")
-    fi
+    sig_value=$(hmac_hex "$body" "$INBOUND_SECRET")
     headers+=(-H "x-wow-signature: $sig_value")
   fi
 
@@ -83,11 +76,7 @@ post_one() {
 
 echo "POSTing sample payloads to $ENDPOINT"
 if [[ -n "$INBOUND_SECRET" ]]; then
-  if [[ "$LEGACY_AUTH" == "1" ]]; then
-    echo "(using LEGACY plaintext x-wow-signature — route will log a deprecation warning)"
-  else
-    echo "(signing with HMAC-SHA256 using INBOUND_SECRET)"
-  fi
+  echo "(signing with HMAC-SHA256 using INBOUND_SECRET)"
 else
   echo "(no INBOUND_SECRET — webhook will accept unsigned, only OK in dev)"
 fi

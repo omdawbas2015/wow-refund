@@ -19,7 +19,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@wow/db';
 import { processInboundReply } from '@/lib/batches/process-inbound';
-import { legacyEqualsSecret, verifyBodySignature } from '@/lib/security/signature';
+import { verifyBodySignature } from '@/lib/security/signature';
 import { assertBodySize, readBodyText } from '@/lib/security/request-limits';
 import { consume } from '@/lib/rate-limit';
 
@@ -75,15 +75,7 @@ export async function POST(req: NextRequest) {
     }
     const hmacOk = verifyBodySignature(rawBody, header, INBOUND_SECRET);
     if (!hmacOk) {
-      // Backward compat: older Flows sent the plaintext secret as the header
-      // value. Accept but warn so operators can roll over to HMAC.
-      if (legacyEqualsSecret(header, INBOUND_SECRET)) {
-        console.warn(
-          '[power-automate inbound] accepted legacy plaintext x-wow-signature; please upgrade the Flow to HMAC-SHA256(rawBody, POWER_AUTOMATE_INBOUND_SECRET)',
-        );
-      } else {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }
 
