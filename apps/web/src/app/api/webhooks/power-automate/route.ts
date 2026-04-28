@@ -69,6 +69,26 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Idempotency: if the caller includes a Power Automate runId and we've
+  // already processed it, return the prior result instead of double-
+  // processing. Safe because runIds are globally unique per Flow run.
+  if (payload.powerAutomateRunId) {
+    const existing = await prisma.inboundEmail.findFirst({
+      where: { powerAutomateRunId: payload.powerAutomateRunId },
+      select: { id: true, parseStatus: true, parsedIntent: true },
+      orderBy: { receivedAt: 'desc' },
+    });
+    if (existing) {
+      return NextResponse.json({
+        ok: true,
+        id: existing.id,
+        idempotent: true,
+        intent: existing.parsedIntent ?? null,
+        parseStatus: existing.parseStatus,
+      });
+    }
+  }
+
   const record = await prisma.inboundEmail.create({
     data: {
       fromEmail: payload.fromEmail,
