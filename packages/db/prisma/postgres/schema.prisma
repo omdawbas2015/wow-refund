@@ -424,10 +424,12 @@ model RefundCase {
   brand           Brand      @relation(fields: [brandId], references: [id])
 
   // Customer
-  customerName    String
-  customerEmail   String     // NOTE: encrypted in production via app-layer
-  customerPhone   String?    // NOTE: encrypted in production via app-layer
-  customerNotes   String?
+  customerName       String
+  customerEmail      String     // AES-256-GCM ciphertext when PII_ENCRYPTION_KEY is set, plaintext otherwise.
+  customerEmailHash  String?    // HMAC-SHA256 of the normalized email, for exact-match lookups against encrypted rows.
+  customerPhone      String?    // AES-256-GCM ciphertext when PII_ENCRYPTION_KEY is set.
+  customerPhoneHash  String?    // HMAC-SHA256 of the normalized phone digits.
+  customerNotes      String?
 
   // Order
   orderNumber     String
@@ -496,6 +498,8 @@ model RefundCase {
   @@index([createdById])
   @@index([assignedToId])
   @@index([customerEmail])
+  @@index([customerEmailHash])
+  @@index([customerPhoneHash])
   @@index([orderNumber])
   @@index([externalCaseNumber])
   @@index([createdAt])
@@ -785,9 +789,10 @@ model PromoAllocation {
   code           PromoCode  @relation(fields: [codeId], references: [id])
   caseId         String?
   case           RefundCase? @relation(fields: [caseId], references: [id])
-  customerEmail  String
-  customerName   String?
-  requestedById  String
+  customerEmail     String
+  customerEmailHash String?
+  customerName      String?
+  requestedById     String
   requestedBy    User       @relation("PromoRequestedBy", fields: [requestedById], references: [id])
   reason         String?
   emailedAt      DateTime? // for CUSTOMER_COMPENSATION
@@ -797,6 +802,7 @@ model PromoAllocation {
   @@index([codeId])
   @@index([caseId])
   @@index([customerEmail])
+  @@index([customerEmailHash])
   @@map("promo_allocation")
 }
 

@@ -6,7 +6,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./seed-data": "./src/seed-data/index.ts"
+    "./seed-data": "./src/seed-data/index.ts",
+    "./pii-extension": "./src/pii-extension.ts",
+    "./pii-hash-db": "./src/pii-hash-db.ts"
   },
   "scripts": {
     "generate": "prisma generate",

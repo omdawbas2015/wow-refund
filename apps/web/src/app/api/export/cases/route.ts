@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma, Prisma } from '@wow/db';
+import { prisma, Prisma, hashEmailDb } from '@wow/db';
 import type { CaseStatus } from '@wow/db';
 import { auth } from '@/auth';
 import { buildSingleSheetXlsx, attachmentDisposition, XLSX_MIME } from '@/lib/exports/xlsx';
 import { buildSlaConditions, parseSlaParam } from '@/lib/cases/sla';
+import { looksLikeEmail } from '@/lib/crypto/pii-hash';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,14 +55,25 @@ export async function GET(req: NextRequest) {
     });
   }
   if (q) {
-    andConditions.push({
-      OR: [
-        { caseNumber: { contains: q } },
-        { orderNumber: { contains: q } },
-        { customerEmail: { contains: q } },
-        { customerName: { contains: q } },
-      ],
-    });
+    // When PII encryption is on, `customerEmail: { contains: q }` can't
+    // substring-search the ciphertext. Route email-shaped queries
+    // through the hash column for exact matches; keep contains search
+    // on case/order number + customerName (still plaintext).
+    const orBranches: Prisma.RefundCaseWhereInput[] = [
+      { caseNumber: { contains: q } },
+      { orderNumber: { contains: q } },
+      { customerName: { contains: q } },
+    ];
+    if (looksLikeEmail(q)) {
+      const hash = hashEmailDb(q);
+      if (hash) {
+        orBranches.push({ customerEmailHash: hash });
+      } else {
+        // Hash key not configured → plaintext path still works.
+        orBranches.push({ customerEmail: q });
+      }
+    }
+    andConditions.push({ OR: orBranches });
   }
 
   const where: Prisma.RefundCaseWhereInput = {
