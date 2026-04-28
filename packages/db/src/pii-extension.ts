@@ -1,6 +1,17 @@
 /**
  * Prisma extension that transparently encrypts + hashes PII on write
- * and decrypts on read for RefundCase and PromoAllocation.
+ * and decrypts on read for RefundCase, PromoAllocation, InboundEmail,
+ * EmailLog, and CaseNote.
+ *
+ * Two flavors of handler:
+ *   - Customer email/phone (RefundCase, PromoAllocation): full
+ *     encrypt + hash + where-rewrite so exact-match lookups by email
+ *     still work against ciphertext.
+ *   - Free-text body fields (InboundEmail.rawBody, EmailLog.body/cc/
+ *     bcc, CaseNote.body): encrypt-on-write / decrypt-on-read only,
+ *     no hash and no where-rewrite. These fields are list+render or
+ *     find-by-id+render in practice, so a hash column would be dead
+ *     weight.
  *
  * The extension is a no-op when neither PII_ENCRYPTION_KEY nor
  * PII_HASH_KEY are configured, so local dev and legacy deploys behave
@@ -9,7 +20,9 @@
  * When PII_ENCRYPTION_KEY is set, every RefundCase/PromoAllocation
  * create/update/upsert/createMany has customerEmail + customerPhone
  * wrapped with AES-256-GCM before hitting the DB, and every find*
- * result has them unwrapped before returning.
+ * result has them unwrapped before returning. The same wrap/unwrap
+ * pipeline runs for the free-text body fields on the secondary
+ * models.
  *
  * When PII_HASH_KEY is set (orthogonal to encryption; they can be set
  * independently but usually go together), hashes are computed on write
@@ -130,14 +143,122 @@ function unwrapReadResult<T>(result: T): T {
   return unwrapReadRow(result);
 }
 
+/**
+ * Generic encrypt-on-write / decrypt-on-read for free-text fields that
+ * are NOT queried by exact match (so we don't need to maintain hash
+ * columns + where-rewrite for them).
+ *
+ * Used for body / rawBody / cc / bcc fields where the only access
+ * pattern is "list rows + render" or "find by id + render". Adding
+ * a field here is forward-only: existing plaintext rows decrypt
+ * unchanged thanks to the `v1:` prefix check in decryptPii.
+ *
+ * If a caller introduces a `where: { body: { contains: ... } }` query
+ * later, that query won't match encrypted rows — same documented
+ * limitation as customerEmail's contains search.
+ */
+const SIMPLE_ENCRYPT_FIELDS: Record<string, readonly string[]> = {
+  inboundEmail: ['rawBody'],
+  emailLog: ['body', 'cc', 'bcc'],
+  caseNote: ['body'],
+};
+
+function wrapSimpleFields(
+  data: Record<string, unknown>,
+  fields: readonly string[],
+): Record<string, unknown> {
+  const next = { ...data };
+  for (const f of fields) {
+    if (typeof next[f] === 'string') {
+      next[f] = encryptPii(next[f] as string);
+    }
+  }
+  return next;
+}
+
+function unwrapSimpleFields<T>(row: T, fields: readonly string[]): T {
+  if (!isPlainObject(row)) return row;
+  const out = { ...row } as Record<string, unknown>;
+  for (const f of fields) {
+    if (typeof out[f] === 'string') {
+      out[f] = decryptPii(out[f] as string);
+    }
+  }
+  return out as unknown as T;
+}
+
+function unwrapSimpleResult<T>(result: T, fields: readonly string[]): T {
+  if (result == null) return result;
+  if (Array.isArray(result)) {
+    return result.map((r) => unwrapSimpleFields(r, fields)) as unknown as T;
+  }
+  return unwrapSimpleFields(result, fields);
+}
+
 /** Build the extension config. Models covered: RefundCase, PromoAllocation. */
 export const piiExtension = {
   name: 'wow-pii',
   query: {
     refundCase: buildModelHandlers(),
     promoAllocation: buildModelHandlers({ phone: false }),
+    inboundEmail: buildSimpleHandlers(SIMPLE_ENCRYPT_FIELDS['inboundEmail']!),
+    emailLog: buildSimpleHandlers(SIMPLE_ENCRYPT_FIELDS['emailLog']!),
+    caseNote: buildSimpleHandlers(SIMPLE_ENCRYPT_FIELDS['caseNote']!),
   },
 } as const;
+
+/**
+ * Builds Prisma extension handlers for models that only need
+ * encrypt-on-write / decrypt-on-read (no hash columns, no where
+ * rewrite). Cheaper than buildModelHandlers and used for free-text
+ * fields like email bodies and case notes.
+ */
+function buildSimpleHandlers(fields: readonly string[]) {
+  const wrap = (data: Record<string, unknown>) => wrapSimpleFields(data, fields);
+  const unwrap = <T>(r: T): T => unwrapSimpleResult(r, fields);
+  return {
+    async create({ args, query }: { args: { data: Record<string, unknown> }; query: (a: unknown) => Promise<unknown> }) {
+      args.data = wrap(args.data);
+      return unwrap(await query(args));
+    },
+    async createMany({ args, query }: { args: { data: Record<string, unknown> | Record<string, unknown>[] }; query: (a: unknown) => Promise<unknown> }) {
+      if (Array.isArray(args.data)) {
+        args.data = args.data.map(wrap);
+      } else {
+        args.data = wrap(args.data);
+      }
+      return query(args);
+    },
+    async update({ args, query }: { args: { data: Record<string, unknown> }; query: (a: unknown) => Promise<unknown> }) {
+      args.data = wrap(args.data);
+      return unwrap(await query(args));
+    },
+    async updateMany({ args, query }: { args: { data: Record<string, unknown> }; query: (a: unknown) => Promise<unknown> }) {
+      args.data = wrap(args.data);
+      return query(args);
+    },
+    async upsert({ args, query }: { args: { create: Record<string, unknown>; update: Record<string, unknown> }; query: (a: unknown) => Promise<unknown> }) {
+      args.create = wrap(args.create);
+      args.update = wrap(args.update);
+      return unwrap(await query(args));
+    },
+    async findUnique(ctx: { args: unknown; query: (a: unknown) => Promise<unknown> }) {
+      return unwrap(await ctx.query(ctx.args));
+    },
+    async findUniqueOrThrow(ctx: { args: unknown; query: (a: unknown) => Promise<unknown> }) {
+      return unwrap(await ctx.query(ctx.args));
+    },
+    async findFirst(ctx: { args: unknown; query: (a: unknown) => Promise<unknown> }) {
+      return unwrap(await ctx.query(ctx.args));
+    },
+    async findFirstOrThrow(ctx: { args: unknown; query: (a: unknown) => Promise<unknown> }) {
+      return unwrap(await ctx.query(ctx.args));
+    },
+    async findMany(ctx: { args: unknown; query: (a: unknown) => Promise<unknown> }) {
+      return unwrap(await ctx.query(ctx.args));
+    },
+  };
+}
 
 function buildModelHandlers(opts: { phone?: boolean } = {}) {
   const wantPhone = opts.phone !== false;
