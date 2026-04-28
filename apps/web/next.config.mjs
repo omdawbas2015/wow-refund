@@ -15,7 +15,7 @@ const nextConfig = {
   // — those should be tracked as a cleanup task, not a deploy blocker.
   eslint: { ignoreDuringBuilds: true },
   transpilePackages: ['@wow/ui', '@wow/validators', '@wow/db'],
-  serverExternalPackages: ['@prisma/client', 'bcryptjs'],
+  serverExternalPackages: ['@prisma/client', 'bcryptjs', 'pino', 'pino-pretty'],
   experimental: {
     typedRoutes: false,
   },

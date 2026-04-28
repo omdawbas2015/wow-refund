@@ -1,80 +1,92 @@
 /**
- * Tiny structured logger.
+ * Structured logger built on pino.
  *
- * Goal: give the app a single place to emit JSON log lines without
- * forcing pino into the bundle. pino is heavy, edge-incompatible, and
- * the next-edge runtime panics if you pull it in via the wrong barrel.
+ * Node.js runtime: real pino with JSON output, pretty-printing in dev.
+ * Edge runtime:    lightweight console shim (pino is not edge-compatible).
  *
- * Sprint G #28 will swap this for pino + a real OTel export when we
- * have a destination for the logs (Vercel Log Drains, Datadog, etc.).
- * Until then this writes structured JSON to stdout in production and
- * falls back to a colourless console.log in development for grep-ability.
+ * API surface mirrors pino: logger.info(obj, msg), logger.child(bindings).
+ * All existing call sites continue to work unchanged.
  *
- * API mirrors pino: logger.info(obj, msg), logger.warn, logger.error.
+ * Sprint G #28. OTel trace context is injected automatically when the
+ * OTel SDK is active (see instrumentation.ts).
  */
+import pino from 'pino';
 
 type Level = 'debug' | 'info' | 'warn' | 'error';
 
-const LEVELS: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
+const level: Level =
+  (process.env['LOG_LEVEL'] as Level | undefined) ??
+  (process.env['NODE_ENV'] === 'production' ? 'info' : 'debug');
 
-const minLevel: Level =
-  (process.env.LOG_LEVEL as Level | undefined) ??
-  (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
+const isNode = typeof process !== 'undefined' && process.versions?.node;
 
-const isProd = process.env.NODE_ENV === 'production';
+const isTest = process.env['NODE_ENV'] === 'test' || !!process.env['VITEST'];
 
-function emit(level: Level, payload: Record<string, unknown> | string, msg?: string) {
-  if (LEVELS[level] < LEVELS[minLevel]) return;
-  const base = {
+function createPinoLogger() {
+  return pino({
     level,
-    time: new Date().toISOString(),
-    pid: typeof process !== 'undefined' ? process.pid : undefined,
-    msg: typeof payload === 'string' ? payload : msg,
-    ...(typeof payload === 'object' && payload !== null ? payload : {}),
-  };
-  if (isProd) {
-    // Structured JSON line — log drains / OTel collectors can parse this.
-    // eslint-disable-next-line no-console
-    console.log(JSON.stringify(base));
-  } else {
-    // Human-friendly in dev. Keep it on a single console call so the
-    // call site is reported correctly by the runtime.
-    const fn =
-      level === 'error'
-        ? console.error
-        : level === 'warn'
-          ? console.warn
-          : console.log;
-    fn(`[${level}] ${base.msg ?? ''}`, base);
-  }
+    // pino-pretty uses a worker thread (async) — skip it in tests
+    ...(process.env['NODE_ENV'] !== 'production' && !isTest
+      ? { transport: { target: 'pino-pretty', options: { colorize: true } } }
+      : {}),
+    formatters: {
+      level(label) {
+        return { level: label };
+      },
+    },
+    timestamp: pino.stdTimeFunctions.isoTime,
+    // Mixin injects OTel trace context when available
+    mixin() {
+      try {
+        const otelApi = require('@opentelemetry/api') as typeof import('@opentelemetry/api');
+        const span = otelApi.trace.getActiveSpan();
+        if (span) {
+          const ctx = span.spanContext();
+          return {
+            traceId: ctx.traceId,
+            spanId: ctx.spanId,
+          };
+        }
+      } catch {
+        // OTel not available — skip
+      }
+      return {};
+    },
+  });
 }
 
-export const logger = {
-  debug(payload: Record<string, unknown> | string, msg?: string) {
-    emit('debug', payload, msg);
-  },
-  info(payload: Record<string, unknown> | string, msg?: string) {
-    emit('info', payload, msg);
-  },
-  warn(payload: Record<string, unknown> | string, msg?: string) {
-    emit('warn', payload, msg);
-  },
-  error(payload: Record<string, unknown> | string, msg?: string) {
-    emit('error', payload, msg);
-  },
-  /** Bind context (e.g. request id, user id) and return a child logger. */
-  child(bindings: Record<string, unknown>) {
-    return {
-      debug: (p: Record<string, unknown> | string, m?: string) =>
-        emit('debug', { ...bindings, ...(typeof p === 'object' && p !== null ? p : {}) }, typeof p === 'string' ? p : m),
-      info: (p: Record<string, unknown> | string, m?: string) =>
-        emit('info', { ...bindings, ...(typeof p === 'object' && p !== null ? p : {}) }, typeof p === 'string' ? p : m),
-      warn: (p: Record<string, unknown> | string, m?: string) =>
-        emit('warn', { ...bindings, ...(typeof p === 'object' && p !== null ? p : {}) }, typeof p === 'string' ? p : m),
-      error: (p: Record<string, unknown> | string, m?: string) =>
-        emit('error', { ...bindings, ...(typeof p === 'object' && p !== null ? p : {}) }, typeof p === 'string' ? p : m),
+// Edge-compatible fallback that matches the pino API surface
+function createEdgeLogger() {
+  const LEVELS: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
+  const minLevel = LEVELS[level] ?? 20;
+
+  function emit(lvl: Level, payload: Record<string, unknown> | string, msg?: string) {
+    if (LEVELS[lvl] < minLevel) return;
+    const base = {
+      level: lvl,
+      time: new Date().toISOString(),
+      msg: typeof payload === 'string' ? payload : msg,
+      ...(typeof payload === 'object' && payload !== null ? payload : {}),
     };
-  },
-};
+    const fn = lvl === 'error' ? console.error : lvl === 'warn' ? console.warn : console.log;
+    fn(JSON.stringify(base));
+  }
+
+  const make = (bindings: Record<string, unknown> = {}) => ({
+    debug: (p: Record<string, unknown> | string, m?: string) =>
+      emit('debug', { ...bindings, ...(typeof p === 'object' && p !== null ? p : {}) }, typeof p === 'string' ? p : m),
+    info: (p: Record<string, unknown> | string, m?: string) =>
+      emit('info', { ...bindings, ...(typeof p === 'object' && p !== null ? p : {}) }, typeof p === 'string' ? p : m),
+    warn: (p: Record<string, unknown> | string, m?: string) =>
+      emit('warn', { ...bindings, ...(typeof p === 'object' && p !== null ? p : {}) }, typeof p === 'string' ? p : m),
+    error: (p: Record<string, unknown> | string, m?: string) =>
+      emit('error', { ...bindings, ...(typeof p === 'object' && p !== null ? p : {}) }, typeof p === 'string' ? p : m),
+    child: (b: Record<string, unknown>) => make({ ...bindings, ...b }),
+  });
+
+  return make();
+}
+
+export const logger = isNode ? createPinoLogger() : createEdgeLogger();
 
 export type Logger = typeof logger;
