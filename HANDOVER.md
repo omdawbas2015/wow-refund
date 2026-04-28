@@ -2,7 +2,8 @@
 
 > **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-27 03:40 UTC.
 >
-> **Active branch:** `devin/1777249813-continue-roadmap` (HEAD = `7afb059`, ~121 commits ahead of `main`).
+> **Active branch:** `devin/1777412762-complete-remaining-items` (HEAD = `efabe63`).
+> Previous branch: `devin/1777249813-continue-roadmap` (121 commits ahead of `main`).
 > **Source of truth:** v2/ directory only. The Vite/Express code at the repo root is **legacy and frozen** — do not touch it.
 
 ---
@@ -212,7 +213,7 @@ Other reference docs:
 
 ### Sprint F — Production hardening (requires owner-provided secrets)
 
-- 🟡 **#20 PII encryption at rest** — `lib/crypto/pii.ts` exposes AES-256-GCM `encrypt` / `decrypt` / `encryptIfPresent` / `decryptIfPresent`. Reads a 32-byte hex key from `PII_ENCRYPTION_KEY`; if unset the helpers are pass-through, so per-field opt-in works without breaking dev. Storage format `v1:<iv>:<ct>:<tag>` reserves room for algo rotation. Wiring into Prisma `client.$extends` for specific RefundCase / Customer fields is the next step once a column-level rollout plan is approved. (commit `00b1d89`)
+- ✅ **#20 PII encryption at rest** — `lib/crypto/pii.ts` exposes AES-256-GCM helpers; `packages/db/src/pii-extension.ts` provides a Prisma `$extends` layer that auto-encrypts `RefundCase.customerEmail`, `RefundCase.customerPhone`, and `PromoAllocation.customerEmail` on write and auto-decrypts on read. Pass-through when `PII_ENCRYPTION_KEY` is unset (dev/CI safe). Uses `v1:` prefix for algo rotation. All consumers of `@wow/db` get encryption transparently — no import changes needed. (commits `00b1d89`, `d02fbd5`)
 - 🟡 **#21 SSE notifications + per-user event bus** — `lib/events/bus.ts` (in-process EventEmitter keyed by user id) and `GET /api/notifications/stream` (SSE endpoint with 25s heartbeats and auth gate) are landed. The bell icon (`components/layout/notifications-bell.tsx`) now subscribes to the SSE stream and slows its polling fallback to 2 min on `ready`; `dispatchNotifications()` calls `publish()` after every `createMany` so SLA / fraud / mention / AURA notifiers fan out live. SSE route's `cancel()` is wired to a real cleanup that clears the heartbeat + bus subscription so disconnects stop leaking timers. Single-replica deploys get real-time fanout for free; multi-replica still needs the Upstash pub/sub bridge in `bus.ts` once `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are provisioned. (commits `a70fae9`, `8550816`, `6a58a8f`, `7afb059`)
 - 🟡 **#22 Sentry SDK** — `@sentry/nextjs` installed; `sentry.client.config.ts` / `sentry.server.config.ts` / `sentry.edge.config.ts` and `instrumentation.ts` all early-return when `SENTRY_DSN` is unset (zero-cost no-op in dev). The build-time `withSentryConfig()` wrap and source-map upload are the one-line follow-ups once `SENTRY_DSN` + `SENTRY_AUTH_TOKEN` are provided. (commit `cd14af2`)
 - 🟡 **#23 Vercel deploy + Neon Postgres + backup policy** — `v2/vercel.json` pins build / region / cron triggers and `v2/docs/DEPLOY.md` captures the env-var matrix + schema.prisma provider switch + 6-step rollout checklist. Cuts over the moment Neon `DATABASE_URL` + Vercel project are wired. (commit `056d729`)
@@ -221,10 +222,10 @@ Other reference docs:
 ### Sprint G — Backlog (P2, optional)
 
 - ⬜ **#26 Power Automate flows on M365 tenant** — owner builds externally; Next.js side already ready.
-- 🟡 **#28 pino structured logs + OpenTelemetry** — partial. `lib/logger.ts` is a JSON-line shim with the same surface as pino (`info(obj, msg)`, `child(bindings)`); production emits structured log lines that any drain or OTel collector can parse. Real pino + OTel exporter wiring deferred until a log-drain destination is approved (Vercel Log Drains, Datadog, etc.). (commit `e6dcf74`)
+- ✅ **#28 pino structured logs + OpenTelemetry** — `lib/logger.ts` replaced with real pino: structured JSON in production, pino-pretty in dev, edge-compatible console fallback. Mixin auto-injects OTel trace context (traceId, spanId) when OTel SDK is active. `instrumentation.ts` wires `@opentelemetry/sdk-node` with auto-instrumentations + OTLP trace exporter when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; no-op otherwise. (commits `e6dcf74`, `0cb5c33`)
 - ✅ **#29 OpenAPI / Swagger** — `GET /api/openapi` emits an OpenAPI 3.1 doc generated live from `@wow/validators` zod schemas via `zod-to-json-schema`. Covers the public auth surface, `/api/health`, `/api/openapi` itself, and the Power Automate inbound webhook. Internal tRPC routers stay excluded by design. (commit `8593a32`)
 - ✅ **#30 axe-core a11y audit** — `tests/a11y.spec.ts` runs `@axe-core/playwright` against `/login` and the post-login dashboard, asserting zero WCAG 2.0/2.1 A and AA violations. Runs alongside the rest of the smoke suite under `pnpm test:e2e`. (commit `a4bbd45`)
-- 🟡 **#31 Storybook design-system website** — replaced with `/admin/design-tokens` living preview page (semantic palette, typography ramp incl. Cairo + IBM Plex Sans Arabic, component swatches). Renders against the real CSS pipeline so dark-mode + RTL parity is verifiable in one URL, with no Storybook builder install. Full Storybook scaffold can land later if a UI engineer takes ownership. (commit `db55d6a`)
+- ✅ **#31 Storybook design-system website** — Storybook 10 (`@storybook/nextjs-vite`) scaffolded with Tailwind/globals.css integration. Stories for 7 core UI components: Button (all variants/sizes), Badge (6 variants), Input, Card, Alert (5 variants), Textarea, Skeleton. `/admin/design-tokens` living preview page also preserved. `pnpm storybook` on port 6006, `pnpm build-storybook` for static export. (commits `db55d6a`, `efabe63`)
 
 ### Sprint H — Live audit + improvements 2026-04-27 (no secrets) 🟡 IN PROGRESS
 
@@ -237,6 +238,14 @@ Walked every page in the running app, captured runtime warnings + console errors
 - ✅ **Bell goes live via SSE** — `components/layout/notifications-bell.tsx` now opens an `EventSource` against `/api/notifications/stream`, slows its polling fallback to 2 min once `ready` fires, refetches on every `notification`, and cleans up the source + interval on unmount. Falls back gracefully on 401 / connection errors. (commit `8550816`)
 - ✅ **SSE stream cleanup wired to `cancel()`** — the route stored a `_cleanup` closure on the controller but never called it; `cancel()` was a no-op, leaking the heartbeat interval + bus subscription on every disconnect. Now `cancel()` invokes the real cleanup, with a `closed` guard preventing post-close enqueues. (commit `6a58a8f`)
 - ✅ **Notifications dispatcher publishes to the bus** — `dispatchNotifications()` was the central choke-point for SLA / mention / fraud / AURA notifiers but only wrote DB rows. After `createMany` it now `publish()`es a minimal `notification` event per allowed userId so the SSE clients refetch immediately; payload deliberately stays small so clients still hit `GET /api/notifications` for the authoritative unread count. (commit `7afb059`)
+
+### Sprint J — Complete remaining roadmap items 2026-04-28 ✅ DONE
+
+Branch: `devin/1777412762-complete-remaining-items`. Verified: `pnpm typecheck` 4/4 + `pnpm test` 257/257 + `pnpm build` all green.
+
+- ✅ **#20 PII encryption Prisma wiring** — `packages/db/src/pii.ts` + `packages/db/src/pii-extension.ts` provide a `Prisma.defineExtension` that auto-encrypts `RefundCase.customerEmail`, `RefundCase.customerPhone`, and `PromoAllocation.customerEmail` on create/update/upsert and auto-decrypts on all find queries. `packages/db/src/index.ts` applies the extension to the singleton client. Zero-change for all 116+ consumers of `@wow/db`. (commit `d02fbd5`)
+- ✅ **#28 pino + OpenTelemetry** — `apps/web/src/lib/logger.ts` replaced with real pino (structured JSON in prod, pino-pretty in dev, edge-safe console fallback). Mixin injects OTel `traceId`/`spanId` when active. `instrumentation.ts` bootstraps `@opentelemetry/sdk-node` + OTLP exporter when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Added pino/pino-pretty to `serverExternalPackages`. (commit `0cb5c33`)
+- ✅ **#31 Storybook scaffold** — Storybook 10 (`@storybook/nextjs-vite`) with Tailwind integration. Stories for Button, Badge, Input, Card, Alert, Textarea, Skeleton — all 7 core UI components. `pnpm storybook` (port 6006) + `pnpm build-storybook`. (commit `efabe63`)
 
 ---
 
