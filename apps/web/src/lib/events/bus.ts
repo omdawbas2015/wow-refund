@@ -24,6 +24,7 @@
  * Channel format: `notifications:<userId>`. Payload is opaque JSON.
  */
 import { EventEmitter } from 'node:events';
+import { randomUUID } from 'node:crypto';
 import { Redis } from '@upstash/redis';
 
 export type EventPayload = {
@@ -31,8 +32,32 @@ export type EventPayload = {
   data: Record<string, unknown>;
 };
 
+// Wire format we put on Upstash. The nonce lets the publishing replica
+// recognize its own message bouncing back over the bridge so we can
+// drop it without re-emitting (otherwise local handlers see it twice).
+type WirePayload = EventPayload & { __nonce?: string };
+
 const emitter = new EventEmitter();
 emitter.setMaxListeners(1000);
+
+// Bounded LRU-ish set of nonces this process published recently. We
+// only need it long enough for the Upstash round-trip to complete
+// (typically <100ms), so 256 entries with FIFO eviction is plenty.
+const recentNonces: string[] = [];
+const recentNonceSet = new Set<string>();
+const NONCE_CAP = 256;
+function rememberNonce(n: string): void {
+  if (recentNonceSet.has(n)) return;
+  recentNonceSet.add(n);
+  recentNonces.push(n);
+  if (recentNonces.length > NONCE_CAP) {
+    const evicted = recentNonces.shift()!;
+    recentNonceSet.delete(evicted);
+  }
+}
+function sawNonce(n: string | undefined): boolean {
+  return !!n && recentNonceSet.has(n);
+}
 
 function channel(userId: string) {
   return `notifications:${userId}`;
@@ -67,7 +92,13 @@ export function publish(userId: string, payload: EventPayload): void {
 
   const redis = upstashClient();
   if (!redis) return;
-  void redis.publish(channel(userId), JSON.stringify(payload)).catch((err) => {
+  // Tag the wire payload with a nonce so when the Upstash subscriber
+  // delivers this same message back to us we can identify it and skip
+  // re-emitting (we already fired locally above).
+  const nonce = randomUUID();
+  rememberNonce(nonce);
+  const wire: WirePayload = { ...payload, __nonce: nonce };
+  void redis.publish(channel(userId), JSON.stringify(wire)).catch((err) => {
     console.warn(
       '[events/bus] Upstash publish failed, falling back to single-replica fanout:',
       err instanceof Error ? err.message : String(err),
@@ -80,14 +111,16 @@ export function publish(userId: string, payload: EventPayload): void {
 const refCounts = new Map<string, number>();
 const abortControllers = new Map<string, AbortController>();
 
-async function startUpstashSubscriber(ch: string): Promise<void> {
+/** Run a single Upstash subscriber connection until it ends or aborts. */
+async function runUpstashSubscriberOnce(
+  ch: string,
+  controller: AbortController,
+): Promise<{ aborted: boolean; healthy: boolean }> {
   const url = process.env['UPSTASH_REDIS_REST_URL'];
   const token = process.env['UPSTASH_REDIS_REST_TOKEN'];
-  if (!url || !token) return;
-  const controller = new AbortController();
-  abortControllers.set(ch, controller);
-
+  if (!url || !token) return { aborted: true, healthy: false };
   const endpoint = `${url.replace(/\/$/, '')}/subscribe/${encodeURIComponent(ch)}`;
+  let healthy = false;
   try {
     const res = await fetch(endpoint, {
       headers: { Authorization: `Bearer ${token}` },
@@ -95,8 +128,9 @@ async function startUpstashSubscriber(ch: string): Promise<void> {
     });
     if (!res.ok || !res.body) {
       console.warn(`[events/bus] Upstash subscribe failed for ${ch}: ${res.status}`);
-      return;
+      return { aborted: controller.signal.aborted, healthy: false };
     }
+    healthy = true;
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -114,19 +148,61 @@ async function startUpstashSubscriber(ch: string): Promise<void> {
         try {
           const parsed = JSON.parse(dataStr);
           const raw = Array.isArray(parsed) ? parsed[2] : parsed;
-          const payload: EventPayload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          const wire: WirePayload =
+            typeof raw === 'string' ? JSON.parse(raw) : raw;
+          // Skip messages this process just published. Otherwise local
+          // SSE handlers would see the event twice (once from publish()'s
+          // synchronous emit, once from this Upstash bounce-back).
+          if (sawNonce(wire.__nonce)) continue;
+          const { __nonce: _n, ...payload } = wire;
           emitter.emit(ch, payload);
         } catch {
           // Keep the subscriber alive even if one message is malformed.
         }
       }
     }
+    return { aborted: controller.signal.aborted, healthy };
   } catch (err) {
     if ((err as Error).name !== 'AbortError') {
       console.warn(
         `[events/bus] Upstash subscriber for ${ch} died:`,
         err instanceof Error ? err.message : String(err),
       );
+    }
+    return { aborted: controller.signal.aborted, healthy };
+  }
+}
+
+async function startUpstashSubscriber(ch: string): Promise<void> {
+  const url = process.env['UPSTASH_REDIS_REST_URL'];
+  const token = process.env['UPSTASH_REDIS_REST_TOKEN'];
+  if (!url || !token) return;
+  const controller = new AbortController();
+  abortControllers.set(ch, controller);
+  // Reconnect loop with exponential backoff. Reset on every healthy run
+  // so a connection that lasted long enough to receive at least one
+  // headers response starts the next backoff at the floor.
+  const baseDelay = 500;
+  const maxDelay = 30_000;
+  let delay = baseDelay;
+  try {
+    while (!controller.signal.aborted) {
+      const { aborted, healthy } = await runUpstashSubscriberOnce(ch, controller);
+      if (aborted) break;
+      if (healthy) delay = baseDelay;
+      // Sleep before reconnecting, but bail early if aborted mid-sleep.
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, delay);
+        controller.signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
+      });
+      delay = Math.min(delay * 2, maxDelay);
     }
   } finally {
     abortControllers.delete(ch);
@@ -171,4 +247,6 @@ export function __resetForTests(): void {
   for (const ctl of abortControllers.values()) ctl.abort();
   abortControllers.clear();
   cachedRedis = undefined;
+  recentNonces.length = 0;
+  recentNonceSet.clear();
 }
