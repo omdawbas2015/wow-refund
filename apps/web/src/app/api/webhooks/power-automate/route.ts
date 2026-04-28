@@ -20,8 +20,25 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@wow/db';
 import { processInboundReply } from '@/lib/batches/process-inbound';
 import { legacyEqualsSecret, verifyBodySignature } from '@/lib/security/signature';
+import { assertBodySize, readBodyText } from '@/lib/security/request-limits';
+import { consume } from '@/lib/rate-limit';
 
 const INBOUND_SECRET = process.env['POWER_AUTOMATE_INBOUND_SECRET'] ?? '';
+
+// Inbound email payloads fit well under this cap — Power Automate's
+// own HTTP action caps actions at 100 MB but a normal reply with its
+// rawBody + subject is < 64 KiB. 256 KiB leaves headroom for big HTML
+// bodies / attachments-as-base64 while still preventing a memory-
+// exhaustion DoS against the webhook.
+const MAX_INBOUND_BYTES = 256 * 1024;
+
+function clientIp(req: NextRequest): string {
+  const xff = req.headers.get('x-forwarded-for');
+  if (xff) return xff.split(',')[0]!.trim();
+  const real = req.headers.get('x-real-ip');
+  if (real) return real;
+  return 'unknown';
+}
 
 interface InboundPayload {
   fromEmail: string;
@@ -32,9 +49,24 @@ interface InboundPayload {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit first so a flood of bad traffic can't burn CPU on body
+  // reads + HMAC verification. 120 requests per minute per source IP
+  // is 10x the expected peak from a single tenant (a busy Flow fires
+  // < 5/s at peak) but low enough to throttle automated abuse.
+  const ip = clientIp(req);
+  const rl = await consume(`webhook:power-automate:${ip}`, 120, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+  }
+
+  // Cap body size before we read it; prevents a malicious sender from
+  // forcing us to buffer a multi-GB payload before the HMAC check.
+  const sizeError = await assertBodySize(req, MAX_INBOUND_BYTES);
+  if (sizeError) return sizeError;
+
   // Read the raw body exactly once — HMAC verification must happen against
   // the bytes the sender signed, not a re-serialized object.
-  const rawBody = await req.text();
+  const rawBody = await readBodyText(req);
 
   if (INBOUND_SECRET) {
     const header = req.headers.get('x-wow-signature') ?? '';
