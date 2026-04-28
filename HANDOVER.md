@@ -8,9 +8,12 @@
 > `v2/<path>`, read it as `<path>`. There is no longer a legacy
 > Vite/Express root to avoid.
 >
-> **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-27 03:40 UTC.
+> **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-28 UTC.
 >
-> **Active branch:** `devin/1777249813-continue-roadmap` (HEAD = `7afb059`, ~121 commits ahead of `main`).
+> **Active branch:** all work happens on short-lived `devin/<ts>-<slug>` branches that PR into `main`. Recent series:
+> - `devin/1777386253-handoff-category-a` → PR #1 (HMAC + real backups + Sentry wrap + route states, merged or in review)
+> - `devin/1777386260-pr2-cleanup` → PR #2 (remove unused tRPC, CI concurrency, route-walk spec, doc refresh)
+> - subsequent PRs numbered #3…#11 follow the audit in `docs/archive/` and the gap report shared with the owner.
 
 ---
 

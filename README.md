@@ -5,7 +5,7 @@ Production-grade refund platform for multi-country, multi-brand operations with 
 ## Stack
 
 - **Framework:** Next.js 15 (App Router, RSC, Server Actions, standalone output)
-- **API:** tRPC v11 (type-safe, end-to-end)
+- **API:** Next Route Handlers + React Server Actions (no tRPC — was evaluated and dropped as unused)
 - **Database:** Prisma 6 + PostgreSQL · SQLite for local dev
 - **Auth:** Auth.js v5 (credentials) with admin-approval signup flow
 - **UI:** shadcn/ui + Tailwind v4 + Radix primitives
