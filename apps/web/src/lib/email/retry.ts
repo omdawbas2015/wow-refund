@@ -129,6 +129,23 @@ export async function sweepFailedEmails(options: RetrySweepOptions = {}): Promis
   };
 
   for (const row of candidates) {
+    // If any sibling row for this destination is already SENT, the
+    // recipient already got the email — bail before we send a duplicate.
+    // This is the dedupe gate that PR review caught: without it, the
+    // sweep keeps re-firing on the original FAILED row even after a
+    // prior retry succeeded, because we never mutate the original row.
+    const alreadyDelivered = await prisma.emailLog.count({
+      where: {
+        templateKey: row.templateKey,
+        to: row.to,
+        subject: row.subject,
+        status: 'SENT',
+      },
+    });
+    if (alreadyDelivered > 0) {
+      outcome.skippedTooManyAttempts++;
+      continue;
+    }
     // Count prior attempts (including the current FAILED row) for this
     // logical destination. If we've already tried MAX_AUTO_RETRIES times,
     // stop retrying — the admin can still bulk-resend manually.
