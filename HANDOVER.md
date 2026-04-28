@@ -31,9 +31,15 @@
 >   `UPSTASH_REDIS_REST_TOKEN` + `SENTRY_DSN` + `SENTRY_AUTH_TOKEN` +
 >   `SENTRY_ORG` + `SENTRY_PROJECT` to activate fanout + error tracking +
 >   source-map upload.
-> - **#26 Power Automate flows** — owner builds the M365 flows
->   externally; Next.js side (outbound webhook + inbound HMAC handler)
->   is already complete.
+> - **#26 Power Automate flows** — five importable Legacy Packages now
+>   ship under `docs/power-automate/packages/` (outbound mailer, inbound
+>   listener, both with optional HMAC variants, and a Microsoft
+>   Approvals flow). Owner imports them via
+>   `make.powerautomate.com → My flows → Import → Import Package
+>   (Legacy)`, maps connections, and turns flows on. HMAC variants
+>   require deploying the tiny Azure Function under
+>   `docs/power-automate/azure-function-hmac/` (free tier covers
+>   typical traffic).
 >
 > **Active branch:** all work happens on short-lived `devin/<ts>-<slug>` branches that PR into `main`. Recent series:
 > - `devin/1777386253-handoff-category-a` → PR #1 (HMAC + real backups + Sentry wrap + route states)
@@ -257,7 +263,7 @@ Other reference docs:
 
 ### Sprint G — Backlog (P2, optional)
 
-- ⬜ **#26 Power Automate flows on M365 tenant** — owner builds externally; Next.js side already ready.
+- 🟡 **#26 Power Automate flows on M365 tenant** — templates ready, owner imports. Five importable Legacy Packages ship under `docs/power-automate/packages/`: outbound mailer (URL-secret + HMAC variants), inbound listener (unsigned dev variant + HMAC-signed production variant), and a Microsoft Approvals flow that turns approval emails into Approve / Reject buttons. HMAC-secured variants are paired with a tiny Node.js Azure Function helper under `docs/power-automate/azure-function-hmac/` for HMAC compute / verify (Power Automate's WDL has no native HMAC primitive). Build script `docs/power-automate/build-packages.py` regenerates all five zips from JSON definitions next door. Owner action: import each zip into Power Automate, map Office 365 Outlook + Microsoft Approvals connections, replace `<APP_BASE_URL>` / `<HMAC_FUNCTION_BASE_URL>` / `<INBOUND_SECRET>` placeholders, save + turn flows on, copy the outbound trigger URL into `POWER_AUTOMATE_WEBHOOK_URL`.
 - ✅ **#28 pino structured logs + OpenTelemetry** — `lib/logger.ts` writes structured JSON to stdout in production with secret/PII-shaped fields auto-redacted via `lib/observability/redact.ts`. Every emit is fire-and-forget exported via OTLP/HTTP (`lib/observability/otlp.ts`) when `OTEL_EXPORTER_OTLP_ENDPOINT` is set — Datadog Agent, Grafana, Honeycomb, self-hosted collectors all accept this. `instrumentation.ts` additionally bootstraps `@opentelemetry/sdk-node` with auto-instrumentations + OTLP trace exporter for distributed tracing. Request-id propagation in `lib/observability/request-id.ts`. All env-gated; no-op without secrets. (commits `e6dcf74`, `57cfa6a`, `866c467`, `e84dc17`, `0cb5c33`)
 - ✅ **#29 OpenAPI / Swagger** — `GET /api/openapi` emits an OpenAPI 3.1 doc generated live from `@wow/validators` zod schemas via `zod-to-json-schema`. Covers the public auth surface, `/api/health`, `/api/openapi` itself, and the Power Automate inbound webhook. Internal tRPC routers stay excluded by design. (commit `8593a32`)
 - ✅ **#30 axe-core a11y audit** — `tests/a11y.spec.ts` runs `@axe-core/playwright` against `/login` and the post-login dashboard, asserting zero WCAG 2.0/2.1 A and AA violations. Runs alongside the rest of the smoke suite under `pnpm test:e2e`. (commit `a4bbd45`)

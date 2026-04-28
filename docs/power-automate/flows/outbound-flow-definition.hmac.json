@@ -1,0 +1,142 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    },
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    }
+  },
+  "triggers": {
+    "manual": {
+      "type": "Request",
+      "kind": "Http",
+      "inputs": {
+        "method": "POST",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "templateKey": { "type": "string" },
+            "to": { "type": "string" },
+            "cc": { "type": ["string", "null"] },
+            "bcc": { "type": ["string", "null"] },
+            "subject": { "type": "string" },
+            "body": { "type": "string" },
+            "logId": { "type": "string" },
+            "contextType": { "type": ["string", "null"] },
+            "contextId": { "type": ["string", "null"] },
+            "variables": { "type": "object" }
+          },
+          "required": ["to", "subject", "body"]
+        }
+      },
+      "description": "WOW Refund app POSTs here. The X-Wow-Signature header is verified via the Azure Function HMAC helper before any email is sent."
+    }
+  },
+  "actions": {
+    "Compose_raw_body_string": {
+      "runAfter": {},
+      "type": "Compose",
+      "inputs": "@{string(triggerBody())}",
+      "description": "Stringify the body so the HMAC verify call sees the same canonical bytes the app signed. Power Automate parses incoming JSON; we re-serialise with deterministic key order via string(triggerBody()). If your app sends a body that doesn't round-trip exactly (e.g. extra whitespace), switch to triggerOutputs()?['body'] which preserves the raw bytes."
+    },
+    "Verify_signature_via_azure_function": {
+      "runAfter": {
+        "Compose_raw_body_string": ["Succeeded"]
+      },
+      "type": "Http",
+      "inputs": {
+        "method": "POST",
+        "uri": "<HMAC_FUNCTION_BASE_URL>/api/verify",
+        "headers": {
+          "Content-Type": "application/json",
+          "x-functions-key": "<HMAC_FUNCTION_KEY>"
+        },
+        "body": {
+          "body": "@{outputs('Compose_raw_body_string')}",
+          "signature": "@{coalesce(triggerOutputs()?['headers']?['X-Wow-Signature'], triggerOutputs()?['headers']?['x-wow-signature'], '')}",
+          "secret": "<OUTBOUND_SIGNING_SECRET>"
+        }
+      },
+      "description": "Calls the Azure Function HMAC helper to verify X-Wow-Signature == HMAC-SHA256(rawBody, OUTBOUND_SIGNING_SECRET). Replace <HMAC_FUNCTION_BASE_URL> with your Function App URL, <HMAC_FUNCTION_KEY> with its function key, and <OUTBOUND_SIGNING_SECRET> with the same value as POWER_AUTOMATE_SIGNING_SECRET in the platform env."
+    },
+    "Branch_on_validity": {
+      "runAfter": {
+        "Verify_signature_via_azure_function": ["Succeeded"]
+      },
+      "type": "If",
+      "expression": {
+        "and": [
+          {
+            "equals": [
+              "@body('Verify_signature_via_azure_function')?['valid']",
+              true
+            ]
+          }
+        ]
+      },
+      "actions": {
+        "Send_an_email_(V2)": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage/To": "@triggerBody()?['to']",
+              "emailMessage/Subject": "@triggerBody()?['subject']",
+              "emailMessage/Body": "<pre style=\"font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;\">@{triggerBody()?['body']}</pre>",
+              "emailMessage/Importance": "Normal",
+              "emailMessage/Cc": "@triggerBody()?['cc']",
+              "emailMessage/Bcc": "@triggerBody()?['bcc']"
+            }
+          }
+        },
+        "Return_200": {
+          "runAfter": {
+            "Send_an_email_(V2)": ["Succeeded"]
+          },
+          "type": "Response",
+          "kind": "Http",
+          "inputs": {
+            "statusCode": 200,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "runId": "@{workflow().run.name}",
+              "logId": "@{triggerBody()?['logId']}",
+              "delivered": true
+            }
+          }
+        }
+      },
+      "else": {
+        "actions": {
+          "Return_401": {
+            "runAfter": {},
+            "type": "Response",
+            "kind": "Http",
+            "inputs": {
+              "statusCode": 401,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": {
+                "error": "Invalid X-Wow-Signature"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "outputs": {}
+}

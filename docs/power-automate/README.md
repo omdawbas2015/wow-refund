@@ -1,76 +1,97 @@
 # Power Automate Integration
 
-The WOW Refund platform talks to Office 365 through **two** Power Automate
-cloud flows:
+The WOW Refund platform talks to Office 365 through Power Automate
+cloud flows. This folder ships **five importable flow packages** so you
+can pick the security / functionality posture that matches your tenant
+and import each one with two clicks.
 
-| Flow | Direction | Trigger | Action |
-| ---- | --------- | ------- | ------ |
-| **Outbound** | App → Mailbox | HTTP request from `dispatchEmail()` | `Office 365 Outlook · Send an email (V2)` |
-| **Inbound**  | Mailbox → App | `Office 365 Outlook · When a new email arrives (V3)` | `HTTP · POST` to `/api/webhooks/power-automate` |
+> ⚡ **TL;DR** — open `make.powerautomate.com`, go to **My flows →
+> Import → Import Package (Legacy)**, upload the `.zip` from
+> [`packages/`](./packages/), map the connection(s), turn the flow
+> **On**. Repeat for every package you want. Section [§ 5](#5--mapping-flows-to-platform-env-vars)
+> tells you which env vars to set on the platform side.
 
-This folder ships **two ways to install** each flow:
+| # | Package | Direction | Security | Triggers | Connectors |
+| - | ------- | --------- | -------- | -------- | ---------- |
+| 1 | [`wow-outbound-mailer.zip`](./packages/wow-outbound-mailer.zip) | App → Outlook | URL-secret | HTTP request | Office 365 Outlook |
+| 2 | [`wow-inbound-listener.zip`](./packages/wow-inbound-listener.zip) | Outlook → App | None (dev) | New email arrives | Office 365 Outlook |
+| 3 | [`wow-outbound-mailer-hmac.zip`](./packages/wow-outbound-mailer-hmac.zip) | App → Outlook | **HMAC verified** | HTTP request | Office 365 Outlook + Azure Function |
+| 4 | [`wow-inbound-listener-hmac.zip`](./packages/wow-inbound-listener-hmac.zip) | Outlook → App | **HMAC signed** | New email arrives | Office 365 Outlook + Azure Function |
+| 5 | [`wow-approval-batch.zip`](./packages/wow-approval-batch.zip) | App → Approvals → App | URL-secret | HTTP request | Microsoft Approvals + Outlook |
 
-1. **Recommended — Legacy Package zip** (`packages/wow-outbound-mailer.zip`,
-   `packages/wow-inbound-listener.zip`). Power Automate → **My flows →
-   Import → Import Package (Legacy)** → upload the zip → map your
-   Office 365 connection → **Import**. The flow lands as a draft you
-   can open and turn on.
-2. **Manual — Code view paste** using `flows/*.json`. Use this if your
-   tenant blocks legacy package imports, or you want to hand-edit the
-   definition first.
+The `-hmac` variants call a tiny Azure Function (
+[`azure-function-hmac/`](./azure-function-hmac/) — deploy in 5 minutes
+on the consumption plan, well inside the 1M-call/month free tier) so
+they can compute the same HMAC-SHA256 hex digest the platform expects.
+Use them in production. The non-HMAC packages are fine for
+dev / staging where the trigger URL itself is enough secret.
 
-The packages are generated from the JSON definitions next door — if
-you tweak a definition, regenerate the zips with:
+The legacy zips are **regenerated** from the JSON definitions next door
+by [`build-packages.py`](./build-packages.py):
 
 ```bash
-python3 v2/docs/power-automate/build-packages.py
+python3 docs/power-automate/build-packages.py
 ```
+
+Tweak a JSON, re-run, commit. Each zip has its own pre-allocated
+`flowId`, so re-importing always lands as a fresh flow rather than
+silently overwriting the old one.
+
+---
+
+## ملخّص بالعربي (Quick Arabic summary)
+
+التمبلتس دي تتعمل **Import** على طول من
+`make.powerautomate.com → My flows → Import → Import Package (Legacy)`.
+
+- باكدج رقم 1 و 2: للتجربة محلياً / staging — مش فيها HMAC.
+- باكدج رقم 3 و 4: للـ production — بتستخدم Azure Function صغيرة لحساب
+  الـ HMAC-SHA256 (الكود تحت [`azure-function-hmac/`](./azure-function-hmac/)).
+- باكدج رقم 5: زرار Approve / Reject تيك في Outlook + Teams بدل ما
+  المانجر يرد بإيميل.
+
+كل اللي محتاج تعمله بعد الـ Import:
+1. تربط الـ connections (Outlook + Approvals).
+2. تفتح كل flow وتستبدل الـ placeholders زي `<APP_BASE_URL>` و
+   `<HMAC_FUNCTION_BASE_URL>` و `<INBOUND_SECRET>`.
+3. تعمل Save + Turn On.
+4. تنسخ الـ HTTP POST URL من الـ outbound flow وتحطه في الـ
+   `POWER_AUTOMATE_WEBHOOK_URL` على الـ app.
+
+التفاصيل الكاملة لكل flow في الأقسام تحت بالإنجليزي.
 
 ---
 
 ## 0. Prerequisites
 
-You need the following before you can wire up the flows:
+You need:
 
-1. An **Office 365 mailbox** the team will use as the sender / receiver.
-   - Common pattern: `refund-ops@yourcompany.com` (a shared mailbox
-     works fine, but the user that owns the connection must have
-     "Send As" rights on it).
-2. The platform deployed at a public URL — Power Automate must be able
-   to reach the webhook endpoint over HTTPS. Local `localhost` won't
-   work; use a tunnel (ngrok, Cloudflare Tunnel) for testing.
-3. Two **shared secrets** — generate any two random 32-character
-   strings (e.g. `openssl rand -hex 32`):
-   - `OUTBOUND_SIGNING_SECRET` — the app computes
-     `HMAC-SHA256(rawBody, OUTBOUND_SIGNING_SECRET)` and sends the hex
-     digest in the `x-wow-signature` header on every outbound POST; the
-     **Outbound** flow verifies the same HMAC before doing any work.
-   - `INBOUND_SECRET` — the inbound **Flow** computes
-     `HMAC-SHA256(rawBody, INBOUND_SECRET)` and sends the hex digest in
-     the `x-wow-signature` header; the webhook verifies it the same way.
-
-   > **No legacy fallback:** the inbound route only accepts HMAC-signed
-   > headers. (Earlier builds tolerated a plaintext `x-wow-signature:
-   > <INBOUND_SECRET>` header and logged a deprecation warning; that
-   > path has been removed.) If your imported Flow predates HMAC, see
-   > section 2 for the expression to compute the digest.
-
-   Put both into your platform's `.env`:
-
+1. An **Office 365 mailbox** the team will use as the sender / receiver
+   (e.g. `refund-ops@yourcompany.com`). A shared mailbox works fine but
+   the user that owns the connection must have **Send As** rights.
+2. The platform deployed at a **public HTTPS URL** — Power Automate must
+   reach the webhook endpoint over the internet. `localhost` won't work;
+   use ngrok / Cloudflare Tunnel for local testing.
+3. Two **shared secrets** — `openssl rand -hex 32` produces a good one.
+   Generate one for outbound (`OUTBOUND_SIGNING_SECRET`) and one for
+   inbound (`INBOUND_SECRET`). Both go into the platform `.env`:
    ```env
    POWER_AUTOMATE_WEBHOOK_URL=https://prod-xx.westus.logic.azure.com:443/workflows/.../triggers/manual/paths/invoke?...
    POWER_AUTOMATE_SIGNING_SECRET=<OUTBOUND_SIGNING_SECRET>
    POWER_AUTOMATE_INBOUND_SECRET=<INBOUND_SECRET>
    ```
-
-   You'll fill `POWER_AUTOMATE_WEBHOOK_URL` after the **Outbound** flow
+   You'll fill `POWER_AUTOMATE_WEBHOOK_URL` after the **outbound** flow
    is saved (the URL is auto-generated by Power Automate).
+4. *(HMAC variants only)* An **Azure subscription** + **Functions Core
+   Tools v4** — used to deploy the HMAC helper. Free tier covers the
+   integration's typical traffic. See
+   [`azure-function-hmac/README.md`](./azure-function-hmac/README.md).
 
 ---
 
-## 1. Outbound flow — "Send refund email"
+## 1. Outbound flow — `wow-outbound-mailer.zip`
 
-The app posts a JSON payload like this:
+The platform POSTs JSON like this:
 
 ```jsonc
 {
@@ -91,62 +112,34 @@ Headers:
 
 ```
 Content-Type: application/json
-X-Wow-Signature: <OUTBOUND_SIGNING_SECRET>
+X-Wow-Signature: <hex HMAC-SHA256(rawBody, OUTBOUND_SIGNING_SECRET)>
 ```
 
-Expected response: HTTP 200 with `{ "runId": "<flow run id>" }`.
+Expected response: HTTP 200 with `{ "runId": "<flow run id>",
+"logId": "<...>", "delivered": true }`.
 
-### Click-through setup
+### Import the package
 
-1. **My flows → New flow → Instant cloud flow**.
-2. Trigger: **When an HTTP request is received**. Click the trigger to
-   expand it and paste the *Request body JSON schema* from
-   [`flows/outbound-request-schema.json`](./flows/outbound-request-schema.json).
-3. Add a **Condition** action right after the trigger:
-   - Left value: `triggerOutputs()['headers']?['X-Wow-Signature']`
-     (use the expression editor)
-   - Operator: `is equal to`
-   - Right value: a *secure variable* set to your
-     `OUTBOUND_SIGNING_SECRET`. Add it via **Initialize variable** with
-     **Type = String** *before* the condition, or use a Power Automate
-     **environment variable** for cleanliness.
-   - **If no** branch → add a **Response** action with status `401`
-     and body `{ "error": "Invalid signature" }`.
-4. Inside the **If yes** branch:
-   - Add **Office 365 Outlook → Send an email (V2)**:
-     - **To**: `triggerBody()?['to']`
-     - **Subject**: `triggerBody()?['subject']`
-     - **Body**: `<pre style="font-family: ui-monospace, monospace; white-space: pre-wrap;">@{triggerBody()?['body']}</pre>`
-       — wrap in `<pre>` so the plain-text formatting (case rows,
-       totals) stays aligned in Outlook.
-     - **CC**: `triggerBody()?['cc']`
-     - **BCC**: `triggerBody()?['bcc']`
-     - **Importance**: Normal
-     - **Body Is Html**: Yes
-   - Add a final **Response** action with status `200` and body:
-     ```json
-     {
-       "runId": "@{workflow().run.name}",
-       "logId": "@{triggerBody()?['logId']}"
-     }
-     ```
-5. **Save** the flow. Open the trigger → copy the **HTTP POST URL** —
-   that is your `POWER_AUTOMATE_WEBHOOK_URL`.
+1. `make.powerautomate.com` → **My flows → Import → Import Package
+   (Legacy)** → upload [`packages/wow-outbound-mailer.zip`](./packages/wow-outbound-mailer.zip).
+2. Map the **Office 365 Outlook** connection to the operator mailbox.
+   If you don't have one yet, click *Create new* and sign in.
+3. **Import**. The flow lands as a draft.
+4. Open the flow → click the **trigger** → copy the **HTTP POST URL**
+   into `POWER_AUTOMATE_WEBHOOK_URL` on the platform.
+5. Toggle **Off → On**.
 
-### Code view JSON
-
-If Code view is available, replace the workflow definition with
-[`flows/outbound-flow-definition.json`](./flows/outbound-flow-definition.json)
-— remember to swap `<OUTBOUND_SIGNING_SECRET>` with your real value (or
-better, point to an environment variable).
+This package **does not verify HMAC** — the Power Automate trigger URL
+is the secret. That's fine for staging / single-tenant deployments. If
+you need server-side HMAC verification, use package #3 instead.
 
 ---
 
-## 2. Inbound flow — "Forward replies to webhook"
+## 2. Inbound flow — `wow-inbound-listener.zip`
 
-Whenever a refund-team mailbox receives an email whose subject contains
-a batch number (`APB-…`, `KNET-…`, `AURA-…`), Power Automate POSTs the
-raw email to the platform.
+When an email lands in the operator mailbox whose subject contains
+`APB-`, `KNET-`, or `AURA-`, this flow forwards a normalised payload to
+the platform webhook so the inbound classifier picks it up.
 
 Webhook expects:
 
@@ -160,171 +153,210 @@ Webhook expects:
 }
 ```
 
-Headers:
+### Import the package
 
-```
-Content-Type: application/json
-x-wow-signature: <hex HMAC-SHA256(rawBody, INBOUND_SECRET)>
-```
+1. **Import → Import Package (Legacy)** →
+   [`packages/wow-inbound-listener.zip`](./packages/wow-inbound-listener.zip).
+2. Map the **Office 365 Outlook** connection.
+3. **Import**, then open the flow.
+4. In the **POST_to_webhook** action, replace `<APP_BASE_URL>` with
+   your real platform URL (e.g. `https://refund.example.com`).
+5. Save and turn the flow **On**.
 
-Successful classification returns:
-
-```json
-{ "ok": true, "id": "<inbound email id>", "intent": "APPROVAL_RESPONSE", "payload": { ... } }
-```
-
-`intent` is one of:
-
-- `APPROVAL_RESPONSE` — manager replied to an approval batch.
-- `KNET_ARN_REPLY` — finance replied with KNET ARNs.
-- `AURA_CONFIRMATION` — Aura team confirmed redemption.
-- `IGNORED` — couldn't match a batch number; row stored for human review.
-
-### Click-through setup
-
-1. **My flows → New flow → Automated cloud flow**.
-2. Trigger: **Office 365 Outlook → When a new email arrives (V3)**.
-   - **Folder**: `Inbox`
-   - **To**: leave blank (we'll filter inside the flow)
-   - **Subject Filter**: leave blank (regex isn't supported; we filter
-     in code below)
-   - **Include Attachments**: No
-   - **Importance**: Any
-3. Add a **Compose** action `Subject_lower`:
-   - Inputs: `toLower(triggerOutputs()?['body/subject'])`
-4. Add a **Condition** named `Has_batch_id`:
-   - Expression A: `or(contains(outputs('Subject_lower'), 'apb-'), contains(outputs('Subject_lower'), 'knet-'), contains(outputs('Subject_lower'), 'aura-'))`
-   - Compared with `equal to true`.
-   - **If no** branch: leave empty (terminate).
-5. Inside **If yes**:
-   - Add a **Compose** action `Request_body_json` that materializes the
-     exact JSON body you'll POST (so the HMAC step signs the same bytes
-     the webhook will verify). Inputs:
-     ```json
-     {
-       "fromEmail": "@{triggerOutputs()?['body/from']}",
-       "toEmail": "@{triggerOutputs()?['body/to']}",
-       "subject": "@{triggerOutputs()?['body/subject']}",
-       "rawBody": "@{triggerOutputs()?['body/bodyPreview']}",
-       "powerAutomateRunId": "@{workflow().run.name}"
-     }
-     ```
-   - Add a second **Compose** action `Hmac_signature` that computes the
-     HMAC-SHA256 hex digest of the body using `INBOUND_SECRET`. Inputs:
-     `@{concat('', dataUriToString(encodeUriComponent(...)))}` isn't
-     available in Power Automate, so use the built-in `base64ToBinary`
-     + `createHmac` pattern — or call a lightweight Azure Function /
-     inline JavaScript action that exposes:
-     `hmacSha256Hex(Request_body_json, INBOUND_SECRET)`.
-     (The sample packages under `docs/power-automate/packages/` wire
-     this up; import those and you won't need to author the HMAC step
-     yourself.)
-   - Add **HTTP** action `POST_to_webhook`:
-     - **Method**: `POST`
-     - **URI**: `https://<your-app>/api/webhooks/power-automate`
-     - **Headers**:
-       ```
-       Content-Type: application/json
-       x-wow-signature: @{outputs('Hmac_signature')}
-       ```
-     - **Body**:
-       ```json
-       {
-         "fromEmail": "@{triggerOutputs()?['body/from']}",
-         "toEmail": "@{triggerOutputs()?['body/to']}",
-         "subject": "@{triggerOutputs()?['body/subject']}",
-         "rawBody": "@{triggerOutputs()?['body/bodyPreview']}",
-         "powerAutomateRunId": "@{workflow().run.name}"
-       }
-       ```
-       Use `body/body` instead of `body/bodyPreview` if you want the
-       full HTML/text body. The webhook tolerates both.
-6. (Optional) Add a **Condition** on the HTTP action's `statusCode` and
-   send yourself a Teams notification on failure — useful while
-   shaking the integration down.
-7. **Save**.
-
-### Code view JSON
-
-[`flows/inbound-flow-definition.json`](./flows/inbound-flow-definition.json)
-— swap `<APP_BASE_URL>` and `<INBOUND_SECRET>` before pasting.
+This package **does not sign the body** — the platform's
+`POWER_AUTOMATE_INBOUND_SECRET` must be **unset (or empty)** for the
+webhook to accept the unsigned payload. That's fine for dev / staging
+deployments behind a private URL. For production, use package #4.
 
 ---
 
-## 3. Test the integration locally
+## 3. Outbound flow (HMAC) — `wow-outbound-mailer-hmac.zip`
 
-### a) Smoke-test the **inbound** webhook
+Same as package #1 but **verifies** the `X-Wow-Signature` header
+server-side by calling the Azure Function HMAC helper before sending
+the email. Returns 401 on signature mismatch.
 
-You don't need Power Automate running to test inbound. The
-[`test-webhook.sh`](./test-webhook.sh) script POSTs each of the three
-sample payloads and prints the classified intent.
+### Import + configure
+
+1. Deploy the Azure Function HMAC helper first — see
+   [`azure-function-hmac/README.md`](./azure-function-hmac/README.md).
+   Note the **base URL** (e.g. `https://wow-refund-pa-hmac.azurewebsites.net`)
+   and the **default function key**.
+2. **Import → Import Package (Legacy)** →
+   [`packages/wow-outbound-mailer-hmac.zip`](./packages/wow-outbound-mailer-hmac.zip).
+3. Map the **Office 365 Outlook** connection.
+4. Open the flow → **Verify_signature_via_azure_function** action →
+   replace:
+   - `<HMAC_FUNCTION_BASE_URL>` → your Function App's base URL.
+   - `<HMAC_FUNCTION_KEY>` → the function key from step 1.
+   - `<OUTBOUND_SIGNING_SECRET>` → same value as
+     `POWER_AUTOMATE_SIGNING_SECRET` on the platform.
+5. Save + copy the trigger URL into `POWER_AUTOMATE_WEBHOOK_URL`.
+6. Toggle **On**.
+
+---
+
+## 4. Inbound flow (HMAC) — `wow-inbound-listener-hmac.zip`
+
+Same as package #2 but **signs** the outbound HTTP body so the
+platform's `POWER_AUTOMATE_INBOUND_SECRET`-secured webhook accepts it.
+
+### Import + configure
+
+1. Deploy the Azure Function HMAC helper first.
+2. **Import → Import Package (Legacy)** →
+   [`packages/wow-inbound-listener-hmac.zip`](./packages/wow-inbound-listener-hmac.zip).
+3. Map the **Office 365 Outlook** connection.
+4. Open the flow → **Sign_via_azure_function** action → replace:
+   - `<HMAC_FUNCTION_BASE_URL>`
+   - `<HMAC_FUNCTION_KEY>`
+   - `<INBOUND_SECRET>` → same value as
+     `POWER_AUTOMATE_INBOUND_SECRET` on the platform.
+5. **POST_to_webhook** → replace `<APP_BASE_URL>` with your platform
+   URL.
+6. Save + turn **On**.
+
+---
+
+## 5. Approval-batch flow — `wow-approval-batch.zip`
+
+This is a **higher-level alternative** to the plain outbound mailer
+*for `templateKey == "approval_batch_request"` only*. Instead of
+sending a plain email, it:
+
+1. Opens a **Microsoft Approvals** card with **Approve / Reject**
+   buttons (delivered to the manager via Outlook + Teams + Power
+   Automate mobile).
+2. Waits indefinitely for the manager's response.
+3. POSTs the response back to the platform's inbound webhook
+   (`/api/webhooks/power-automate`) shaped as an
+   `APPROVAL_RESPONSE` reply, so the platform's existing classifier
+   advances the batch state automatically.
+
+### When to use it
+
+Use this **in addition to** the plain outbound mailer (#1 or #3) — keep
+the plain mailer for KNET / Aura / OTP / SYSTEM emails, and route
+`approval_batch_request` traffic to this approval flow.
+
+### How to wire it
+
+Either:
+- **Single mailer**: keep `POWER_AUTOMATE_WEBHOOK_URL` pointed at the
+  approval flow only when you've set
+  `POWER_AUTOMATE_TEMPLATE_KEY_FILTER=approval_batch_request` on the
+  platform. (Not implemented yet — see issue / TODO note.)
+- **Recommended — branch in Power Automate**: keep
+  `POWER_AUTOMATE_WEBHOOK_URL` on the plain outbound mailer; add a
+  **Switch** action at the top of the plain mailer that routes
+  `triggerBody()?['templateKey'] == 'approval_batch_request'` to
+  *Trigger another flow* (this approval flow) and everything else to
+  the existing **Send_an_email_(V2)** path.
+
+### Import + configure
+
+1. **Import → Import Package (Legacy)** →
+   [`packages/wow-approval-batch.zip`](./packages/wow-approval-batch.zip).
+2. Map the **Microsoft Approvals** connection (and **Office 365
+   Outlook** if prompted — it's used to deliver the approval card).
+3. Open the flow → **Start_and_wait_for_an_approval** action → replace
+   `<APP_BASE_URL>` in **WebhookApprovalCreationInput/itemLink** with
+   your platform URL so the manager can click *Open batch in WOW
+   Refund* directly.
+4. **POST_response_to_webhook** → replace `<APP_BASE_URL>` again.
+5. *(Optional)* If your deployment uses HMAC-secured inbound, replace
+   the **POST_response_to_webhook** action body with the
+   `Sign_via_azure_function` + signed POST pattern from
+   [`flows/inbound-flow-definition.hmac.json`](./flows/inbound-flow-definition.hmac.json).
+6. Save + turn **On**.
+7. Copy the trigger URL — that's the URL you point at when you want
+   `approval_batch_request` traffic to use Approvals.
+
+---
+
+## 6. Mapping flows to platform env vars
+
+| Env var | Used by | Set to |
+| ------- | ------- | ------ |
+| `POWER_AUTOMATE_WEBHOOK_URL` | App → outbound mailer (#1 / #3) or approval flow (#5) | the trigger URL of the flow you chose |
+| `POWER_AUTOMATE_SIGNING_SECRET` | App → outbound (#3 verifies it server-side) | a 32-byte random hex string; same value goes into the `<OUTBOUND_SIGNING_SECRET>` placeholder in flow #3 |
+| `POWER_AUTOMATE_INBOUND_SECRET` | Inbound webhook → app | a 32-byte random hex string; **must be unset / empty** for #2; **must match `<INBOUND_SECRET>`** for #4 |
+
+Leave a value blank to **disable** that auth layer. The platform
+explicitly tolerates a blank `POWER_AUTOMATE_INBOUND_SECRET` and will
+accept unsigned inbound payloads — that's how the unsigned listener
+package #2 works.
+
+---
+
+## 7. Test the integration locally
+
+### a) Smoke-test the **inbound** webhook (no Power Automate needed)
+
+[`test-webhook.sh`](./test-webhook.sh) POSTs each of the four sample
+payloads in [`sample-payloads/`](./sample-payloads/) and prints the
+classified intent.
 
 ```bash
-# from repo root
-cd v2/apps/web && pnpm dev   # ensure app is up at localhost:3000
+# Localhost, secret unset
+./test-webhook.sh
 
-# in another terminal
-export INBOUND_SECRET="<value of POWER_AUTOMATE_INBOUND_SECRET>"
-./v2/docs/power-automate/test-webhook.sh
+# Against staging, with HMAC enabled
+APP_URL=https://staging.example.com \
+  INBOUND_SECRET=$(cat .secret) \
+  ./test-webhook.sh
 ```
 
-Expected output:
+Expect:
 
 ```
-→ approval reply       intent=APPROVAL_RESPONSE     ok=true
-→ KNET ARN reply       intent=KNET_ARN_REPLY        ok=true
-→ Aura confirmation    intent=AURA_CONFIRMATION     ok=true
-→ unrelated email      intent=IGNORED               ok=true
+→ approval reply         status=200  ok=true   intent=APPROVAL_RESPONSE
+→ KNET ARN reply         status=200  ok=true   intent=KNET_ARN_REPLY
+→ Aura confirmation      status=200  ok=true   intent=AURA_CONFIRMATION
+→ unrelated email        status=200  ok=true   intent=IGNORED
 ```
 
-If the secret doesn't match, you get `401 Unauthorized` — that's the
-guard working. Leave `POWER_AUTOMATE_INBOUND_SECRET` blank in your
-`.env` to bypass auth during local testing.
+On a fresh DB the approval / KNET / Aura payloads will report
+`IGNORED` (with reason "unknown ... batch") — that's correct
+behaviour, not a failure. To see real classification first create the
+matching batches via the operations desk and update the sample
+subjects.
 
-### b) Smoke-test the **outbound** flow
+### b) Smoke-test the **outbound** flow without sending a real email
 
-After the outbound flow is saved, copy its HTTP POST URL and exercise
-the dispatcher directly:
+Hit the trigger URL with `curl`:
 
 ```bash
-curl -X POST "$POWER_AUTOMATE_WEBHOOK_URL" \
-  -H "Content-Type: application/json" \
-  -H "X-Wow-Signature: $POWER_AUTOMATE_SIGNING_SECRET" \
-  -d @v2/docs/power-automate/sample-payloads/outbound-approval-email.json
+curl -sS -X POST "$POWER_AUTOMATE_WEBHOOK_URL" \
+  -H 'Content-Type: application/json' \
+  -H "X-Wow-Signature: $(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$OUTBOUND_SIGNING_SECRET" | awk '{print $NF}')" \
+  -d "$BODY"
 ```
 
-You should get a 200 back with a `runId`, and the manager mailbox
-should receive the email within a few seconds.
+For the HMAC variant, the flow returns 401 on signature mismatch
+without sending the email — flip a byte in `BODY` and re-run to
+confirm.
 
 ---
 
-## 4. File map
+## 8. Editing the flows
 
-```
-v2/docs/power-automate/
-├── README.md                         (this file)
-├── test-webhook.sh                   smoke test for the inbound endpoint
-├── flows/
-│   ├── outbound-request-schema.json  Trigger schema for the outbound flow
-│   ├── outbound-flow-definition.json Full Code-view JSON for outbound
-│   └── inbound-flow-definition.json  Full Code-view JSON for inbound
-└── sample-payloads/
-    ├── outbound-approval-email.json  Example app→PA outbound POST
-    ├── inbound-approval-reply.json   Example PA→app inbound POST (manager reply)
-    ├── inbound-knet-arn-reply.json   Example PA→app inbound POST (finance ARNs)
-    ├── inbound-aura-confirmation.json Example PA→app inbound POST (Aura team)
-    └── inbound-unrelated.json        Example PA→app inbound POST that should be IGNORED
-```
+The JSON in `flows/` is the source of truth. To customise:
 
----
+1. Open `flows/<the-flow>.json` in your editor.
+2. Modify the action / trigger you care about. The
+   [Logic Apps WDL reference](https://learn.microsoft.com/azure/logic-apps/logic-apps-workflow-definition-language)
+   covers every supported expression / type.
+3. Regenerate the zips:
+   ```bash
+   python3 docs/power-automate/build-packages.py
+   ```
+4. Re-import the zip into Power Automate (it imports as a **new** flow
+   because the build script allocates a fresh `flowId` each run).
+   Delete the old draft once the new one is configured.
 
-## 5. Troubleshooting
-
-| Symptom | Likely cause |
-| ------- | ------------ |
-| Outbound flow never fires, app logs `Power Automate returned 401` | `X-Wow-Signature` header doesn't match the value the flow checks. Re-paste both sides. |
-| Inbound webhook returns `401 Unauthorized` | `x-wow-signature` header missing or wrong. Make sure Power Automate's HTTP action sets it. |
-| Inbound returns `400 Missing field: rawBody` | Body mapping references the wrong dynamic content field — use `body/body` or `body/bodyPreview`. |
-| `intent=IGNORED` for a real reply | Subject doesn't include the batch number. Confirm Outlook isn't trimming `APB-…` from the subject (rare with non-ASCII characters in the prefix). |
-| Email lands in Junk so the inbound flow never sees it | Add the platform's sender domain to the safe-sender list, or switch the trigger folder to `Inbox + Junk`. |
-| Inbox processes the same email twice | The trigger is idempotent in Power Automate; the webhook stores `inbound_email` rows, but `applyApprovalReply` / `applyKnetArnReply` / `applyAuraConfirmation` are guarded against double-application via `updateMany` status checks (see `process-inbound.ts`). Duplicate POSTs are safe. |
+If you want to tweak a flow that's already running in production
+without re-importing, you can paste the `definition` block directly via
+**Code view** in Power Automate's editor — useful for one-off fixes,
+but commit the change back to `flows/` afterwards so the repo stays the
+source of truth.

@@ -1,0 +1,17 @@
+{
+  "name": "wow-refund-azure-function-hmac",
+  "version": "1.0.0",
+  "description": "Tiny Azure Functions app that exposes /sign and /verify endpoints for HMAC-SHA256, used by the WOW Refund Power Automate flows when running in HMAC-secured mode.",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "start": "func start",
+    "deploy": "func azure functionapp publish $FUNCTION_APP_NAME"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

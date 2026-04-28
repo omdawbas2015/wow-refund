@@ -30,16 +30,14 @@
           "method": "post",
           "uri": "@listCallbackUrl()"
         }
-      },
-      "description": "Trigger fires for every new mail in the refund-ops mailbox Inbox. Filters in the next steps drop emails that are not refund replies."
+      }
     }
   },
   "actions": {
     "Subject_lower": {
       "runAfter": {},
       "type": "Compose",
-      "inputs": "@toLower(triggerOutputs()?['body/subject'])",
-      "description": "Lowercase the subject so the substring match in Has_batch_id is case-insensitive."
+      "inputs": "@toLower(triggerOutputs()?['body/subject'])"
     },
     "Has_batch_id": {
       "runAfter": {
@@ -64,22 +62,49 @@
             "rawBody": "@{coalesce(triggerOutputs()?['body/body'], triggerOutputs()?['body/bodyPreview'], '')}",
             "powerAutomateRunId": "@{workflow().run.name}"
           },
-          "description": "Materialise the exact JSON body to POST. Composing it once means the optional HMAC step (see Azure Function variant) signs the same bytes the webhook will verify."
+          "description": "Materialise the JSON body once. The HMAC step signs the SAME serialised string we POST so the receiver verifies against identical bytes."
+        },
+        "Compose_body_string": {
+          "runAfter": {
+            "Compose_request_body": ["Succeeded"]
+          },
+          "type": "Compose",
+          "inputs": "@{string(outputs('Compose_request_body'))}"
+        },
+        "Sign_via_azure_function": {
+          "runAfter": {
+            "Compose_body_string": ["Succeeded"]
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "POST",
+            "uri": "<HMAC_FUNCTION_BASE_URL>/api/sign",
+            "headers": {
+              "Content-Type": "application/json",
+              "x-functions-key": "<HMAC_FUNCTION_KEY>"
+            },
+            "body": {
+              "body": "@{outputs('Compose_body_string')}",
+              "secret": "<INBOUND_SECRET>"
+            }
+          },
+          "description": "Calls the Azure Function HMAC helper to compute HMAC-SHA256(body, INBOUND_SECRET). Replace <HMAC_FUNCTION_BASE_URL>, <HMAC_FUNCTION_KEY>, <INBOUND_SECRET> with the function URL, function key, and POWER_AUTOMATE_INBOUND_SECRET respectively."
         },
         "POST_to_webhook": {
           "runAfter": {
-            "Compose_request_body": ["Succeeded"]
+            "Sign_via_azure_function": ["Succeeded"]
           },
           "type": "Http",
           "inputs": {
             "method": "POST",
             "uri": "<APP_BASE_URL>/api/webhooks/power-automate",
             "headers": {
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
+              "x-wow-signature": "@{body('Sign_via_azure_function')?['signature']}"
             },
-            "body": "@outputs('Compose_request_body')"
+            "body": "@outputs('Compose_body_string')"
           },
-          "description": "Replace <APP_BASE_URL> with your platform URL (e.g. https://refund.example.com). NOTE: this default flow does not sign the body. The app must therefore have POWER_AUTOMATE_INBOUND_SECRET unset (or empty). For HMAC-secured production deployments, replace this action with the HTTP-call-to-Azure-Function pattern from docs/power-automate/azure-function-hmac/."
+          "description": "POSTs the same canonical body string we signed to the platform webhook. The platform recomputes HMAC server-side and rejects mismatched signatures with 401."
         }
       },
       "else": {
@@ -89,8 +114,7 @@
             "type": "Terminate",
             "inputs": {
               "runStatus": "Succeeded"
-            },
-            "description": "Email is unrelated to a refund batch — drop it without notifying the platform."
+            }
           }
         }
       }
