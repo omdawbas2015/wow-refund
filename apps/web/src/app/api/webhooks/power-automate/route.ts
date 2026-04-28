@@ -6,10 +6,16 @@
  * payload here.
  *
  * Auth: `x-wow-signature` HMAC-SHA256 hex digest of the raw request body,
- * computed with `POWER_AUTOMATE_INBOUND_SECRET`. For backward compatibility
- * with earlier Flows that sent the secret directly, a plaintext match is
- * still accepted and logged as a deprecation warning so operators can roll
- * the Flow over at their own pace.
+ * computed with `POWER_AUTOMATE_INBOUND_SECRET`. Only HMAC signatures are
+ * accepted — the legacy "send the plaintext secret as the header" fallback
+ * was removed in Sprint K (PR #10). Operators upgrading from a pre-Sprint-K
+ * Flow must switch to the HMAC-signing variant (see
+ * docs/power-automate/packages/wow-inbound-listener-hmac.zip) before
+ * setting the secret, otherwise every inbound reply will 401.
+ *
+ * If `POWER_AUTOMATE_INBOUND_SECRET` is unset or empty, signature
+ * verification is skipped entirely — useful for the unsigned dev variant
+ * (wow-inbound-listener.zip) and for local testing without Power Automate.
  *
  * We persist the raw email in `inbound_email`, then immediately classify it
  * and route it to the right handler. Parsing failures are non-fatal — they
