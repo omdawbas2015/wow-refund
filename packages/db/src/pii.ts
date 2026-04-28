@@ -1,18 +1,11 @@
 /**
- * AES-256-GCM helpers for PII at rest.
+ * AES-256-GCM helpers for PII at rest — used by the Prisma $extends layer.
  *
  * Reads a 32-byte key from PII_ENCRYPTION_KEY (hex-encoded, 64 chars).
- * If the key is missing the helpers are pass-through: encrypt() returns
- * the plaintext unchanged and decrypt() returns whatever was passed.
- * This lets the codebase opt into encryption per-field without breaking
- * dev / preview where the key isn't provisioned.
+ * If the key is missing the helpers are pass-through so dev / preview
+ * environments work without any extra setup.
  *
- * Storage format: `v1:<iv-hex>:<ciphertext-hex>:<authTag-hex>`. The `v1:`
- * prefix lets us rotate algorithms later without reading every column.
- *
- * The Prisma-layer auto-encryption is handled by @wow/db's pii-extension
- * (packages/db/src/pii-extension.ts). This module is kept for any call
- * sites that need direct encrypt/decrypt outside the ORM layer.
+ * Storage format: `v1:<iv-hex>:<ciphertext-hex>:<authTag-hex>`.
  */
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
@@ -34,11 +27,7 @@ function getKey(): Buffer | null {
   return buf;
 }
 
-export function isEnabled(): boolean {
-  return !!process.env['PII_ENCRYPTION_KEY'];
-}
-
-export function encrypt(plaintext: string | null | undefined): string | null {
+export function piiEncrypt(plaintext: string | null | undefined): string | null {
   if (plaintext == null) return plaintext ?? null;
   const key = getKey();
   if (!key) return plaintext;
@@ -49,12 +38,15 @@ export function encrypt(plaintext: string | null | undefined): string | null {
   return `${PREFIX}${iv.toString('hex')}:${enc.toString('hex')}:${tag.toString('hex')}`;
 }
 
-export function decrypt(value: string | null | undefined): string | null {
+export function piiDecrypt(value: string | null | undefined): string | null {
   if (value == null) return value ?? null;
   const key = getKey();
   if (!key) return value;
   if (!value.startsWith(PREFIX)) return value; // legacy plaintext row
-  const [, ivHex, encHex, tagHex] = value.split(':');
+  const parts = value.split(':');
+  const ivHex = parts[1];
+  const encHex = parts[2];
+  const tagHex = parts[3];
   if (!ivHex || !encHex || !tagHex) return value;
   try {
     const iv = Buffer.from(ivHex, 'hex');
@@ -66,21 +58,6 @@ export function decrypt(value: string | null | undefined): string | null {
     const dec = Buffer.concat([decipher.update(enc), decipher.final()]);
     return dec.toString('utf8');
   } catch {
-    // Bad ciphertext or wrong key — return raw so callers can surface
-    // a "decryption failed" error in their own context.
     return value;
   }
-}
-
-/**
- * Convenience for fields that are sometimes null. Mirrors the shape of
- * Prisma scalars so callers can `field: encryptIfPresent(input.field)`
- * without a ternary.
- */
-export function encryptIfPresent(v: string | null | undefined): string | null {
-  return v == null ? null : encrypt(v);
-}
-
-export function decryptIfPresent(v: string | null | undefined): string | null {
-  return v == null ? null : decrypt(v);
 }
