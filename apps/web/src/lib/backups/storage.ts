@@ -16,6 +16,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { putS3Object } from './s3';
 
 export type ParsedDestination =
   | { kind: 'local'; dir: string }
@@ -59,16 +60,27 @@ export async function writeBackup(
   fileName: string,
   contents: Buffer | string,
 ): Promise<BackupWriteResult> {
-  if (parsed.kind !== 'local') {
-    throw new Error(
-      `Backup destination "${parsed.kind}" is not yet implemented. Use a \`local:<path>\` destination or wire up the cloud adapter.`,
-    );
-  }
-  await mkdir(parsed.dir, { recursive: true });
-  const absPath = path.join(parsed.dir, fileName);
   const payload = typeof contents === 'string' ? Buffer.from(contents, 'utf8') : contents;
-  await writeFile(absPath, payload);
-  return { uri: `local:${absPath}`, sizeBytes: payload.byteLength };
+
+  if (parsed.kind === 'local') {
+    await mkdir(parsed.dir, { recursive: true });
+    const absPath = path.join(parsed.dir, fileName);
+    await writeFile(absPath, payload);
+    return { uri: `local:${absPath}`, sizeBytes: payload.byteLength };
+  }
+
+  if (parsed.kind === 's3') {
+    const key = parsed.prefix ? `${parsed.prefix.replace(/\/+$/, '')}/${fileName}` : fileName;
+    await putS3Object({ bucket: parsed.bucket, key, body: payload });
+    return { uri: `s3://${parsed.bucket}/${key}`, sizeBytes: payload.byteLength };
+  }
+
+  // gcs is intentionally still a stub — owner hasn't requested GCS; if we
+  // wire it, do it as a focused PR with its own creds path. Today we fail
+  // loudly rather than silently.
+  throw new Error(
+    `Backup destination "${parsed.kind}" is not yet implemented. Use local:<path> or s3://bucket/prefix.`,
+  );
 }
 
 export function timestampedFileName(prefix: string, ext: string, now: Date = new Date()): string {

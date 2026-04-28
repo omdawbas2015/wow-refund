@@ -26,6 +26,7 @@ import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import { prisma } from '@wow/db';
 import { parseDestination, timestampedFileName, writeBackup, type ParsedDestination } from './storage';
+import { pruneOldBackups } from './retention';
 
 export type BackupTrigger = 'MANUAL' | 'SCHEDULED';
 
@@ -154,6 +155,24 @@ export async function runBackup(options: RunBackupOptions): Promise<RunBackupRes
         destination: written.uri,
       },
     });
+
+    // Best-effort retention sweep. Intentionally non-fatal: a failed
+    // prune must not flip a successful backup to FAILED.
+    if (settings?.retentionDays && settings.retentionDays > 0) {
+      try {
+        const pruned = await pruneOldBackups(settings.retentionDays);
+        if (pruned.fileErrors.length > 0) {
+          console.warn(
+            `[backup] retention sweep left ${pruned.fileErrors.length} file error(s); last: ${pruned.fileErrors[0]?.reason}`,
+          );
+        }
+      } catch (pruneErr) {
+        console.warn(
+          `[backup] retention sweep failed: ${pruneErr instanceof Error ? pruneErr.message : String(pruneErr)}`,
+        );
+      }
+    }
+
     return { logId: log.id, status: 'SUCCESS', uri: written.uri, sizeBytes: written.sizeBytes };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
