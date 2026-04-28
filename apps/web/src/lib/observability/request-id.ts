@@ -12,8 +12,6 @@
  * proxies can echo it back when they file a bug report.
  */
 
-import { randomBytes } from 'node:crypto';
-
 const HEADER = 'x-request-id';
 
 export function requestIdHeader(): string {
@@ -23,7 +21,15 @@ export function requestIdHeader(): string {
 export function generateRequestId(): string {
   // 16 random bytes → 22-char base64url. Short enough to fit in a log
   // line without bloat, long enough that collisions are not a concern.
-  return randomBytes(16).toString('base64url');
+  // Uses the Web Crypto API (available in both the Node.js runtime and
+  // the Next.js Edge runtime, where node:crypto is not available).
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) {
+    bin += String.fromCharCode(bytes[i]!);
+  }
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 /**
