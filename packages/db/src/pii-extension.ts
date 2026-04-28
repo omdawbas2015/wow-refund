@@ -92,7 +92,10 @@ export function rewriteWhere(where: unknown): unknown {
   }
   if (Array.isArray(next['OR'])) next['OR'] = next['OR'].map(rewriteWhere);
   if (Array.isArray(next['AND'])) next['AND'] = next['AND'].map(rewriteWhere);
+  // Prisma's NOT accepts both a single condition object AND an array of
+  // conditions (ANDed). Recurse into both shapes.
   if (isPlainObject(next['NOT'])) next['NOT'] = rewriteWhere(next['NOT']);
+  if (Array.isArray(next['NOT'])) next['NOT'] = next['NOT'].map(rewriteWhere);
   return next;
 }
 
