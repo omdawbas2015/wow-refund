@@ -61,13 +61,27 @@ describe('writeBackup', () => {
     expect(stats.size).toBe(11);
   });
 
-  it('rejects cloud destinations until wired up', async () => {
-    await expect(
-      writeBackup({ kind: 's3', bucket: 'b', prefix: 'p' }, 'x', ''),
-    ).rejects.toThrow(/not yet implemented/);
+  it('rejects gcs destinations until wired up', async () => {
     await expect(
       writeBackup({ kind: 'gcs', bucket: 'b', prefix: 'p' }, 'x', ''),
     ).rejects.toThrow(/not yet implemented/);
+  });
+
+  it('fails s3 with a clear error when credentials are missing', async () => {
+    // Credentials not set in the test env — surface the expected message
+    // so we never silently skip an S3 backup in prod.
+    const origAws = process.env['AWS_ACCESS_KEY_ID'];
+    const origBak = process.env['BACKUP_S3_ACCESS_KEY_ID'];
+    delete process.env['AWS_ACCESS_KEY_ID'];
+    delete process.env['BACKUP_S3_ACCESS_KEY_ID'];
+    try {
+      await expect(
+        writeBackup({ kind: 's3', bucket: 'b', prefix: 'p' }, 'x', 'hello'),
+      ).rejects.toThrow(/AWS credentials/);
+    } finally {
+      if (origAws) process.env['AWS_ACCESS_KEY_ID'] = origAws;
+      if (origBak) process.env['BACKUP_S3_ACCESS_KEY_ID'] = origBak;
+    }
   });
 });
 
