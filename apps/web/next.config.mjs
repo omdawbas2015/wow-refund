@@ -1,4 +1,5 @@
 import createNextIntlPlugin from 'next-intl/plugin';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
@@ -27,4 +28,25 @@ const nextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+const intlConfig = withNextIntl(nextConfig);
+
+// Wrap with Sentry only when an auth token is configured — that's the signal
+// that the build host should upload source maps. Local / preview builds
+// still emit the runtime SDK (which is a no-op when SENTRY_DSN is unset),
+// they just don't hit the Sentry API.
+const shouldUploadSourceMaps = Boolean(
+  process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT,
+);
+
+export default shouldUploadSourceMaps
+  ? withSentryConfig(intlConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      hideSourceMaps: true,
+      disableLogger: true,
+      telemetry: false,
+    })
+  : intlConfig;
