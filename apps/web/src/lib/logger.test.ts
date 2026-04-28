@@ -1,44 +1,51 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('lib/logger', () => {
-  const originalWrite = process.stdout.write;
-  let writeCallCount = 0;
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.resetModules();
-    delete process.env['LOG_LEVEL'];
-    writeCallCount = 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    process.stdout.write = ((...args: any[]) => {
-      writeCallCount++;
-      return originalWrite.apply(process.stdout, args as [string]);
-    }) as typeof process.stdout.write;
+    delete process.env.LOG_LEVEL;
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    process.stdout.write = originalWrite;
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
-  it('emits structured output via pino', async () => {
+  it('emits at the right console method per level', async () => {
     const { logger } = await import('./logger');
     logger.info('hello');
     logger.warn('careful');
     logger.error('boom');
-    expect(writeCallCount).toBeGreaterThan(0);
+    expect(logSpy).toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
   });
 
-  it('child(bindings) returns a logger with same API', async () => {
+  it('respects LOG_LEVEL=warn (info is dropped)', async () => {
+    process.env.LOG_LEVEL = 'warn';
+    const { logger } = await import('./logger');
+    logger.debug('skip me');
+    logger.info('skip me too');
+    logger.warn('keep me');
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('child(bindings) merges fields into every emission', async () => {
     const { logger } = await import('./logger');
     const scoped = logger.child({ requestId: 'abc' });
-    expect(scoped).toBeDefined();
-    expect(typeof scoped.info).toBe('function');
-    expect(typeof scoped.error).toBe('function');
     scoped.info({ caseId: 'c1' }, 'created');
-    expect(writeCallCount).toBeGreaterThan(0);
-  });
-
-  it('exports Logger type', async () => {
-    const mod = await import('./logger');
-    expect(mod.logger).toBeDefined();
+    expect(logSpy).toHaveBeenCalled();
+    const args = logSpy.mock.calls[0]!;
+    const tail = args[args.length - 1] as Record<string, unknown>;
+    expect(tail).toMatchObject({ requestId: 'abc', caseId: 'c1' });
   });
 });
