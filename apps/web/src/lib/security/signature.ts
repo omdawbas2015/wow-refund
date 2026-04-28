@@ -41,19 +41,4 @@ export function verifyBodySignature(body: string, providedSignature: string, sec
   }
 }
 
-/**
- * Constant-time equality for the legacy contract where the header value is
- * the shared secret itself. Kept as a separate helper so callers have to
- * opt into the legacy behavior (typically behind a deprecation warning).
- */
-export function legacyEqualsSecret(providedHeader: string, secret: string): boolean {
-  if (!providedHeader || !secret) return false;
-  const a = Buffer.from(providedHeader, 'utf8');
-  const b = Buffer.from(secret, 'utf8');
-  if (a.length !== b.length) return false;
-  try {
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
-  }
-}
+

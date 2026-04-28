@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { signBody, verifyBodySignature, legacyEqualsSecret } from './signature';
+import { signBody, verifyBodySignature } from './signature';
 
 describe('signBody / verifyBodySignature', () => {
   const secret = 'test-secret-123';
@@ -44,19 +44,4 @@ describe('signBody / verifyBodySignature', () => {
   });
 });
 
-describe('legacyEqualsSecret', () => {
-  const secret = 'plaintext-shared-secret';
 
-  it('accepts matching', () => {
-    expect(legacyEqualsSecret(secret, secret)).toBe(true);
-  });
-
-  it('rejects different length', () => {
-    expect(legacyEqualsSecret(secret + 'x', secret)).toBe(false);
-  });
-
-  it('rejects empty', () => {
-    expect(legacyEqualsSecret('', secret)).toBe(false);
-    expect(legacyEqualsSecret(secret, '')).toBe(false);
-  });
-});

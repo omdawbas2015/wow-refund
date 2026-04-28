@@ -49,11 +49,11 @@ You need the following before you can wire up the flows:
      `HMAC-SHA256(rawBody, INBOUND_SECRET)` and sends the hex digest in
      the `x-wow-signature` header; the webhook verifies it the same way.
 
-   > **Backward compatibility:** the inbound route still accepts a
-   > plaintext `x-wow-signature: <INBOUND_SECRET>` header for Flows
-   > imported before HMAC was required. A deprecation warning is logged
-   > in that case — roll the Flow over to HMAC at your earliest
-   > convenience (see section 2 for the Flow expression).
+   > **No legacy fallback:** the inbound route only accepts HMAC-signed
+   > headers. (Earlier builds tolerated a plaintext `x-wow-signature:
+   > <INBOUND_SECRET>` header and logged a deprecation warning; that
+   > path has been removed.) If your imported Flow predates HMAC, see
+   > section 2 for the expression to compute the digest.
 
    Put both into your platform's `.env`:
 
