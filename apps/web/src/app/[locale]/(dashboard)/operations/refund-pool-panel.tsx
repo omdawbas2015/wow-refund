@@ -922,10 +922,19 @@ function CallFollowUp({
     );
   }
 
+  // `status === 'PENDING'` also lands here for viewers who can't execute
+  // (e.g. MANAGER). Render a neutral "call pending" banner instead of
+  // falling through to NOT_NEEDED, which would be misleading.
   const meta: Record<
-    'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED',
+    'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED',
     { tone: string; Icon: typeof PhoneCall; title: string; detail: string }
   > = {
+    PENDING: {
+      tone: 'border-amber-200 bg-amber-50/60 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-300',
+      Icon: PhoneCall,
+      title: 'Call pending',
+      detail: 'Waiting for an agent to confirm the refund with the customer.',
+    },
     ANSWERED: {
       tone: 'border-emerald-200 bg-emerald-50/60 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:text-emerald-300',
       Icon: CheckCircle2,
@@ -945,7 +954,8 @@ function CallFollowUp({
       detail: 'No call was needed.',
     },
   };
-  const m = meta[status as 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED'] ?? meta.NOT_NEEDED;
+  const m =
+    meta[status as 'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED'] ?? meta.NOT_NEEDED;
 
   return (
     <div className={cn('flex flex-wrap items-center gap-3 rounded-xl border px-3 py-3', m.tone)}>
