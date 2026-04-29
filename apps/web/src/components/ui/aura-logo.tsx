@@ -2,16 +2,14 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 /**
- * Aura partner-brand chip rendered from the official Aura logo
- * (magenta circular mark + wordmark) shipped under
- * `/public/brand/aura-mark.png`.
- *
- * The asset is already 322x120 (~2.7:1) on a transparent background,
- * so we just place it on a white chip with `object-contain` and a
- * tiny inset; that keeps the wordmark fully readable from 16px up.
+ * Aura partner-brand chip rendered as just the circular icon mark
+ * (the magenta circle with the Arabic أورا inside) — no wordmark,
+ * no surrounding white field. Using only the icon makes the badge
+ * read at the same density as Apple Pay / KNET / Mastercard chips
+ * and avoids the wide white halo the full wordmark version produced.
  */
 export function AuraLogo({
-  size = 18,
+  size = 20,
   className,
   title = 'Aura',
 }: {
@@ -19,32 +17,16 @@ export function AuraLogo({
   className?: string;
   title?: string;
 }) {
-  const width = Math.round(size * 2.7);
-  const radius = Math.max(2, Math.round(size * 0.22));
-
   return (
-    <span
-      role="img"
-      aria-label={title}
+    <Image
+      src="/brand/aura-icon.png"
+      alt={title}
       title={title}
-      className={cn(
-        'inline-flex flex-none items-center justify-center overflow-hidden bg-white ring-1 ring-inset ring-black/5',
-        className,
-      )}
-      style={{
-        height: `${size}px`,
-        width: `${width}px`,
-        borderRadius: `${radius}px`,
-      }}
-    >
-      <Image
-        src="/brand/aura-mark.png"
-        alt={title}
-        width={width * 2}
-        height={size * 2}
-        className="h-full w-full object-contain p-[2px]"
-        priority={false}
-      />
-    </span>
+      width={size * 2}
+      height={size * 2}
+      className={cn('inline-block flex-none object-contain', className)}
+      style={{ height: `${size}px`, width: `${size}px` }}
+      priority={false}
+    />
   );
 }

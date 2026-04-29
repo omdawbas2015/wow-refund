@@ -189,19 +189,19 @@ function KnetBadge({ label, size }: RendererProps) {
 }
 
 function AuraBadge({ label, size }: RendererProps) {
-  // Official Aura logo (magenta circular mark + wordmark) sits on a
-  // white chip with object-contain so the wordmark stays legible at
-  // the standard 14x9 / 28x18 footprint.
-  const w = size === 'md' ? 56 : 28;
-  const h = size === 'md' ? 36 : 18;
+  // Aura icon-only treatment (magenta circle with Arabic أورا), sized
+  // to fit the standard payment-chip footprint without horizontal
+  // letterboxing — the wordmark version is too wide for this chip.
+  const dim = size === 'md' ? 28 : 14;
   return (
     <Chip label={label} size={size} className="bg-white">
       <Image
-        src="/brand/aura-mark.png"
+        src="/brand/aura-icon.png"
         alt={label}
-        width={w * 2}
-        height={h * 2}
-        className="h-full w-full object-contain p-[2px]"
+        width={dim * 2}
+        height={dim * 2}
+        className="object-contain"
+        style={{ height: `${dim}px`, width: `${dim}px` }}
       />
     </Chip>
   );

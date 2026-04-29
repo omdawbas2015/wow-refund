@@ -1364,32 +1364,51 @@ function CustomerCallFollowUp({
 }
 
 /**
- * Mirrors the shape of <ComponentStatusBadge> so the Aura row reads the
- * same as a payment component.
+ * Aura points pill — visually identical to the payment component
+ * status badge (same dot + tonal pill + emerald hue when complete) so
+ * a "Redeemed" Aura row reads the same as a "Refunded" payment row.
  */
 function AuraStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    NONE: 'bg-muted text-muted-foreground',
-    PENDING:
-      'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
-    COMPLETED:
-      'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
-    FAILED: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400',
+  const tones: Record<
+    string,
+    { dot: string; bg: string; text: string; label: string }
+  > = {
+    NONE: {
+      dot: 'bg-zinc-400',
+      bg: 'bg-zinc-500/10',
+      text: 'text-zinc-700 dark:text-zinc-300',
+      label: 'No points',
+    },
+    PENDING: {
+      dot: 'bg-amber-500',
+      bg: 'bg-amber-500/10',
+      text: 'text-amber-700 dark:text-amber-400',
+      label: 'Awaiting batch',
+    },
+    COMPLETED: {
+      dot: 'bg-emerald-500',
+      bg: 'bg-emerald-500/10',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      label: 'Redeemed',
+    },
+    FAILED: {
+      dot: 'bg-rose-500',
+      bg: 'bg-rose-500/10',
+      text: 'text-rose-700 dark:text-rose-400',
+      label: 'Failed',
+    },
   };
-  const labels: Record<string, string> = {
-    NONE: 'No points',
-    PENDING: 'Awaiting batch',
-    COMPLETED: 'Redeemed',
-    FAILED: 'Failed',
-  };
+  const tone = tones[status] ?? tones.NONE!;
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium',
-        styles[status] ?? styles.NONE,
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium',
+        tone.bg,
+        tone.text,
       )}
     >
-      {labels[status] ?? status}
+      <span className={cn('h-1.5 w-1.5 rounded-full', tone.dot)} aria-hidden />
+      {tone.label}
     </span>
   );
 }
