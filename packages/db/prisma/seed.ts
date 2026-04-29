@@ -571,6 +571,306 @@ async function seedDemoCases() {
   });
 }
 
+/**
+ * Realistic Refund Pool scenario:
+ * 5 APPROVED cases (KW, SA, AE, BH, OM) with manager-approved batches,
+ * full customer contact log, and components ready for KNET/Aura execution.
+ *
+ * Idempotent — keyed off case numbers REF-XX-YYYY-9000XX. Skipped unless
+ * SEED_REFUND_POOL=1 is set so prod / CI never picks it up by accident.
+ */
+async function seedRefundPoolScenario() {
+  if (process.env['SEED_REFUND_POOL'] !== '1') {
+    console.log('→ Skipping refund pool scenario (set SEED_REFUND_POOL=1 to seed)');
+    return;
+  }
+  console.log('→ Seeding Refund Pool demo scenario (5 approved cases)...');
+
+  const admin = await prisma.user.findUnique({ where: { email: 'admin@wow.local' } });
+  if (!admin) {
+    console.log('  ! admin missing, skipping');
+    return;
+  }
+  const knet = await prisma.paymentMethod.findUnique({ where: { key: 'KNET' } });
+  const apple = await prisma.paymentMethod.findUnique({ where: { key: 'APPLE_PAY' } });
+  const visa = await prisma.paymentMethod.findUnique({ where: { key: 'VISA' } });
+  const mastercard = await prisma.paymentMethod.findUnique({ where: { key: 'MASTERCARD' } });
+  if (!knet || !apple || (!visa && !mastercard)) {
+    console.log('  ! payment methods missing, skipping');
+    return;
+  }
+  const card = visa ?? mastercard!;
+
+  type Scenario = {
+    countryCode: string;
+    brandSlug: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    orderNumber: string;
+    orderAmount: number;
+    refundAmount: number;
+    currency: string;
+    paymentMethodId: string;
+    paymentLabel: string;
+    authCode?: string;
+    last4?: string;
+    auraPoints?: number;
+    contactAttempts: { atHoursAgo: number; channel: string; outcome: string; agent: string }[];
+    managerEmail: string;
+    managerReply: string;
+    rootCauseSummary: string;
+  };
+
+  const scenarios: Scenario[] = [
+    {
+      countryCode: 'KW',
+      brandSlug: 'starbucks',
+      customerName: 'Noor Al-Sabah',
+      customerEmail: 'noor.sabah@example.com',
+      customerPhone: '+96599112233',
+      orderNumber: 'SBX-KW-90015',
+      orderAmount: 8.75,
+      refundAmount: 8.75,
+      currency: 'KWD',
+      paymentMethodId: knet.id,
+      paymentLabel: 'KNET',
+      authCode: 'A77231',
+      contactAttempts: [
+        { atHoursAgo: 30, channel: 'Phone', outcome: 'No answer', agent: 'Default Admin' },
+        { atHoursAgo: 26, channel: 'WhatsApp', outcome: 'Customer confirmed refund preference: KNET', agent: 'Default Admin' },
+      ],
+      managerEmail: 'kw-manager@wow.local',
+      managerReply: 'Approved — please process the refund. — KW Manager',
+      rootCauseSummary: 'Wrong drink delivered twice; customer asked for full refund.',
+    },
+    {
+      countryCode: 'SA',
+      brandSlug: 'chipotle',
+      customerName: 'Faisal Al-Otaibi',
+      customerEmail: 'faisal.otaibi@example.com',
+      customerPhone: '+966500445566',
+      orderNumber: 'CHP-SA-90217',
+      orderAmount: 95.0,
+      refundAmount: 95.0,
+      currency: 'SAR',
+      paymentMethodId: card.id,
+      paymentLabel: card.key === 'VISA' ? 'Visa' : 'Mastercard',
+      last4: '4421',
+      contactAttempts: [
+        { atHoursAgo: 22, channel: 'Phone', outcome: 'Customer reached, refund acknowledged', agent: 'Default Admin' },
+      ],
+      managerEmail: 'sa-manager@wow.local',
+      managerReply: 'Approved. SA Country Manager.',
+      rootCauseSummary: 'Order missing two main bowls; partial fulfilment refused.',
+    },
+    {
+      countryCode: 'AE',
+      brandSlug: 'starbucks',
+      customerName: 'Maryam Al-Marzooqi',
+      customerEmail: 'maryam.m@example.com',
+      customerPhone: '+971501234567',
+      orderNumber: 'SBX-AE-90118',
+      orderAmount: 35.0,
+      refundAmount: 35.0,
+      currency: 'AED',
+      paymentMethodId: apple.id,
+      paymentLabel: 'Apple Pay',
+      contactAttempts: [
+        { atHoursAgo: 18, channel: 'Phone', outcome: 'Voicemail left', agent: 'Default Admin' },
+        { atHoursAgo: 14, channel: 'Email', outcome: 'Customer replied, refund approved on original card', agent: 'Default Admin' },
+      ],
+      managerEmail: 'ae-manager@wow.local',
+      managerReply: 'Approved — proceed with Apple Pay reversal. UAE Manager',
+      rootCauseSummary: 'Late delivery (>60 minutes); compensation refund requested.',
+    },
+    {
+      countryCode: 'BH',
+      brandSlug: 'chipotle',
+      customerName: 'Khalid Al-Khalifa',
+      customerEmail: 'khalid.k@example.com',
+      customerPhone: '+97333445566',
+      orderNumber: 'CHP-BH-90042',
+      orderAmount: 12.0,
+      refundAmount: 12.0,
+      currency: 'BHD',
+      paymentMethodId: card.id,
+      paymentLabel: card.key === 'VISA' ? 'Visa' : 'Mastercard',
+      last4: '8881',
+      auraPoints: 200,
+      contactAttempts: [
+        { atHoursAgo: 12, channel: 'Phone', outcome: 'Customer agreed refund + 200 Aura goodwill', agent: 'Default Admin' },
+      ],
+      managerEmail: 'bh-manager@wow.local',
+      managerReply: 'Approved with 200 Aura goodwill. BH Manager.',
+      rootCauseSummary: 'Cold food on delivery; offered card refund + Aura points.',
+    },
+    {
+      countryCode: 'OM',
+      brandSlug: 'starbucks',
+      customerName: 'Sultan Al-Busaidi',
+      customerEmail: 'sultan.b@example.com',
+      customerPhone: '+96891234567',
+      orderNumber: 'SBX-OM-90067',
+      orderAmount: 6.0,
+      refundAmount: 6.0,
+      currency: 'OMR',
+      paymentMethodId: knet.id,
+      paymentLabel: 'KNET',
+      authCode: 'A91204',
+      contactAttempts: [
+        { atHoursAgo: 9, channel: 'Phone', outcome: 'Customer confirmed KNET refund preference', agent: 'Default Admin' },
+        { atHoursAgo: 5, channel: 'SMS', outcome: 'Refund tracking link sent', agent: 'Default Admin' },
+      ],
+      managerEmail: 'om-manager@wow.local',
+      managerReply: 'Approved. OM Country Manager.',
+      rootCauseSummary: 'Stale pastry; customer requested refund of single line item.',
+    },
+  ];
+
+  const rootCause = await prisma.rootCause.findFirst();
+
+  for (let i = 0; i < scenarios.length; i++) {
+    const s = scenarios[i]!;
+    const country = await prisma.country.findUnique({
+      where: { registryCode: s.countryCode },
+      include: { registry: true },
+    });
+    const brand = await prisma.brand.findUnique({ where: { slug: s.brandSlug } });
+    if (!country || !brand) {
+      console.log(`  ! ${s.countryCode}/${s.brandSlug} not active, skipping ${s.customerName}`);
+      continue;
+    }
+
+    const caseNumber = `REF-${country.registry.code}-${new Date().getFullYear()}-9${(i + 1).toString().padStart(5, '0')}`;
+    const existing = await prisma.refundCase.findUnique({ where: { caseNumber } });
+    if (existing) {
+      console.log(`  · ${caseNumber} already exists, skipping`);
+      continue;
+    }
+
+    // Approval batch — one per country, status DECIDED, manager replied positively.
+    const batchNumber = `APB-${country.registry.code}-${new Date().getFullYear()}-9${(i + 1).toString().padStart(4, '0')}`;
+    const approvalBatch = await prisma.approvalBatch.create({
+      data: {
+        batchNumber,
+        countryId: country.id,
+        status: 'COMPLETED',
+        createdById: admin.id,
+        scheduledFor: new Date(Date.now() - 2 * 86_400_000),
+        sentAt: new Date(Date.now() - 2 * 86_400_000),
+        recipientEmails: s.managerEmail,
+        responseReceivedAt: new Date(Date.now() - 1 * 86_400_000),
+        responseRawBody: s.managerReply,
+        responseParsed: JSON.stringify({ decisions: [{ caseNumber, decision: 'APPROVED' }] }),
+        totalCases: 1,
+        approvedCases: 1,
+        rejectedCases: 0,
+        completedAt: new Date(Date.now() - 1 * 86_400_000),
+      },
+    });
+
+    // Update country managerEmail if it was empty so the UI shows it set.
+    if (!country.managerEmail) {
+      await prisma.country.update({ where: { id: country.id }, data: { managerEmail: s.managerEmail } });
+    }
+
+    const created = await prisma.refundCase.create({
+      data: {
+        caseNumber,
+        externalCaseNumber: `CRM-9${(100000 + i).toString()}`,
+        countryId: country.id,
+        brandId: brand.id,
+        customerName: s.customerName,
+        customerEmail: s.customerEmail,
+        customerPhone: s.customerPhone,
+        customerNotes: s.rootCauseSummary,
+        orderNumber: s.orderNumber,
+        orderDate: new Date(Date.now() - 3 * 86_400_000),
+        orderAmount: s.orderAmount,
+        orderCurrency: s.currency,
+        totalRefundAmount: s.refundAmount,
+        isPartial: Math.abs(s.refundAmount - s.orderAmount) > 0.001,
+        status: 'APPROVED',
+        rootCauseId: rootCause?.id ?? null,
+        rootCauseNotes: s.rootCauseSummary,
+        createdById: admin.id,
+        approvedById: admin.id,
+        approvedAt: new Date(Date.now() - 1 * 86_400_000),
+        approvalBatchId: approvalBatch.id,
+        auraPoints: s.auraPoints ?? null,
+        auraStatus: s.auraPoints ? 'PENDING' : 'NONE',
+        components: {
+          create: {
+            paymentMethodId: s.paymentMethodId,
+            amount: s.refundAmount,
+            currency: s.currency,
+            authCode: s.authCode ?? null,
+            last4: s.last4 ?? null,
+            // Approved & ready to be added to the next KNET / card refund batch.
+            status: 'AWAITING_BATCH',
+          },
+        },
+      },
+    });
+
+    // Activity log: created → manager email sent → manager replied → contact attempts → approved
+    const baseTime = Date.now() - 3 * 86_400_000;
+    await prisma.activityLog.createMany({
+      data: [
+        {
+          caseId: created.id,
+          actorId: admin.id,
+          actorLabel: admin.name,
+          kind: 'case.created',
+          message: `Case ${caseNumber} created`,
+          createdAt: new Date(baseTime),
+        },
+        {
+          caseId: created.id,
+          actorId: admin.id,
+          actorLabel: admin.name,
+          kind: 'batch.sent',
+          message: `Approval batch ${batchNumber} sent to ${s.managerEmail}`,
+          createdAt: new Date(baseTime + 4 * 3600_000),
+        },
+        {
+          caseId: created.id,
+          actorLabel: 'Power Automate',
+          kind: 'batch.replied',
+          message: `Manager approval received for ${caseNumber}`,
+          createdAt: new Date(Date.now() - 1 * 86_400_000),
+        },
+        ...s.contactAttempts.map((c) => ({
+          caseId: created.id,
+          actorId: admin.id,
+          actorLabel: c.agent,
+          kind: 'case.contact_attempt',
+          message: `${c.channel}: ${c.outcome}`,
+          metadata: JSON.stringify({ channel: c.channel, outcome: c.outcome }),
+          createdAt: new Date(Date.now() - c.atHoursAgo * 3600_000),
+        })),
+      ],
+    });
+
+    // Notes mirror the contact log so they also surface on /cases/:id.
+    for (const c of s.contactAttempts) {
+      await prisma.caseNote.create({
+        data: {
+          caseId: created.id,
+          authorId: admin.id,
+          body: `[CONTACT · ${c.channel}] ${c.outcome}`,
+          createdAt: new Date(Date.now() - c.atHoursAgo * 3600_000),
+        },
+      });
+    }
+
+    console.log(`  ✓ ${caseNumber} (${s.customerName}, ${s.paymentLabel}, ${s.refundAmount} ${s.currency})`);
+  }
+
+  console.log('→ Refund Pool scenario seeded.');
+}
+
 async function seedFeatureFlags() {
   const flags = [
     { key: 'feature.promo.compensation', enabled: true, description: 'Enable customer compensation promos' },
@@ -609,6 +909,7 @@ async function main() {
   await seedDefaultAdmin();
   await seedFeatureFlags();
   await seedDemoCases();
+  await seedRefundPoolScenario();
 
   console.log('\n✓ Seed complete.');
 }

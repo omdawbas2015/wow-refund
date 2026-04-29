@@ -894,6 +894,37 @@ export async function createPromoConfigAction(
     }
     const { brandId, countryId, type, value, currency, label } = parsed.data;
 
+    // Enforce country active + brand wired up to country (BrandCountry).
+    // Mirrors case-creation guard so the system is internally consistent —
+    // configs can only exist for active brand×country pairs.
+    const [country, brand, brandCountry] = await Promise.all([
+      prisma.country.findUnique({
+        where: { id: countryId },
+        include: { registry: { select: { nameEn: true } } },
+      }),
+      prisma.brand.findUnique({ where: { id: brandId }, select: { name: true, isActive: true } }),
+      prisma.brandCountry.findUnique({
+        where: { brandId_countryId: { brandId, countryId } },
+        select: { isActive: true },
+      }),
+    ]);
+    if (!country) return { ok: false, error: 'Invalid country.' };
+    if (!country.isActive) {
+      return {
+        ok: false,
+        error: `${country.registry.nameEn} is not active. Activate it from Admin → Countries first.`,
+      };
+    }
+    if (!brand || !brand.isActive) {
+      return { ok: false, error: 'Brand not found or inactive.' };
+    }
+    if (!brandCountry || !brandCountry.isActive) {
+      return {
+        ok: false,
+        error: `${brand.name} is not enabled for ${country.registry.nameEn}. Enable it from Admin → Countries → Edit.`,
+      };
+    }
+
     const dup = await prisma.promoConfig.findUnique({
       where: { brandId_countryId_type_value: { brandId, countryId, type, value } },
     });

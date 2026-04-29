@@ -15,6 +15,24 @@ export const updateCountrySchema = z.object({
 });
 export type UpdateCountryInput = z.infer<typeof updateCountrySchema>;
 
+/**
+ * Activate or update a country in one shot, including which brands operate
+ * there. Used by /admin/countries to make adding a new country a single,
+ * complete flow (no need for multiple round-trips through separate admin
+ * pages). When `isActive` is true the country row is created on demand.
+ */
+export const upsertCountrySettingsSchema = z.object({
+  registryCode: nonEmptyString.max(8),
+  isActive: z.coerce.boolean(),
+  managerEmail: z.string().trim().email().optional().or(z.literal('')),
+  cutoffTime: z
+    .string()
+    .regex(/^([01]?\d|2[0-3]):[0-5]\d$/, 'Use HH:mm'),
+  sortOrder: z.coerce.number().int().min(0).default(0),
+  brandIds: z.array(nonEmptyString).default([]),
+});
+export type UpsertCountrySettingsInput = z.infer<typeof upsertCountrySettingsSchema>;
+
 // ── Brand ─────────────────────────────────────────────────────────────────
 
 export const upsertBrandSchema = z.object({

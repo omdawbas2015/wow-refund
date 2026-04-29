@@ -11,32 +11,12 @@ import {
   Gift,
   Store,
   BarChart3,
-  Users,
   ClipboardList,
-  Globe,
   Settings,
-  CreditCard,
-  Mail,
-  Tag,
-  AlertTriangle,
-  History,
-  MessageSquare,
-  ShieldAlert,
-  Timer,
   Bell,
   Search as SearchIcon,
   Sparkles,
   User as UserIcon,
-  Activity,
-  Server,
-  CalendarClock,
-  Coins,
-  Building2,
-  CalendarRange,
-  Workflow,
-  CloudUpload,
-  ToggleLeft,
-  Palette,
 } from 'lucide-react';
 
 interface NavSection {
@@ -61,7 +41,14 @@ export function Sidebar({
   const t = useTranslations('nav');
   const disabled = new Set(disabledModules);
 
-  const opsRole = role === 'ADMIN' || role === 'OPERATIONS' || role === 'MANAGER';
+  // Refund Pool is for whoever actually executes refunds. The seeded role
+  // for that work is REFUND_AGENT (DB) — the older 'OPERATIONS' string is
+  // kept as a legacy alias because some env data may still hold it.
+  const opsRole =
+    role === 'ADMIN' ||
+    role === 'MANAGER' ||
+    role === 'REFUND_AGENT' ||
+    role === 'OPERATIONS';
   const sections: NavSection[] = [
     {
       label: '',
@@ -95,31 +82,15 @@ export function Sidebar({
         { label: 'Changelog', href: '/changelog', icon: Sparkles },
       ],
     },
+    // Admin sidebar is intentionally minimal: only items an admin touches
+    // every day belong here. Everything else (users, brands, branches,
+    // workflow rules, templates, cron, modules, system info, etc.) lives
+    // inside /admin/settings as a grouped hub. The hub stays one click
+    // away while the daily flow stays uncluttered.
     {
       label: t('admin'),
       items: [
-        { label: t('users'), href: '/admin/users', icon: Users, adminOnly: true },
         { label: t('pendingApprovals'), href: '/admin/pending-approvals', icon: ClipboardList, adminOnly: true },
-        { label: t('countries'), href: '/admin/countries', icon: Globe, adminOnly: true },
-        { label: 'Currencies', href: '/admin/currencies', icon: Coins, adminOnly: true },
-        { label: 'Brands', href: '/admin/brands', icon: Tag, adminOnly: true },
-        { label: 'Branches', href: '/admin/branches', icon: Building2, adminOnly: true },
-        { label: t('paymentMethods'), href: '/admin/payment-methods', icon: CreditCard, adminOnly: true },
-        { label: 'Root Causes', href: '/admin/root-causes', icon: AlertTriangle, adminOnly: true },
-        { label: 'Store Templates', href: '/admin/store-templates', icon: MessageSquare, adminOnly: true },
-        { label: t('emailTemplates'), href: '/admin/email-templates', icon: Mail, adminOnly: true },
-        { label: t('auditLog') ?? 'Audit Log', href: '/admin/audit-log', icon: History, adminOnly: true },
-        { label: 'Email Log', href: '/admin/email-log', icon: Mail, adminOnly: true },
-        { label: 'SLA Rules', href: '/admin/sla-rules', icon: Timer, adminOnly: true },
-        { label: 'Fraud Signals', href: '/admin/fraud-signals', icon: ShieldAlert, adminOnly: true, module: 'fraud-signals' },
-        { label: 'Automation Rules', href: '/admin/automation-rules', icon: Workflow, adminOnly: true, module: 'automation-rules' },
-        { label: 'Batch Schedules', href: '/admin/batch-schedules', icon: CalendarRange, adminOnly: true, module: 'batch-schedules' },
-        { label: 'Scheduled Reports', href: '/admin/scheduled-reports', icon: CalendarClock, adminOnly: true, module: 'scheduled-reports' },
-        { label: 'Backup', href: '/admin/backup', icon: CloudUpload, adminOnly: true, module: 'backup' },
-        { label: 'Modules', href: '/admin/modules', icon: ToggleLeft, adminOnly: true },
-        { label: 'Design Tokens', href: '/admin/design-tokens', icon: Palette, adminOnly: true },
-        { label: 'Cron Status', href: '/admin/cron-status', icon: Activity, adminOnly: true },
-        { label: 'System Info', href: '/admin/system-info', icon: Server, adminOnly: true },
         { label: t('settings'), href: '/admin/settings', icon: Settings, adminOnly: true },
       ],
     },
