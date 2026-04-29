@@ -14,28 +14,34 @@ import {
   ClipboardList,
   Settings,
   Bell,
-  Search as SearchIcon,
-  Sparkles,
   User as UserIcon,
 } from 'lucide-react';
 
-interface NavSection {
-  label: string;
-  items: (NavItem & { module?: string })[];
-}
 interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
+  module?: string;
+  /** Numeric badge shown on the right of the row (e.g. pending count). */
+  badge?: number;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
 }
 
 export function Sidebar({
   role,
   disabledModules = [],
+  pendingAccessRequestCount = 0,
 }: {
   role: string | null;
   disabledModules?: string[];
+  /** Number of users awaiting access approval. Drives the dot/badge on
+   *  the User Access Requests row so admins know there's work waiting. */
+  pendingAccessRequestCount?: number;
 }) {
   const pathname = usePathname();
   const t = useTranslations('nav');
@@ -49,15 +55,19 @@ export function Sidebar({
     role === 'MANAGER' ||
     role === 'REFUND_AGENT' ||
     role === 'OPERATIONS';
+
   const sections: NavSection[] = [
     {
       label: '',
       items: [
         { label: t('dashboard'), href: '/', icon: LayoutDashboard },
-        { label: t('cases'), href: '/cases', icon: FileText },
-        { label: 'Search', href: '/search', icon: SearchIcon },
-        { label: 'Notifications', href: '/notifications', icon: Bell },
-        { label: 'Profile', href: '/profile', icon: UserIcon },
+        { label: t('notifications'), href: '/notifications', icon: Bell },
+      ],
+    },
+    {
+      label: t('refund'),
+      items: [
+        { label: t('refundCases'), href: '/cases', icon: FileText },
         ...(opsRole
           ? [{ label: t('operations'), href: '/operations', icon: ShieldCheck }]
           : []),
@@ -79,7 +89,6 @@ export function Sidebar({
       label: t('reports'),
       items: [
         { label: t('reports'), href: '/reports', icon: BarChart3, module: 'reports' },
-        { label: 'Changelog', href: '/changelog', icon: Sparkles },
       ],
     },
     // Admin sidebar is intentionally minimal: only items an admin touches
@@ -90,11 +99,28 @@ export function Sidebar({
     {
       label: t('admin'),
       items: [
-        { label: t('pendingApprovals'), href: '/admin/pending-approvals', icon: ClipboardList, adminOnly: true },
+        {
+          label: t('pendingApprovals'),
+          href: '/admin/pending-approvals',
+          icon: ClipboardList,
+          adminOnly: true,
+          badge: pendingAccessRequestCount,
+        },
         { label: t('settings'), href: '/admin/settings', icon: Settings, adminOnly: true },
       ],
     },
   ];
+
+  // Profile + sign-out style controls live at the bottom of the rail —
+  // they don't belong next to operational nav.
+  const footerItems: NavItem[] = [
+    { label: t('profile'), href: '/profile', icon: UserIcon },
+  ];
+
+  function isActiveHref(href: string) {
+    if (href === '/') return pathname === '/' || /^\/(en|ar)$/.test(pathname);
+    return pathname.endsWith(href) || pathname.includes(`${href}/`);
+  }
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-e border-border bg-surface">
@@ -123,32 +149,59 @@ export function Sidebar({
                 </div>
               ) : null}
               <ul className="space-y-0.5">
-                {items.map((item) => {
-                  const isActive =
-                    item.href === '/' ? pathname === '/' || /^\/(en|ar)$/.test(pathname) : pathname.endsWith(item.href) || pathname.includes(`${item.href}/`);
-                  const Icon = item.icon;
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors',
-                          isActive
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-body hover:bg-surface-subtle hover:text-foreground',
-                        )}
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
+                {items.map((item) => (
+                  <SidebarRow
+                    key={item.href}
+                    item={item}
+                    isActive={isActiveHref(item.href)}
+                  />
+                ))}
               </ul>
             </div>
           );
         })}
       </nav>
+
+      <div className="border-t border-border px-3 py-2">
+        <ul className="space-y-0.5">
+          {footerItems.map((item) => (
+            <SidebarRow
+              key={item.href}
+              item={item}
+              isActive={isActiveHref(item.href)}
+            />
+          ))}
+        </ul>
+      </div>
     </aside>
+  );
+}
+
+function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
+  const Icon = item.icon;
+  const showBadge = (item.badge ?? 0) > 0;
+  return (
+    <li>
+      <Link
+        href={item.href}
+        className={cn(
+          'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors',
+          isActive
+            ? 'bg-primary/10 text-primary'
+            : 'text-body hover:bg-surface-subtle hover:text-foreground',
+        )}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="flex-1 truncate">{item.label}</span>
+        {showBadge ? (
+          <span
+            className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-semibold leading-none text-white"
+            aria-label={`${item.badge} pending`}
+          >
+            {item.badge}
+          </span>
+        ) : null}
+      </Link>
+    </li>
   );
 }
