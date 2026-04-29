@@ -189,24 +189,19 @@ function KnetBadge({ label, size }: RendererProps) {
 }
 
 function AuraBadge({ label, size }: RendererProps) {
-  // Aura's brand mark ships as a wordmark on a soft gradient. We
-  // render it on a CSS gradient field that matches the asset, then
-  // sit the wordmark on top with `object-contain` and a tiny inset so
-  // the AURA letters read clearly even at the small chip footprint.
+  // Official Aura logo (magenta circular mark + wordmark) sits on a
+  // white chip with object-contain so the wordmark stays legible at
+  // the standard 14x9 / 28x18 footprint.
   const w = size === 'md' ? 56 : 28;
   const h = size === 'md' ? 36 : 18;
   return (
-    <Chip
-      label={label}
-      size={size}
-      className="bg-gradient-to-r from-[#dbe7ff] via-white to-[#ffd9ba]"
-    >
+    <Chip label={label} size={size} className="bg-white">
       <Image
         src="/brand/aura-mark.png"
         alt={label}
-        width={w}
-        height={h}
-        className="h-full w-full object-contain p-[2px] mix-blend-multiply"
+        width={w * 2}
+        height={h * 2}
+        className="h-full w-full object-contain p-[2px]"
       />
     </Chip>
   );

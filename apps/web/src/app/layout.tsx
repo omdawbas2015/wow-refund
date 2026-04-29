@@ -34,8 +34,8 @@ const ibmPlexArabic = IBM_Plex_Sans_Arabic({
 
 export const metadata: Metadata = {
   title: {
-    default: 'WOW Refund',
-    template: '%s · WOW Refund',
+    default: 'Alshaya Portal',
+    template: '%s · Alshaya Portal',
   },
   description: 'Enterprise refund management platform',
   icons: { icon: '/favicon.ico' },

@@ -151,11 +151,16 @@ export function Sidebar({
         type="button"
         className="mx-3 mt-3 flex items-center gap-2.5 rounded-xl px-2 py-2 text-start transition-colors hover:bg-surface-subtle"
       >
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-          <span className="text-sm font-bold leading-none">W</span>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-inset ring-border">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/alshaya-mark.png"
+            alt="Alshaya"
+            className="h-6 w-6 object-contain"
+          />
         </div>
         <span className="flex-1 truncate text-[13px] font-semibold tracking-tight">
-          WOW Refund
+          Alshaya Portal
         </span>
         <ChevronDown className="h-4 w-4 text-muted-foreground" />
       </button>

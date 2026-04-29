@@ -2,13 +2,13 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 /**
- * Aura partner-brand chip rendered from the asset shipped under
- * `/public/brand/aura-mark.png` (the wordmark sits on the gradient
- * already, so the chip is the image — no extra background).
+ * Aura partner-brand chip rendered from the official Aura logo
+ * (magenta circular mark + wordmark) shipped under
+ * `/public/brand/aura-mark.png`.
  *
- * Aspect is 2.5:1 to match the cropped wordmark, so the AURA letters
- * read clearly even at small sizes (slot into the payment-strip row
- * next to Apple Pay / KNET / Mastercard at the same height).
+ * The asset is already 322x120 (~2.7:1) on a transparent background,
+ * so we just place it on a white chip with `object-contain` and a
+ * tiny inset; that keeps the wordmark fully readable from 16px up.
  */
 export function AuraLogo({
   size = 18,
@@ -19,7 +19,7 @@ export function AuraLogo({
   className?: string;
   title?: string;
 }) {
-  const width = Math.round(size * 2.5);
+  const width = Math.round(size * 2.7);
   const radius = Math.max(2, Math.round(size * 0.22));
 
   return (
@@ -28,7 +28,7 @@ export function AuraLogo({
       aria-label={title}
       title={title}
       className={cn(
-        'inline-flex flex-none items-center justify-center overflow-hidden ring-1 ring-inset ring-black/5',
+        'inline-flex flex-none items-center justify-center overflow-hidden bg-white ring-1 ring-inset ring-black/5',
         className,
       )}
       style={{
@@ -40,9 +40,9 @@ export function AuraLogo({
       <Image
         src="/brand/aura-mark.png"
         alt={title}
-        width={width}
-        height={size}
-        className="h-full w-full object-cover"
+        width={width * 2}
+        height={size * 2}
+        className="h-full w-full object-contain p-[2px]"
         priority={false}
       />
     </span>
