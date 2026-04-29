@@ -346,7 +346,7 @@ export function RefundPoolPanel({ cases, canExecute }: RefundPoolPanelProps) {
 
         <div className="bg-surface-subtle/40">
           {selected ? (
-            <TicketWorkbench c={selected} canExecute={canExecute} />
+            <TicketWorkbench key={selected.id} c={selected} canExecute={canExecute} />
           ) : (
             <div className="py-12 text-center text-sm text-muted-foreground">
               Select a ticket to work on it.
