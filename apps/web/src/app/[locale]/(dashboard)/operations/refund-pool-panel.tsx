@@ -12,6 +12,7 @@ import {
   MessageCircle,
   ExternalLink,
   Search as SearchIcon,
+  SlidersHorizontal,
   Wallet,
   CreditCard,
   Coins,
@@ -162,6 +163,11 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
     return [...set.entries()].map(([key, label]) => ({ key, label }));
   }, [cases]);
 
+  const selectedComponents = selected?.components.length ?? 0;
+  const selectedRefundLabel = selected
+    ? `${selected.refundAmount.toFixed(2)} ${selected.currency}`
+    : '—';
+
   if (cases.length === 0) {
     return (
       <Card>
@@ -177,35 +183,21 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <CardTitle className="text-base">Refund tickets</CardTitle>
-              <CardDescription>
-                Work one approved case at a time. Batch creation and follow-up live in the batch
-                tabs.
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className="w-fit">
-              {filtered.length} of {cases.length} tickets
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+    <div className="rounded-2xl border border-border bg-card shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-border p-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="grid gap-2 sm:grid-cols-[minmax(260px,1fr)_auto_auto] sm:items-center">
           <div className="relative">
             <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search case, customer, order, phone"
-              className="pl-8"
+              placeholder="Search tickets"
+              className="h-9 min-w-0 pl-8 sm:w-[360px]"
             />
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex items-center gap-1.5">
             <FilterChip active={paymentFilter === 'all'} onClick={() => setPaymentFilter('all')}>
-              All payments
+              All
             </FilterChip>
             {paymentOptions.map((p) => (
               <FilterChip
@@ -217,9 +209,9 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
               </FilterChip>
             ))}
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex items-center gap-1.5">
             <FilterChip active={countryFilter === 'all'} onClick={() => setCountryFilter('all')}>
-              All countries
+              Countries
             </FilterChip>
             {countryOptions.map((c) => (
               <FilterChip
@@ -231,18 +223,25 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
               </FilterChip>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          <span>
+            {filtered.length} / {cases.length} tickets
+          </span>
+        </div>
+      </div>
 
-      <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b border-border pb-3">
-            <CardTitle className="text-sm">Ticket queue</CardTitle>
-            <CardDescription className="text-xs">
-              Pick a case to review its refund rails.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="max-h-[calc(100vh-370px)] space-y-2 overflow-y-auto p-3">
+      <div className="grid min-h-[640px] lg:grid-cols-[minmax(520px,1fr)_440px]">
+        <div className="border-b border-border lg:border-b-0 lg:border-e">
+          <div className="grid grid-cols-[1.35fr_1fr_0.9fr_0.8fr_0.9fr] gap-3 border-b border-border bg-surface-subtle px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span>Ticket</span>
+            <span>Customer</span>
+            <span>Rail</span>
+            <span className="text-end">Amount</span>
+            <span className="text-end">Status</span>
+          </div>
+          <div className="max-h-[calc(100vh-265px)] overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="px-2 py-3 text-sm text-muted-foreground">
                 No cases match your filters.
@@ -256,50 +255,61 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
                     key={c.id}
                     onClick={() => setSelectedId(c.id)}
                     className={cn(
-                      'w-full rounded-lg border p-3 text-left transition-colors',
-                      isActive
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border bg-card hover:border-primary/40 hover:bg-surface-subtle',
+                      'grid w-full grid-cols-[1.35fr_1fr_0.9fr_0.8fr_0.9fr] items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0',
+                      isActive ? 'bg-primary/5' : 'bg-card hover:bg-surface-subtle',
                     )}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{c.countryFlag}</span>
-                        <span className="font-medium text-foreground">{c.caseNumber}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{c.countryFlag}</span>
+                        <span className="truncate font-mono text-sm font-semibold text-heading">
+                          {c.caseNumber}
+                        </span>
                       </div>
+                      <div className="mt-1 truncate text-xs text-muted-foreground">
+                        {c.brandName} · {c.orderNumber}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{c.customerName}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {c.customerEmail}
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">
+                        {c.components.map((cmp) => cmp.paymentLabel).join(' + ') || '—'}
+                      </span>
+                    </div>
+                    <div className="text-end text-sm font-semibold tabular-nums">
+                      {c.refundAmount.toFixed(2)} {c.currency}
+                    </div>
+                    <div className="flex justify-end">
                       <Badge variant="outline" className={cn('text-[10px]', statusTone(c.status))}>
                         {c.status.replace(/_/g, ' ')}
                       </Badge>
-                    </div>
-                    <div className="mt-1.5 text-sm font-medium leading-tight">{c.customerName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {c.brandName} · {c.orderNumber}
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Icon className="h-3.5 w-3.5" />
-                        <span>{c.components[0]?.paymentLabel ?? '—'}</span>
-                      </div>
-                      <div className="text-sm font-semibold tabular-nums">
-                        {c.refundAmount.toFixed(2)} {c.currency}
-                      </div>
                     </div>
                   </button>
                 );
               })
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {selected ? (
-          <CaseDetail c={selected} />
-        ) : (
-          <Card>
-            <CardContent className="py-12 text-center text-sm text-muted-foreground">
+        <div className="bg-surface-subtle/40">
+          {selected ? (
+            <TicketInspector
+              c={selected}
+              selectedComponents={selectedComponents}
+              selectedRefundLabel={selectedRefundLabel}
+            />
+          ) : (
+            <div className="py-12 text-center text-sm text-muted-foreground">
               Select a case from the list to see details.
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -319,7 +329,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
+        'whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
         active
           ? 'border-primary bg-primary text-primary-foreground'
           : 'border-border bg-card text-foreground hover:bg-surface-subtle',
@@ -604,6 +614,176 @@ function CaseDetail({ c }: { c: PoolCase }) {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function TicketInspector({
+  c,
+  selectedComponents,
+  selectedRefundLabel,
+}: {
+  c: PoolCase;
+  selectedComponents: number;
+  selectedRefundLabel: string;
+}) {
+  const firstContact = c.contactLog[0] ?? null;
+  const lastEvent = c.timeline[0] ?? null;
+
+  return (
+    <aside className="sticky top-0 max-h-[calc(100vh-150px)] overflow-y-auto p-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>
+              {c.countryFlag} {c.countryName}
+            </span>
+            <span>·</span>
+            <span>{c.brandName}</span>
+          </div>
+          <h2 className="mt-1 truncate text-lg font-semibold text-heading">{c.caseNumber}</h2>
+          <p className="line-clamp-2 text-xs text-muted-foreground">{c.rootCauseSummary ?? '—'}</p>
+        </div>
+        <Link
+          href={`/cases/${c.id}`}
+          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs font-medium hover:bg-surface-subtle"
+        >
+          <ExternalLink className="h-3 w-3" /> Open
+        </Link>
+      </div>
+
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        <MiniMetric label="Refund" value={selectedRefundLabel} />
+        <MiniMetric label="Rails" value={`${selectedComponents}`} />
+        <MiniMetric label="Approved" value={c.approvedAt ?? '—'} />
+      </div>
+
+      <section className="mb-4 rounded-xl border border-border bg-card p-3">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Customer
+        </div>
+        <div className="text-sm font-medium">{c.customerName}</div>
+        <div className="truncate text-xs text-muted-foreground">{c.customerEmail}</div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {c.customerPhone ? (
+            <>
+              <a
+                href={`tel:${c.customerPhone}`}
+                className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs hover:bg-surface-subtle"
+              >
+                <Phone className="h-3 w-3" /> Call
+              </a>
+              <a
+                href={`https://wa.me/${c.customerPhone.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs hover:bg-surface-subtle"
+              >
+                <MessageCircle className="h-3 w-3" /> WhatsApp
+              </a>
+            </>
+          ) : null}
+          <a
+            href={`mailto:${c.customerEmail}`}
+            className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs hover:bg-surface-subtle"
+          >
+            <Mail className="h-3 w-3" /> Email
+          </a>
+        </div>
+      </section>
+
+      <section className="mb-4 rounded-xl border border-border bg-card p-3">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Refund rails
+        </div>
+        <div className="space-y-2">
+          {c.components.map((cmp) => {
+            const Icon = paymentIcon(cmp.paymentKey);
+            return (
+              <div key={cmp.id} className="rounded-lg border border-border p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{cmp.paymentLabel}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {cmp.amount.toFixed(2)} {cmp.currency}
+                        {cmp.authCode ? ` · auth ${cmp.authCode}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">
+                    {cmp.status.replace(/_/g, ' ')}
+                  </Badge>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{cmp.arn ? `ARN ${cmp.arn}` : 'No ARN yet'}</span>
+                  {cmp.batchNumber ? (
+                    <Link
+                      href={`/operations/knet/${cmp.batchId}`}
+                      className="underline-offset-2 hover:underline"
+                    >
+                      {cmp.batchNumber}
+                    </Link>
+                  ) : (
+                    <span>Not batched</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {c.auraPoints ? (
+            <div className="flex items-center justify-between rounded-lg border border-border p-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-muted-foreground" />
+                <span>{c.auraPoints} Aura points</span>
+              </div>
+              <Badge variant="outline" className="text-[10px]">
+                {c.auraStatus}
+              </Badge>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-3">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Latest context
+        </div>
+        <div className="space-y-3 text-xs">
+          <div>
+            <div className="text-muted-foreground">Contact</div>
+            <div className="text-foreground">
+              {firstContact
+                ? `${firstContact.channel}: ${firstContact.outcome}`
+                : 'No contact logged yet'}
+            </div>
+            {firstContact ? (
+              <div className="text-muted-foreground">{firstContact.whenLabel}</div>
+            ) : null}
+          </div>
+          <div>
+            <div className="text-muted-foreground">Timeline</div>
+            <div className="text-foreground">{lastEvent?.message ?? 'No activity logged'}</div>
+            {lastEvent ? <div className="text-muted-foreground">{lastEvent.whenLabel}</div> : null}
+          </div>
+          {c.approvalReply ? (
+            <div>
+              <div className="text-muted-foreground">Approval reply</div>
+              <div className="line-clamp-2 text-foreground">{c.approvalReply}</div>
+            </div>
+          ) : null}
+        </div>
+      </section>
+    </aside>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-1 truncate text-sm font-semibold text-heading">{value}</div>
     </div>
   );
 }

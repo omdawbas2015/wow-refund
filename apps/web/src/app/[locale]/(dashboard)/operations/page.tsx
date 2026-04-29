@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
 import { prisma } from '@wow/db';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ApprovalBatchesPanel } from './approval-batches-panel';
@@ -41,6 +40,7 @@ export default async function OperationsPage({
   const tabParam = typeof sp['tab'] === 'string' ? sp['tab'] : 'pool';
   const activeTab =
     tabParam === 'approvals' || tabParam === 'knet' || tabParam === 'aura' ? tabParam : 'pool';
+  const isPoolTab = activeTab === 'pool';
 
   // Resolve KNET payment method id once so the "pending KNET components"
   // query can use the same criteria as createKnetBatchAction.
@@ -301,82 +301,85 @@ export default async function OperationsPage({
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
-      <div className="mb-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-display-md font-normal tracking-tight text-heading">Refund Pool</h1>
-            <p className="mt-1 text-body">
-              A cleaner desk for approved refund tickets. Review customers and refund rails here,
-              then use the batch tabs for approval, KNET and Aura work.
-            </p>
+    <div className={isPoolTab ? 'px-4 py-4' : 'mx-auto max-w-7xl px-6 py-8'}>
+      <div className={isPoolTab ? 'mb-3' : 'mb-6'}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <h1
+              className={
+                isPoolTab
+                  ? 'text-xl font-semibold tracking-tight text-heading'
+                  : 'text-display-md font-normal tracking-tight text-heading'
+              }
+            >
+              Refund Pool
+            </h1>
+            {isPoolTab ? (
+              <Badge variant="outline" className="text-xs">
+                {poolData.length} tickets
+              </Badge>
+            ) : (
+              <p className="text-body">Batch work for approvals, KNET and Aura refunds.</p>
+            )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/operations"
+              className={`inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors ${
+                activeTab === 'pool'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border bg-card text-heading hover:bg-surface-subtle'
+              }`}
+            >
+              Tickets
+            </Link>
+            <Link
+              href="?tab=approvals"
+              scroll={false}
+              className={`inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors ${
+                activeTab === 'approvals'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border bg-card text-heading hover:bg-surface-subtle'
+              }`}
+            >
+              Approvals {totalPendingApprovals}
+            </Link>
+            <Link
+              href="?tab=knet"
+              scroll={false}
+              className={`inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors ${
+                activeTab === 'knet'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border bg-card text-heading hover:bg-surface-subtle'
+              }`}
+            >
+              KNET {totalKnetReady}
+            </Link>
+            <Link
+              href="?tab=aura"
+              scroll={false}
+              className={`inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors ${
+                activeTab === 'aura'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border bg-card text-heading hover:bg-surface-subtle'
+              }`}
+            >
+              Aura {totalPendingAura}
+            </Link>
             <Link
               href="/operations/bulk-cases"
-              className="inline-flex h-9 items-center rounded-md border border-border bg-card px-3 text-sm font-medium text-heading transition-colors hover:bg-surface-subtle"
+              className="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-sm font-medium text-heading transition-colors hover:bg-surface-subtle"
             >
-              Bulk operations
+              Bulk
             </Link>
-            <Badge variant="outline" className="text-xs">
-              v0.43 · cleaner desk
-            </Badge>
           </div>
         </div>
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <SummaryCard
-          label="Refund tickets"
-          value={poolData.length}
-          hint="Approved cases ready for agent follow-up"
-        />
-        <SummaryCard
-          label="Batch work"
-          value={totalPendingApprovals + totalKnetReady + totalPendingAura}
-          hint="Approvals, KNET components and Aura cases"
-        />
-        <SummaryCard
-          label="Live batches"
-          value={liveApprovalBatches.length + liveKnetBatches.length + liveAuraBatches.length}
-          hint="Active approval, KNET and Aura batches"
-        />
-      </div>
+      {activeTab === 'pool' ? <RefundPoolPanel cases={poolData} /> : null}
 
-      <Tabs defaultValue={activeTab} className="space-y-4">
-        <TabsList className="h-10">
-          <TabsTrigger value="pool" asChild>
-            <Link href="?tab=pool" scroll={false}>
-              Tickets ({poolData.length})
-            </Link>
-          </TabsTrigger>
-          <TabsTrigger value="approvals" asChild>
-            <Link href="?tab=approvals" scroll={false}>
-              Approval batches ({totalPendingApprovals})
-            </Link>
-          </TabsTrigger>
-          <TabsTrigger value="knet" asChild>
-            <Link href="?tab=knet" scroll={false}>
-              KNET batches ({totalKnetReady})
-            </Link>
-          </TabsTrigger>
-          <TabsTrigger value="aura" asChild>
-            <Link href="?tab=aura" scroll={false}>
-              Aura batches ({totalPendingAura})
-            </Link>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="pool" className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            This tab is only for refund tickets: customer details, payment components, contact log,
-            manager reply and timeline. Batch creation and batch monitoring stay in their own tabs
-            so the pool stays readable.
-          </p>
-          <RefundPoolPanel cases={poolData} />
-        </TabsContent>
-
-        <TabsContent value="approvals" className="space-y-3">
+      {activeTab === 'approvals' ? (
+        <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
             Cases sitting at <span className="font-medium text-foreground">Pending approval</span>.
             Pick a country, send the manager an approval email, and watch the live batch as the
@@ -405,9 +408,11 @@ export default async function OperationsPage({
               })),
             }))}
           />
-        </TabsContent>
+        </div>
+      ) : null}
 
-        <TabsContent value="knet" className="space-y-3">
+      {activeTab === 'knet' ? (
+        <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
             Approved cases with KNET components ready to be added to the next file. Build a batch,
             send it, then enter the ARNs received back from the bank to mark the components{' '}
@@ -445,9 +450,11 @@ export default async function OperationsPage({
               })),
             }))}
           />
-        </TabsContent>
+        </div>
+      ) : null}
 
-        <TabsContent value="aura" className="space-y-3">
+      {activeTab === 'aura' ? (
+        <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
             Approved cases that owe Aura points back to the customer. Group them into a batch, hand
             it off to the Aura team, and confirm once the points have been credited.
@@ -470,8 +477,8 @@ export default async function OperationsPage({
               completedCases: b.completedCases,
             }))}
           />
-        </TabsContent>
-      </Tabs>
+        </div>
+      ) : null}
     </div>
   );
 }
