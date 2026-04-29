@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { Mail, Phone, User as UserIcon } from 'lucide-react';
 import { prisma } from '@wow/db';
 import { auth } from '@/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,101 +65,67 @@ export default async function CaseDetailsPage({
     take: 100,
   });
 
-  // Primary heading is the externalCaseNumber the agent typed when
-  // creating the case. The auto-generated REF-XX-YYYY-NNNNN sits as a
-  // muted sub-id underneath. Cases imported before externalCaseNumber
-  // was required fall back to the auto number as the heading.
-  const headingRef = refundCase.externalCaseNumber ?? refundCase.caseNumber;
-  const showInternalSubId =
-    refundCase.externalCaseNumber !== null &&
-    refundCase.externalCaseNumber !== refundCase.caseNumber;
-  const customerInitial = (refundCase.customerName || '?').charAt(0).toUpperCase();
+  // We identify cases solely by the agent-typed Case # (the
+  // externalCaseNumber field). The auto-generated REF-XX-YYYY-NNNNN
+  // is no longer surfaced in the UI — it stays only as an internal id
+  // for batch / ARN integrations that still parse it.
+  const heading =
+    refundCase.externalCaseNumber && refundCase.externalCaseNumber.length > 0
+      ? refundCase.externalCaseNumber
+      : refundCase.caseNumber;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="flex items-center gap-1 text-display-sm font-semibold tracking-tight text-heading">
-              {headingRef}
-              <CopyButton
-                value={headingRef}
-                size="sm"
-                label="Copy case reference"
-                className="ms-1"
-              />
-            </h1>
-            <CaseStatusBadge status={refundCase.status} />
-            {refundCase.isPartial && (
-              <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                Partial
-              </span>
-            )}
-          </div>
-          {showInternalSubId && (
-            <p className="mt-1 flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-              <span>{refundCase.caseNumber}</span>
-              <CopyButton
-                value={refundCase.caseNumber}
-                size="sm"
-                label="Copy internal case number"
-              />
-            </p>
-          )}
-        </div>
-        <div className="text-end text-sm text-muted-foreground">
-          <div>
-            {refundCase.country.registry.flag ?? '🌐'} {refundCase.country.registry.nameEn} ·{' '}
-            {refundCase.brand.name}
-          </div>
-          <div>Created {formatDateTime(refundCase.createdAt)}</div>
-        </div>
-      </div>
-
-      {/* Customer panel — bordered card with avatar + name + contact rows.
-          Replaces the inline "Name · email" line so customer info reads
-          as its own information block. */}
+      {/* Page header card — case # + status on the left, country / brand
+          on the right, customer + order + refund laid out as one
+          consistent strip below. Reads as a single information block
+          in the same visual language as the rest of the page. */}
       <Card className="mb-6">
-        <CardContent className="flex flex-wrap items-center gap-4 p-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/12 text-base font-semibold text-primary">
-            {customerInitial}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="truncate">{refundCase.customerName}</span>
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5" />
-                <span className="truncate">{refundCase.customerEmail}</span>
-              </span>
-              {refundCase.customerPhone ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" />
-                  <span dir="ltr">{refundCase.customerPhone}</span>
+        <CardContent className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="flex items-center gap-1.5 text-display-sm font-semibold tracking-tight text-heading">
+                {heading}
+                <CopyButton
+                  value={heading}
+                  size="sm"
+                  label="Copy case number"
+                />
+              </h1>
+              <CaseStatusBadge status={refundCase.status} />
+              {refundCase.isPartial && (
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                  Partial
                 </span>
-              ) : null}
+              )}
             </div>
-          </div>
-          <div className="flex items-center gap-4 text-end">
-            <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Order
+            <div className="text-end text-xs text-muted-foreground">
+              <div className="text-sm text-body">
+                {refundCase.country.registry.flag ?? '🌐'}{' '}
+                {refundCase.country.registry.nameEn} · {refundCase.brand.name}
               </div>
-              <div className="font-mono text-sm font-medium text-foreground">
-                {refundCase.orderNumber}
-              </div>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Refund
-              </div>
-              <div className="text-sm font-semibold tabular text-foreground">
-                {formatMoney(refundCase.totalRefundAmount, refundCase.orderCurrency)}
+              <div className="mt-0.5">
+                Created {formatDateTime(refundCase.createdAt)}
               </div>
             </div>
           </div>
+
+          <dl className="mt-5 grid gap-x-6 gap-y-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4">
+            <CaseHeaderField label="Customer" value={refundCase.customerName} />
+            <CaseHeaderField
+              label="Email"
+              value={refundCase.customerEmail}
+              mono
+              truncate
+            />
+            <CaseHeaderField
+              label="Phone"
+              value={refundCase.customerPhone ?? null}
+              mono
+              ltr
+            />
+            <CaseHeaderField label="Order #" value={refundCase.orderNumber} mono />
+          </dl>
         </CardContent>
       </Card>
 
@@ -246,6 +211,49 @@ export default async function CaseDetailsPage({
         canExecute={canExecute}
         isDeleted={isDeleted}
       />
+    </div>
+  );
+}
+
+/**
+ * Single key/value cell used in the case-header info strip. Renders
+ * the label as a small all-caps caption with the value below it, and
+ * exposes a copy button on hover/focus so any of the values (email,
+ * phone, order number, …) can be copied with one click. Uses the
+ * same visual language as the Details / People sections below.
+ */
+function CaseHeaderField({
+  label,
+  value,
+  mono,
+  ltr,
+  truncate,
+}: {
+  label: string;
+  value: string | null;
+  mono?: boolean;
+  ltr?: boolean;
+  truncate?: boolean;
+}) {
+  const hasValue = !!value && value.length > 0;
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="mt-1 flex items-center gap-1.5">
+        <span
+          className={`min-w-0 text-sm text-foreground${mono ? ' font-mono' : ''}${
+            truncate ? ' truncate' : ''
+          }`}
+          dir={ltr ? 'ltr' : undefined}
+        >
+          {hasValue ? value : <span className="text-muted-foreground">—</span>}
+        </span>
+        {hasValue && (
+          <CopyButton value={value!} size="sm" label={`Copy ${label.toLowerCase()}`} />
+        )}
+      </dd>
     </div>
   );
 }

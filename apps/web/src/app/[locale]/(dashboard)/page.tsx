@@ -136,6 +136,7 @@ export default async function DashboardHome() {
     select: {
       id: true,
       caseNumber: true,
+      externalCaseNumber: true,
       status: true,
       totalRefundAmount: true,
       orderCurrency: true,
@@ -382,7 +383,7 @@ export default async function DashboardHome() {
                           href={`/cases/${c.id}`}
                           className="font-medium tracking-tight text-foreground hover:underline"
                         >
-                          {c.caseNumber}
+                          {c.externalCaseNumber || c.caseNumber}
                         </Link>
                       </td>
                       <td className="px-6 py-3 align-middle">
