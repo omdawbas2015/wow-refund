@@ -69,6 +69,7 @@ export default async function SystemInfoPage() {
   // Configuration flags — booleans only. Never the secret values.
   const cronConfigured = Boolean(process.env['CRON_SECRET']);
   const powerAutomateConfigured = Boolean(process.env['POWER_AUTOMATE_WEBHOOK_URL']);
+  const powerAutomatePromoConfigured = Boolean(process.env['POWER_AUTOMATE_PROMO_WEBHOOK_URL']);
   const sentryConfigured = Boolean(process.env['SENTRY_DSN']);
 
   // Build / deploy metadata. Vercel injects VERCEL_GIT_COMMIT_SHA and
@@ -152,6 +153,10 @@ export default async function SystemInfoPage() {
             <Row
               label="Power Automate webhook"
               value={<ConfigBadge ok={powerAutomateConfigured} />}
+            />
+            <Row
+              label="Power Automate promo webhook"
+              value={<ConfigBadge ok={powerAutomatePromoConfigured} />}
             />
             <Row label="Sentry DSN" value={<ConfigBadge ok={sentryConfigured} />} />
             <Row

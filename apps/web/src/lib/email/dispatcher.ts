@@ -40,7 +40,21 @@ export interface EmailDispatchResult {
 }
 
 const WEBHOOK_URL = process.env['POWER_AUTOMATE_WEBHOOK_URL'] ?? '';
+const PROMO_WEBHOOK_URL = process.env['POWER_AUTOMATE_PROMO_WEBHOOK_URL'] ?? '';
 const SIGNING_SECRET = process.env['POWER_AUTOMATE_SIGNING_SECRET'] ?? '';
+
+/**
+ * Some Power Automate flows are template-scoped (e.g. the
+ * CUSTOMER_PROMO_COMPENSATION flow rejects any other templateKey). When
+ * POWER_AUTOMATE_PROMO_WEBHOOK_URL is configured, route promo-compensation
+ * mail through it and let everything else fall back to the main outbound URL.
+ */
+function resolveWebhookUrl(templateKey: string): string {
+  if (templateKey === 'CUSTOMER_PROMO_COMPENSATION' && PROMO_WEBHOOK_URL) {
+    return PROMO_WEBHOOK_URL;
+  }
+  return WEBHOOK_URL;
+}
 
 export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatchResult> {
   // Load template if no override given
@@ -85,8 +99,10 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
     },
   });
 
+  const targetUrl = resolveWebhookUrl(payload.templateKey);
+
   // If no webhook configured (dev), log to console and mark SENT
-  if (!WEBHOOK_URL) {
+  if (!targetUrl) {
     console.log('\n══════════════════════════════════════════════════════════════');
     console.log('📧 EMAIL (dev mode — no Power Automate webhook configured)');
     console.log('──────────────────────────────────────────────────────────────');
@@ -94,7 +110,12 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
     console.log(`  To:       ${payload.to}${payload.cc ? ` (cc: ${payload.cc})` : ''}`);
     console.log(`  Subject:  ${subject}`);
     console.log('──────────────────────────────────────────────────────────────');
-    console.log(body.split('\n').map((line) => `  ${line}`).join('\n'));
+    console.log(
+      body
+        .split('\n')
+        .map((line) => `  ${line}`)
+        .join('\n'),
+    );
     console.log('══════════════════════════════════════════════════════════════\n');
 
     await prisma.emailLog.update({
@@ -107,7 +128,7 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
 
   // Production: POST to Power Automate
   try {
-    const res = await fetch(WEBHOOK_URL, {
+    const res = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

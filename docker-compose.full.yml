@@ -77,6 +77,7 @@ services:
       NEXTAUTH_URL: http://localhost:3000
       # Email transport — Power Automate webhook left blank → dev-mode console log.
       POWER_AUTOMATE_WEBHOOK_URL: ''
+      POWER_AUTOMATE_PROMO_WEBHOOK_URL: ''
       POWER_AUTOMATE_SIGNING_SECRET: ''
       # Cron secret for the in-cluster CronJobs (k8s topology) / `curl` smoke tests.
       CRON_SECRET: dev-cron-secret-change-me
