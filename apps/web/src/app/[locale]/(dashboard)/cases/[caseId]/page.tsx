@@ -1,10 +1,7 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@wow/db';
 import { auth } from '@/auth';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft } from 'lucide-react';
 import { CaseStatusBadge, ComponentStatusBadge } from '@/components/ui/case-status-badge';
 import { CopyButton } from '@/components/ui/copy-button';
 import { formatDate, formatDateTime, formatMoney, relativeTime } from '@/lib/format';
@@ -70,15 +67,6 @@ export default async function CaseDetailsPage({
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="mb-4">
-        <Button asChild variant="ghost" size="sm">
-          <Link href={`/${locale}/cases`}>
-            <ChevronLeft className="h-4 w-4" />
-            Back to cases
-          </Link>
-        </Button>
-      </div>
-
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">

@@ -1,8 +1,5 @@
-import Link from 'next/link';
 import { prisma } from '@wow/db';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft } from 'lucide-react';
 import { NewCaseForm } from './new-case-form';
 
 export const dynamic = 'force-dynamic';
@@ -31,15 +28,6 @@ export default async function NewCasePage({
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
-      <div className="mb-6">
-        <Button asChild variant="ghost" size="sm">
-          <Link href={`/${locale}/cases`}>
-            <ChevronLeft className="h-4 w-4" />
-            Back to refund cases
-          </Link>
-        </Button>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-heading-lg">Create refund case</CardTitle>
