@@ -124,12 +124,16 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
       if (countryFilter !== 'all' && c.countryCode !== countryFilter) return false;
       if (search.trim()) {
         const q = search.trim().toLowerCase();
+        const paymentText = c.components
+          .flatMap((cmp) => [cmp.paymentLabel, cmp.paymentKey, cmp.authCode ?? '', cmp.arn ?? ''])
+          .join(' ');
         const hay = [
           c.caseNumber,
           c.customerName,
           c.customerEmail,
           c.orderNumber,
           c.customerPhone ?? '',
+          paymentText,
         ]
           .join(' ')
           .toLowerCase();
