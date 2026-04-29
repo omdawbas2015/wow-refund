@@ -3,6 +3,7 @@ import { prisma } from '@wow/db';
 import { auth } from '@/auth';
 import { Sidebar } from '@/components/layout/sidebar';
 import { TopBar } from '@/components/layout/top-bar';
+import { BackLink } from '@/components/layout/back-link';
 import { CommandPalette } from '@/components/layout/command-palette';
 import { getModuleToggleStatuses } from '@/lib/module-toggles';
 
@@ -41,6 +42,7 @@ export default async function DashboardLayout({
           userEmail={session.user.email ?? ''}
           currentLocale={locale}
         />
+        <BackLink />
         <main className="scrollbar-thin flex-1 overflow-y-auto">
           {children}
         </main>

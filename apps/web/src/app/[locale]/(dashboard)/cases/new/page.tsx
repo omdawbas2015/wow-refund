@@ -30,12 +30,12 @@ export default async function NewCasePage({
   ]);
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <div className="mx-auto max-w-5xl px-6 py-8">
       <div className="mb-6">
         <Button asChild variant="ghost" size="sm">
           <Link href={`/${locale}/cases`}>
             <ChevronLeft className="h-4 w-4" />
-            Back to cases
+            Back to refund cases
           </Link>
         </Button>
       </div>
