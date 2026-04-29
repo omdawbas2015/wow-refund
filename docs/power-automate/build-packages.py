@@ -26,6 +26,7 @@ Output:
     docs/power-automate/packages/wow-outbound-mailer-hmac.zip
     docs/power-automate/packages/wow-inbound-listener-hmac.zip
     docs/power-automate/packages/wow-approval-batch.zip
+    docs/power-automate/packages/wow-test-customer-promo.zip
 """
 
 from __future__ import annotations
@@ -317,13 +318,21 @@ def main() -> int:
 
     build_package(
         package_name="wow-outbound-mailer",
-        display_name="WOW Refund — Outbound mailer (HTTP → Outlook)",
+        display_name="WOW Refund — 1. Outbound Mail Router (sends every email: OTP, signup, approval, KNET, Aura, customer promo, customer refund)",
         description=(
-            "HTTP-triggered flow used by the WOW Refund platform to send "
-            "approval / KNET / Aura emails through the operator mailbox. "
-            "Trigger URL is the secret; the X-Wow-Signature header is logged "
-            "for forensics. Use the -hmac variant for tenants that require "
-            "server-side signature verification."
+            "Single HTTP entry point that the WOW Refund platform calls every "
+            "time it needs to send an email. The platform renders the subject "
+            "and body itself, attaches a templateKey + logId in the JSON body, "
+            "and POSTs everything to this flow's trigger URL. The flow takes "
+            "those rendered fields and hands them to Office 365 'Send an "
+            "email (V2)'. Templates that flow through here include: "
+            "AUTH_OTP_PASSWORD_RESET, AUTH_ADMIN_NEW_SIGNUP, "
+            "AUTH_SIGNUP_APPROVED, APPROVAL_BATCH_MANAGER, KNET_BATCH_FINANCE, "
+            "AURA_BATCH_TEAM, CUSTOMER_REFUND_COMPLETED, "
+            "CUSTOMER_PROMO_COMPENSATION, STORE_*, scheduled_report.summary. "
+            "Trigger URL itself is the secret; X-Wow-Signature is logged "
+            "only. Use the HMAC-secured variant for production tenants that "
+            "want server-side signature verification."
         ),
         flow_definition_path=FLOWS_DIR / "outbound-flow-definition.json",
         output_path=PACKAGES_DIR / "wow-outbound-mailer.zip",
@@ -331,14 +340,17 @@ def main() -> int:
 
     build_package(
         package_name="wow-inbound-listener",
-        display_name="WOW Refund — Inbound listener (Outlook → webhook)",
+        display_name="WOW Refund — 2. Inbound Mail Listener (manager / Finance / Aura / customer replies → webhook)",
         description=(
-            "Mailbox trigger flow used by the WOW Refund platform to forward "
-            "approval / KNET / Aura replies into the platform webhook. "
-            "Filters on subject prefixes (APB- / KNET- / AURA-) and posts an "
-            "unsigned payload — only safe when the platform's "
-            "POWER_AUTOMATE_INBOUND_SECRET is unset. Use the -hmac variant "
-            "for HMAC-secured production deployments."
+            "Watches the operator mailbox and forwards interesting replies to "
+            "the platform webhook so the existing classifier can route them: "
+            "manager 'Approved/Rejected' replies become APPROVAL_RESPONSE, "
+            "Finance ARN replies become KNET_ARN_REPLY, Aura confirmation "
+            "replies become AURA_CONFIRMATION, free-text customer replies "
+            "become CUSTOMER_REPLY. Subject must contain APB- / KNET- / "
+            "AURA- to be picked up; everything else is ignored. Posts an "
+            "unsigned payload, so the platform's POWER_AUTOMATE_INBOUND_SECRET "
+            "must be unset — use the HMAC-signed variant if it's set."
         ),
         flow_definition_path=FLOWS_DIR / "inbound-flow-definition.json",
         output_path=PACKAGES_DIR / "wow-inbound-listener.zip",
@@ -346,12 +358,14 @@ def main() -> int:
 
     build_package(
         package_name="wow-outbound-mailer-hmac",
-        display_name="WOW Refund — Outbound mailer (HMAC-secured)",
+        display_name="WOW Refund — 3. Outbound Mail Router (HMAC-secured — verifies X-Wow-Signature before sending)",
         description=(
-            "Same as wow-outbound-mailer, but verifies the X-Wow-Signature "
-            "HMAC-SHA256 header by calling the WOW Refund Azure Function HMAC "
-            "helper before sending the email. Requires the helper to be "
-            "deployed first (see docs/power-automate/azure-function-hmac/)."
+            "Production hardening of the outbound mail router. Same trigger "
+            "contract and same set of templateKeys as flow #1, but verifies "
+            "X-Wow-Signature via the WOW Refund Azure Function HMAC helper "
+            "before sending the email. Returns 401 on signature mismatch "
+            "without sending. Requires the Azure Function helper to be "
+            "deployed first — see docs/power-automate/azure-function-hmac/."
         ),
         flow_definition_path=FLOWS_DIR / "outbound-flow-definition.hmac.json",
         output_path=PACKAGES_DIR / "wow-outbound-mailer-hmac.zip",
@@ -359,12 +373,14 @@ def main() -> int:
 
     build_package(
         package_name="wow-inbound-listener-hmac",
-        display_name="WOW Refund — Inbound listener (HMAC-secured)",
+        display_name="WOW Refund — 4. Inbound Mail Listener (HMAC-signed — signs body before posting to webhook)",
         description=(
-            "Same as wow-inbound-listener, but signs the body with HMAC-SHA256 "
+            "Production hardening of the inbound mail listener. Same trigger "
+            "and filtering as flow #2, but signs the body with HMAC-SHA256 "
             "via the WOW Refund Azure Function HMAC helper before posting to "
-            "the webhook. Use this when POWER_AUTOMATE_INBOUND_SECRET is set "
-            "on the platform."
+            "the webhook. Use this when the platform's "
+            "POWER_AUTOMATE_INBOUND_SECRET is set so signed inbound traffic "
+            "is accepted."
         ),
         flow_definition_path=FLOWS_DIR / "inbound-flow-definition.hmac.json",
         output_path=PACKAGES_DIR / "wow-inbound-listener-hmac.zip",
@@ -372,18 +388,38 @@ def main() -> int:
 
     build_package(
         package_name="wow-approval-batch",
-        display_name="WOW Refund — Approval batch (HTTP → Approvals → webhook)",
+        display_name="WOW Refund — 5. Manager Approval (Approve / Reject card via Microsoft Approvals)",
         description=(
-            "Higher-level alternative to the plain outbound mailer for "
-            "approval_batch_request emails. Sends a real Microsoft Approvals "
-            "card (Approve / Reject buttons) instead of a plain email, waits "
-            "for the manager's response, and posts the structured outcome "
-            "back to the platform's inbound webhook. Use as "
-            "POWER_AUTOMATE_WEBHOOK_URL only for approval-batch emails — "
-            "keep the plain mailer for KNET / Aura / OTP / SYSTEM emails."
+            "Drop-in replacement for the plain outbound mail router but ONLY "
+            "for templateKey = APPROVAL_BATCH_MANAGER. Instead of sending a "
+            "plain email, opens a Microsoft Approvals card with Approve / "
+            "Reject buttons (delivered to the manager via Outlook + Teams + "
+            "Power Automate mobile), waits for the response, and POSTs it "
+            "back to the inbound webhook so the existing APPROVAL_RESPONSE "
+            "classifier can advance the batch. Wire up only when you want "
+            "the manager UX to be 'one click' instead of 'reply with "
+            "Approved'."
         ),
         flow_definition_path=FLOWS_DIR / "approval-batch-flow-definition.json",
         output_path=PACKAGES_DIR / "wow-approval-batch.zip",
+    )
+
+    build_package(
+        package_name="wow-test-customer-promo",
+        display_name="WOW Refund — 6. Test: Send Customer Promo Code Email (manual button trigger)",
+        description=(
+            "Diagnostic / smoke-test flow. Hit Run inside Power Automate, "
+            "fill in the customer email + promo code + value + brand fields, "
+            "and the same shape of email that the live "
+            "CUSTOMER_PROMO_COMPENSATION template produces lands in the "
+            "customer mailbox. Validates Outlook connection + mailbox "
+            "identity + sending limits BEFORE the live outbound flow goes "
+            "online. No HTTP trigger, no platform integration — just a "
+            "button you click. Delete it after on-boarding if you don't "
+            "want it sitting in the tenant."
+        ),
+        flow_definition_path=FLOWS_DIR / "test-customer-promo-flow-definition.json",
+        output_path=PACKAGES_DIR / "wow-test-customer-promo.zip",
     )
 
     return 0

@@ -1,7 +1,7 @@
 # Power Automate Integration
 
 The WOW Refund platform talks to Office 365 through Power Automate
-cloud flows. This folder ships **five importable flow packages** so you
+cloud flows. This folder ships **six importable flow packages** so you
 can pick the security / functionality posture that matches your tenant
 and import each one with two clicks.
 
@@ -11,13 +11,52 @@ and import each one with two clicks.
 > **On**. Repeat for every package you want. Section [§ 5](#5--mapping-flows-to-platform-env-vars)
 > tells you which env vars to set on the platform side.
 
-| # | Package | Direction | Security | Triggers | Connectors |
-| - | ------- | --------- | -------- | -------- | ---------- |
-| 1 | [`wow-outbound-mailer.zip`](./packages/wow-outbound-mailer.zip) | App → Outlook | URL-secret | HTTP request | Office 365 Outlook |
-| 2 | [`wow-inbound-listener.zip`](./packages/wow-inbound-listener.zip) | Outlook → App | None (dev) | New email arrives | Office 365 Outlook |
-| 3 | [`wow-outbound-mailer-hmac.zip`](./packages/wow-outbound-mailer-hmac.zip) | App → Outlook | **HMAC verified** | HTTP request | Office 365 Outlook + Azure Function |
-| 4 | [`wow-inbound-listener-hmac.zip`](./packages/wow-inbound-listener-hmac.zip) | Outlook → App | **HMAC signed** | New email arrives | Office 365 Outlook + Azure Function |
-| 5 | [`wow-approval-batch.zip`](./packages/wow-approval-batch.zip) | App → Approvals → App | URL-secret | HTTP request | Microsoft Approvals + Outlook |
+> 🧪 **Want to do a sanity check first?** Import package #6
+> ([`wow-test-customer-promo.zip`](./packages/wow-test-customer-promo.zip)),
+> open the flow, click **Run**, fill in your own email + a fake promo
+> code — you should receive a real promo email in seconds. That
+> confirms your Outlook connection works end-to-end before you wire up
+> the live mail router.
+
+| # | Package | What it does | Direction | Security | Trigger | Connectors |
+| - | ------- | ------------ | --------- | -------- | ------- | ---------- |
+| 1 | [`wow-outbound-mailer.zip`](./packages/wow-outbound-mailer.zip) | **Single mail dispatcher** — sends every email the app produces (OTP, signup, approval, KNET, Aura, customer refund, **customer promo code**, scheduled reports, store help-desk) | App → Outlook | URL-secret | HTTP POST | Office 365 Outlook |
+| 2 | [`wow-inbound-listener.zip`](./packages/wow-inbound-listener.zip) | Forwards manager / Finance / Aura / customer **replies** in the operator mailbox to the platform webhook | Outlook → App | None (dev) | New email arrives | Office 365 Outlook |
+| 3 | [`wow-outbound-mailer-hmac.zip`](./packages/wow-outbound-mailer-hmac.zip) | Production hardening of #1 — verifies `X-Wow-Signature` HMAC-SHA256 before sending | App → Outlook | **HMAC verified** | HTTP POST | Office 365 Outlook + Azure Function |
+| 4 | [`wow-inbound-listener-hmac.zip`](./packages/wow-inbound-listener-hmac.zip) | Production hardening of #2 — signs the body with HMAC-SHA256 before posting to the webhook | Outlook → App | **HMAC signed** | New email arrives | Office 365 Outlook + Azure Function |
+| 5 | [`wow-approval-batch.zip`](./packages/wow-approval-batch.zip) | **Replaces** the plain `APPROVAL_BATCH_MANAGER` email with a real Microsoft Approvals card (Approve / Reject buttons in Outlook + Teams + PA mobile) | App → Approvals → App | URL-secret | HTTP POST | Microsoft Approvals + Outlook |
+| 6 | [`wow-test-customer-promo.zip`](./packages/wow-test-customer-promo.zip) | **Sanity test only.** Manual button trigger that sends one promo-code email to whatever address you type. No platform integration — just confirms Outlook + mailbox + sender identity work. Delete after on-boarding. | Manual → Outlook | None (manual) | Button | Office 365 Outlook |
+
+### Email templates the app produces (and which flow handles them)
+
+The app pre-renders every email body locally using its own templates
+table — Power Automate just receives the rendered subject + body and
+forwards them. That means **all** outbound traffic flows through the
+single mail-router (#1 or #3); there is no per-template flow except for
+the optional Approvals override (#5).
+
+| `templateKey` | Audience | When it fires | Locales | Goes through |
+| --- | --- | --- | --- | --- |
+| `AUTH_OTP_PASSWORD_RESET` | The user | Forgot-password / first-login set-password flow | en, ar | flow #1 (or #3) |
+| `AUTH_ADMIN_NEW_SIGNUP` | All admins | New signup awaiting approval | en | flow #1 (or #3) |
+| `AUTH_SIGNUP_APPROVED` | The user | Admin approved their signup | en | flow #1 (or #3) |
+| `APPROVAL_BATCH_MANAGER` | Country manager | Daily batch of cases pending approval | en | flow #1 (or #3) — **or** route to flow #5 to use Approvals card |
+| `KNET_BATCH_FINANCE` | Finance team | Daily KNET refund batch (Finance fills in ARN) | en | flow #1 (or #3) |
+| `AURA_BATCH_TEAM` | Aura team | Daily Aura points refund batch | en | flow #1 (or #3) |
+| `AURA_BATCH_SENT` | Internal | Aura batch confirmation from operations | en | flow #1 (or #3) |
+| `CUSTOMER_REFUND_COMPLETED` | The customer | Refund processed end-to-end | en, ar | flow #1 (or #3) |
+| `CUSTOMER_PROMO_COMPENSATION` | **The customer** | Goodwill promo code allocated | en | flow #1 (or #3) — **mirrored by flow #6 for testing** |
+| `STORE_<key>` | Store managers | Help-desk store-communication templates | en | flow #1 (or #3) |
+| `scheduled_report.summary` | Admin | Scheduled report run | en | flow #1 (or #3) |
+
+### Inbound replies the listener classifies (`parsedIntent`)
+
+| `parsedIntent` | Trigger | Source mailbox | Becomes |
+| --- | --- | --- | --- |
+| `APPROVAL_RESPONSE` | Manager replies "Approved" / "Rejected" with case numbers | reply to a `APPROVAL_BATCH_MANAGER` email | Cases advance to `APPROVED` / `REJECTED` automatically |
+| `KNET_ARN_REPLY` | Finance replies with ARN for each transaction | reply to a `KNET_BATCH_FINANCE` email | KNET batch components get their `arn` populated |
+| `AURA_CONFIRMATION` | Aura team confirms each order processed | reply to a `AURA_BATCH_TEAM` email | Aura batch components transition to `AURA_CONFIRMED` |
+| `CUSTOMER_REPLY` | Customer replies to any of their emails | from the customer's own mailbox | Logged on the case timeline for the agent |
 
 The `-hmac` variants call a tiny Azure Function (
 [`azure-function-hmac/`](./azure-function-hmac/) — deploy in 5 minutes
@@ -44,11 +83,25 @@ silently overwriting the old one.
 التمبلتس دي تتعمل **Import** على طول من
 `make.powerautomate.com → My flows → Import → Import Package (Legacy)`.
 
-- باكدج رقم 1 و 2: للتجربة محلياً / staging — مش فيها HMAC.
-- باكدج رقم 3 و 4: للـ production — بتستخدم Azure Function صغيرة لحساب
-  الـ HMAC-SHA256 (الكود تحت [`azure-function-hmac/`](./azure-function-hmac/)).
-- باكدج رقم 5: زرار Approve / Reject تيك في Outlook + Teams بدل ما
-  المانجر يرد بإيميل.
+- **باكدج رقم 6** ([`wow-test-customer-promo.zip`](./packages/wow-test-customer-promo.zip)) — **ابدأ بيها**. زرار Run يدوي
+  بيبعت إيميل برومو كود تجريبي على أي مالبوكس تكتبه. خلصت تجربة
+  ـ Outlook connection والمالبوكس قبل ما توصل أي حاجة جدية.
+- **باكدج رقم 1** ([`wow-outbound-mailer.zip`](./packages/wow-outbound-mailer.zip)) — **هي اللي بتبعت كل الإيميلات**:
+  OTP، signup approval، approval batch للمانجر، KNET للفاينانس، Aura
+  للفريق، **برومو كود للكاستمر**، refund completed للكاستمر، store
+  emails، scheduled reports. الـ app بيرندر السبجكت والبودي بنفسه
+  وبيبعت كل حاجة على trigger URL واحد بـ `templateKey` مختلف.
+- **باكدج رقم 2** ([`wow-inbound-listener.zip`](./packages/wow-inbound-listener.zip)) — بتاخد الردود من المانجر / الفاينانس / Aura /
+  الكاستمر اللي جايه على الـ operator mailbox وتبعتها للـ app webhook
+  عشان الـ classifier يحرك الـ batches.
+- **باكدج رقم 3 و 4** — نسخة production من 1 و 2 بـ HMAC-SHA256
+  verification (محتاجة Azure Function صغيرة تحت [`azure-function-hmac/`](./azure-function-hmac/)).
+- **باكدج رقم 5** ([`wow-approval-batch.zip`](./packages/wow-approval-batch.zip)) — **بديل** للـ
+  `APPROVAL_BATCH_MANAGER` بس. زرار Approve / Reject في Outlook +
+  Teams بدل ما المانجر يرد بإيميل نصي.
+
+ترتيب التركيب المقترح: 6 → 1 → 2 → (5 لو حابب). كل templateKey في الـ
+catalog فوق بيمر من باكدج 1 (أو 3 لو HMAC).
 
 كل اللي محتاج تعمله بعد الـ Import:
 1. تربط الـ connections (Outlook + Approvals).
@@ -86,6 +139,25 @@ You need:
    Tools v4** — used to deploy the HMAC helper. Free tier covers the
    integration's typical traffic. See
    [`azure-function-hmac/README.md`](./azure-function-hmac/README.md).
+
+---
+
+## 0. Recommended import order
+
+Import the flows roughly in this order — each step builds on the
+previous one and lets you verify Power Automate is healthy before you
+push customer-facing traffic through it.
+
+| Step | Flow | What you confirm |
+| --- | --- | --- |
+| 0. Sanity test | **#6 `wow-test-customer-promo.zip`** | Outlook connection, mailbox identity, sending limits, anti-spam reputation. Click Run, fill in your own email, expect a real promo email in seconds. |
+| 1. Outbound | **#1 `wow-outbound-mailer.zip`** (or #3 for HMAC) | The platform can send every email it produces (every `templateKey` in the catalog above). |
+| 2. Inbound | **#2 `wow-inbound-listener.zip`** (or #4 for HMAC) | Manager / Finance / Aura / customer replies make it back into the platform, get classified, advance batches automatically. |
+| 3. *(Optional)* Approvals | **#5 `wow-approval-batch.zip`** | Country managers see one-click Approve / Reject cards in Outlook + Teams + PA mobile instead of replying with text. Wire up only after #1 + #2 are stable. |
+
+You can stop after step 0 if you only want to confirm the tenant is
+plumbed correctly. You can stop after step 2 if your managers prefer
+text replies. Step 3 is purely UX upgrade.
 
 ---
 
@@ -274,7 +346,54 @@ Either:
 
 ---
 
-## 6. Mapping flows to platform env vars
+## 6. Test customer-promo flow — `wow-test-customer-promo.zip`
+
+A **manual-trigger sanity flow** for the very first day. It produces
+the same shape of email as the live `CUSTOMER_PROMO_COMPENSATION`
+template (greeting, code box, value, expiry, brand sign-off) but
+doesn't talk to the platform at all — you click **Run**, fill in a
+few fields, and an email lands in the address you typed.
+
+### Why use it
+
+- Confirm Outlook → your operator mailbox connection is healthy.
+- Confirm your sender identity (display name, From address) renders
+  correctly to recipients.
+- Confirm the email isn't getting flagged as spam by typical Gmail /
+  Outlook.com inboxes.
+- Demo the customer-facing promo email to stakeholders without
+  spinning up the platform.
+
+### Import + run
+
+1. **Import → Import Package (Legacy)** →
+   [`packages/wow-test-customer-promo.zip`](./packages/wow-test-customer-promo.zip).
+2. Map the **Office 365 Outlook** connection.
+3. Save the flow.
+4. Open it → click **Run** in the top-right.
+5. Fill in the form:
+   - **Customer email** — use your own mailbox first; switch to a
+     real customer only once you trust the output.
+   - **Customer name** — e.g. "Test Customer".
+   - **Brand name** — e.g. "WOW Burger" / "PaperMoon" / your test brand.
+   - **Promo code** — anything, it's just for display.
+   - **Value / Currency / Expires at** — anything, just for display.
+6. Click **Run flow**. The customer mailbox should receive a real
+   styled email within a few seconds.
+7. Once you're happy, **delete the flow** — it has no place in a
+   production tenant.
+
+### When NOT to use it
+
+This flow does **not** wire into `POWER_AUTOMATE_WEBHOOK_URL`, does
+**not** verify HMAC, and does **not** create platform `EmailLog`
+rows. It is purely a sanity check before you turn on the live
+router (#1 / #3). Once you have proven the live mailer works, this
+flow has no further role.
+
+---
+
+## 7. Mapping flows to platform env vars
 
 | Env var | Used by | Set to |
 | ------- | ------- | ------ |
@@ -289,7 +408,7 @@ package #2 works.
 
 ---
 
-## 7. Test the integration locally
+## 8. Test the integration locally
 
 ### a) Smoke-test the **inbound** webhook (no Power Automate needed)
 
@@ -339,7 +458,7 @@ confirm.
 
 ---
 
-## 8. Editing the flows
+## 9. Editing the flows
 
 The JSON in `flows/` is the source of truth. To customise:
 
