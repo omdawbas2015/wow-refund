@@ -15,13 +15,13 @@ import {
   AtSign,
   CheckCircle2,
   Trash2,
+  Ban,
 } from 'lucide-react';
 import { CustomerHistory } from './customer-history';
 import { CaseStatusStepper, type CaseStatus } from '@/components/ui/case-status-stepper';
 import { PaymentMethodIcons } from '@/components/ui/payment-method-icons';
 import { AuraLogo } from '@/components/ui/aura-logo';
 import { CopyButton } from '@/components/ui/copy-button';
-import { UserAvatar } from '@/components/ui/user-avatar';
 
 type CaseData = {
   id: string;
@@ -49,6 +49,7 @@ type CaseData = {
   assignedTo: { id: string; name: string; avatarUrl: string | null } | null;
   approvedBy: { id: string; name: string; avatarUrl: string | null } | null;
   approvedAt: string | null;
+  cancelledReason: string | null;
 };
 
 type Component = {
@@ -167,21 +168,38 @@ export function CaseTabs({
     });
   }
 
+  function cancelCase() {
+    const reason = window.prompt(
+      'Cancelling this case cannot be undone. Reason for cancellation?',
+    );
+    if (!reason || reason.trim().length < 3) return;
+    transitionStatus('CANCELLED', reason.trim());
+  }
+
   const canSubmit = !isDeleted && caseData.status === 'DRAFT';
   const isPendingApproval = !isDeleted && caseData.status === 'PENDING_APPROVAL';
   const canStartExecution = !isDeleted && caseData.status === 'APPROVED';
   const canMarkRefunded =
     !isDeleted &&
     (caseData.status === 'IN_EXECUTION' || caseData.status === 'PARTIALLY_REFUNDED');
-  const canDelete =
+  // Cancel is allowed from any non-terminal status — matches the state
+  // machine in @wow/validators. Explicit from the UI so an agent who
+  // opened the wrong case can correct themselves without contacting ops.
+  const canCancel =
     !isDeleted &&
     caseData.status !== 'REFUNDED' &&
     caseData.status !== 'PARTIALLY_REFUNDED' &&
     caseData.status !== 'REJECTED' &&
     caseData.status !== 'CANCELLED';
+  const canDelete = canCancel;
 
   const showActionBar =
-    canSubmit || isPendingApproval || canStartExecution || canMarkRefunded || canDelete;
+    canSubmit ||
+    isPendingApproval ||
+    canStartExecution ||
+    canMarkRefunded ||
+    canCancel ||
+    canDelete;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_220px]">
@@ -236,6 +254,18 @@ export function CaseTabs({
               </Button>
             )}
             <div className="ms-auto" />
+            {canCancel && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={isPending}
+                onClick={cancelCase}
+                className="text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              >
+                <Ban className="h-4 w-4" />
+                Cancel case
+              </Button>
+            )}
             {canDelete && (
               <Button
                 size="sm"
@@ -254,6 +284,17 @@ export function CaseTabs({
           <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
             <Trash2 className="h-4 w-4" />
             This case has been deleted. It is read-only and preserved for audit.
+          </div>
+        )}
+        {caseData.status === 'CANCELLED' && !isDeleted && (
+          <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+            <Ban className="mt-0.5 h-4 w-4 flex-none" />
+            <div>
+              <div className="font-medium text-foreground">Case cancelled</div>
+              {caseData.cancelledReason && (
+                <div className="mt-0.5 text-xs">Reason: {caseData.cancelledReason}</div>
+              )}
+            </div>
           </div>
         )}
 
@@ -803,9 +844,8 @@ function FieldInline({ label, value }: { label: string; value: React.ReactNode }
 }
 
 /**
- * Labeled row for the People sidebar: shows a small avatar (initials or
- * uploaded photo) alongside the user's name. Falls back to a subtle
- * "Unassigned" chip when no user is set.
+ * Labeled row for the People sidebar: plain text name (no avatar chip) —
+ * keeps the sidebar visually quiet and readable at a glance.
  */
 function PersonRow({
   label,
@@ -820,10 +860,7 @@ function PersonRow({
     <div>
       <div className="text-xs font-medium text-muted-foreground">{label}</div>
       {user ? (
-        <div className="mt-1 flex items-center gap-2">
-          <UserAvatar name={user.name} image={user.avatarUrl} size="sm" />
-          <span className="text-sm font-medium text-foreground">{user.name}</span>
-        </div>
+        <div className="mt-0.5 text-sm font-medium text-foreground">{user.name}</div>
       ) : (
         <div className="mt-0.5 text-sm text-muted-foreground">{fallback}</div>
       )}
