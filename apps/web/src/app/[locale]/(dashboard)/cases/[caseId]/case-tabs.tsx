@@ -643,9 +643,7 @@ function OverviewTab({
                 ))}
                 {caseData.auraPoints ? (
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
-                    <span className="inline-flex h-9 w-14 flex-none items-center justify-center overflow-hidden rounded-md ring-1 ring-inset ring-black/10">
-                      <AuraLogo size={36} />
-                    </span>
+                    <AuraLogo size={36} className="ring-1 ring-inset ring-black/10" />
                     <div className="font-mono text-sm font-medium">
                       {caseData.auraPoints.toLocaleString()}{' '}
                       <span className="text-xs font-normal text-muted-foreground">

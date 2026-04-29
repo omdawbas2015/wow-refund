@@ -145,9 +145,7 @@ export function AuraBatchActions(props: Props) {
         <DialogContent>
           <DialogHeader>
             <div className="mb-2 flex items-center gap-2">
-              <span className="inline-flex h-9 w-14 items-center justify-center overflow-hidden rounded-md ring-1 ring-inset ring-black/10">
-                <AuraLogo size={36} />
-              </span>
+              <AuraLogo size={36} className="ring-1 ring-inset ring-black/10" />
               <Mail className="h-5 w-5 text-muted-foreground" />
             </div>
             <DialogTitle>Send batch to the Aura team?</DialogTitle>
