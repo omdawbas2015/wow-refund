@@ -15,6 +15,7 @@ import {
   Settings,
   Bell,
   User as UserIcon,
+  ChevronDown,
   ChevronRight,
   Search as SearchIcon,
   LogOut,
@@ -144,29 +145,32 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-e border-border bg-surface">
-      {/* Workspace header — square brand tile + name + chevron, mirrors
-          the Elegance "E" / Elegance Essense block. */}
-      <div className="flex items-center gap-2.5 px-4 py-3.5">
+      {/* Workspace header — square brand tile + name + dropdown chevron,
+          mirrors the Elegance 'E' / Elegance Essense block. */}
+      <button
+        type="button"
+        className="flex items-center gap-2.5 px-4 py-3.5 text-start transition-colors hover:bg-surface-subtle"
+      >
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
           <span className="text-sm font-bold leading-none">W</span>
         </div>
         <span className="flex-1 truncate text-sm font-semibold tracking-tight">
           WOW Refund
         </span>
-        <ChevronRight className="h-4 w-4 text-muted-foreground rtl:rotate-180" />
-      </div>
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+      </button>
 
       {/* Sidebar search — opens the global command palette. */}
       <div className="px-3 pb-2">
         <button
           type="button"
           onClick={openSearch}
-          className="flex h-9 w-full items-center gap-2 rounded-lg border border-border bg-surface-subtle px-2.5 text-sm text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
+          className="flex h-9 w-full items-center gap-2 rounded-full border border-border bg-surface-subtle px-3 text-sm text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
           aria-label={t('search')}
         >
           <SearchIcon className="h-4 w-4 shrink-0" />
           <span className="flex-1 text-start text-[13px]">Search</span>
-          <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+          <kbd className="rounded-md border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
             ⌘K
           </kbd>
         </button>

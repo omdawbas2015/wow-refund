@@ -11,7 +11,7 @@ import {
   Maximize2,
   Search as SearchIcon,
 } from 'lucide-react';
-import { KpiSparkline, type SparkPoint } from './kpi-sparkline';
+import { type SparkPoint } from './kpi-sparkline';
 import { RefundVolumeChart } from './refund-volume-chart';
 
 const RECENT_LIMIT = 6;
@@ -138,16 +138,11 @@ export default async function DashboardHome() {
     },
   });
 
+  // Daily trend feeds the big Refund Volume area chart. KPI cards
+  // intentionally don't carry sparklines so they read like the
+  // reference (clean number + delta + date range).
   const trendCreated = bucketByDay(
     casesCreatedRecent.map((r) => ({ date: r.createdAt })),
-    days,
-  );
-  const trendPending = bucketByDay(
-    casesPendingTrans.map((r) => ({ date: r.createdAt })),
-    days,
-  );
-  const trendRefunded = bucketByDay(
-    casesRefundedTrans.map((r) => ({ date: r.createdAt })),
     days,
   );
 
@@ -167,41 +162,37 @@ export default async function DashboardHome() {
   });
   const dateRange = `${dateRangeFmt.format(start)} \u2014 ${dateRangeFmt.format(now)}, ${now.getFullYear()}`;
 
+  // KPI cards mirror the reference: a soft pastel surface, a faint
+  // off-card radial 'glow' that hints at brand color, no sparkline
+  // inside the card. The sparkline lives only inside the big Refund
+  // Volume card below.
   const stats: {
     label: string;
-    value: number;
     valueDisplay: string;
     delta: number;
-    sparkTint: 'primary' | 'warning' | 'success' | 'destructive';
-    trend: SparkPoint[];
     surface: string;
+    glow: string;
   }[] = [
     {
       label: 'Total cases',
-      value: totalCases,
       valueDisplay: totalCases.toLocaleString(),
       delta: deltaPct(casesCreatedRecent.length, casesCreatedPrev),
-      sparkTint: 'primary',
-      trend: trendCreated,
-      surface: 'bg-primary/5',
+      surface: 'bg-[hsl(248,92%,97%)] dark:bg-primary/8',
+      glow: 'before:bg-[radial-gradient(circle_at_0%_0%,rgba(99,91,255,0.22),transparent_55%)]',
     },
     {
       label: 'Pending approval',
-      value: pendingCases,
       valueDisplay: pendingCases.toLocaleString(),
       delta: deltaPct(casesPendingTrans.length, casesPendingTransPrev),
-      sparkTint: 'warning',
-      trend: trendPending,
-      surface: 'bg-amber-500/5',
+      surface: 'bg-[hsl(28,100%,97%)] dark:bg-amber-500/8',
+      glow: 'before:bg-[radial-gradient(circle_at_100%_0%,rgba(251,146,60,0.25),transparent_55%)]',
     },
     {
       label: 'Completed',
-      value: completedCases,
       valueDisplay: completedCases.toLocaleString(),
       delta: deltaPct(casesRefundedTrans.length, casesRefundedTransPrev),
-      sparkTint: 'success',
-      trend: trendRefunded,
-      surface: 'bg-emerald-500/5',
+      surface: 'bg-surface',
+      glow: '',
     },
   ];
 
@@ -221,28 +212,32 @@ export default async function DashboardHome() {
           const positive = stat.delta >= 0;
           const DeltaIcon = positive ? ArrowUpRight : ArrowDownRight;
           return (
-            <Card key={stat.label} className={stat.surface}>
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-1">
+            <Card
+              key={stat.label}
+              className={`relative isolate overflow-hidden ${stat.surface} before:pointer-events-none before:absolute before:inset-0 before:-z-10 ${stat.glow}`}
+            >
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
                 <CardTitle className="text-sm font-medium text-body">
                   {stat.label}
                 </CardTitle>
-                <Maximize2
-                  className="h-3.5 w-3.5 text-muted-foreground/60"
+                <span
                   aria-hidden
-                />
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-surface/60 text-muted-foreground"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </span>
               </CardHeader>
-              <CardContent className="pt-1">
-                <div className="text-display-md font-light tabular leading-tight">
+              <CardContent className="pt-0">
+                <div className="text-[34px] font-semibold tabular leading-none text-foreground">
                   {stat.valueDisplay}
                 </div>
-                <KpiSparkline data={stat.trend} tint={stat.sparkTint} unitLabel="cases" />
-                <div className="mt-2 flex items-center justify-between text-xs">
+                <div className="mt-6 flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{dateRange}</span>
                   <span
                     className={
                       positive
-                        ? 'inline-flex items-center gap-0.5 font-medium text-emerald-600 dark:text-emerald-400'
-                        : 'inline-flex items-center gap-0.5 font-medium text-rose-600 dark:text-rose-400'
+                        ? 'inline-flex items-center gap-0.5 font-semibold text-emerald-600 dark:text-emerald-400'
+                        : 'inline-flex items-center gap-0.5 font-semibold text-rose-600 dark:text-rose-400'
                     }
                   >
                     <DeltaIcon className="h-3.5 w-3.5" />
@@ -326,18 +321,24 @@ export default async function DashboardHome() {
               Latest activity across all countries.
             </p>
           </div>
+          {/* Search + Filter mirror the reference. The input is
+              read-only and links to /cases when clicked, where the
+              real search lives. The filter button is a static
+              affordance (links to the same place). */}
           <div className="flex items-center gap-2">
             <Link
               href="/cases"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-subtle px-2.5 text-xs font-medium text-body transition-colors hover:bg-surface hover:text-foreground"
+              className="flex h-9 w-56 items-center gap-2 rounded-lg border border-border bg-surface-subtle px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
             >
-              <SearchIcon className="h-3.5 w-3.5" /> Search
+              <SearchIcon className="h-3.5 w-3.5" />
+              <span className="flex-1">Search cases</span>
             </Link>
             <Link
               href="/cases"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-subtle px-2.5 text-xs font-medium text-body transition-colors hover:bg-surface hover:text-foreground"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface-subtle px-3 text-sm font-medium text-body transition-colors hover:bg-surface hover:text-foreground"
             >
-              <Filter className="h-3.5 w-3.5" /> Filter
+              <Filter className="h-3.5 w-3.5" />
+              <span>Filter</span>
             </Link>
           </div>
         </CardHeader>
