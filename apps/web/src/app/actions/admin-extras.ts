@@ -71,11 +71,15 @@ export async function upsertCountrySettingsAction(
     if (!registry) return { ok: false, error: 'Unknown country code' };
 
     if (brandIds.length > 0) {
+      // Compare against the deduped set because Prisma's `in` filter
+      // collapses duplicates server-side; otherwise a payload like
+      // ['a','a','b'] would be wrongly flagged as missing a brand.
+      const uniqueBrandIds = new Set(brandIds);
       const found = await prisma.brand.findMany({
-        where: { id: { in: brandIds } },
+        where: { id: { in: Array.from(uniqueBrandIds) } },
         select: { id: true },
       });
-      if (found.length !== brandIds.length) {
+      if (found.length !== uniqueBrandIds.size) {
         return { ok: false, error: 'One or more brands no longer exist' };
       }
     }
