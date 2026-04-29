@@ -3,15 +3,12 @@ import { cn } from '@/lib/utils';
 
 /**
  * Aura partner-brand chip rendered from the asset shipped under
- * `/public/brand/aura-mark.png`. Used everywhere the system needs
- * to identify Aura as a refund rail (case payment strip, batch
- * action dialogs, the new-case picker).
+ * `/public/brand/aura-mark.png` (the wordmark sits on the gradient
+ * already, so the chip is the image — no extra background).
  *
- * `size` is the rendered chip height in px — width follows the
- * card-aspect ratio (≈1.55:1) so it slots into the same row as
- * Apple Pay / KNET / Mastercard chips without breaking alignment.
- * Defaults are deliberately small (18px) so the chip reads as a
- * payment mark instead of a dominant logo.
+ * Aspect is 2.5:1 to match the cropped wordmark, so the AURA letters
+ * read clearly even at small sizes (slot into the payment-strip row
+ * next to Apple Pay / KNET / Mastercard at the same height).
  */
 export function AuraLogo({
   size = 18,
@@ -22,8 +19,8 @@ export function AuraLogo({
   className?: string;
   title?: string;
 }) {
-  const width = Math.round(size * 1.55);
-  const radius = Math.max(2, Math.round(size * 0.18));
+  const width = Math.round(size * 2.5);
+  const radius = Math.max(2, Math.round(size * 0.22));
 
   return (
     <span
@@ -31,7 +28,7 @@ export function AuraLogo({
       aria-label={title}
       title={title}
       className={cn(
-        'inline-flex flex-none items-center justify-center overflow-hidden bg-white',
+        'inline-flex flex-none items-center justify-center overflow-hidden ring-1 ring-inset ring-black/5',
         className,
       )}
       style={{
