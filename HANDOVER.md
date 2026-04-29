@@ -226,6 +226,17 @@ Other reference docs:
 - ✅ **#30 axe-core a11y audit** — `tests/a11y.spec.ts` runs `@axe-core/playwright` against `/login` and the post-login dashboard, asserting zero WCAG 2.0/2.1 A and AA violations. Runs alongside the rest of the smoke suite under `pnpm test:e2e`. (commit `a4bbd45`)
 - 🟡 **#31 Storybook design-system website** — replaced with `/admin/design-tokens` living preview page (semantic palette, typography ramp incl. Cairo + IBM Plex Sans Arabic, component swatches). Renders against the real CSS pipeline so dark-mode + RTL parity is verifiable in one URL, with no Storybook builder install. Full Storybook scaffold can land later if a UI engineer takes ownership. (commit `db55d6a`)
 
+### Sprint I.2 — Demo feedback (3-dot menu, lighter Aura mark, simplified follow-up, polished stepper) 2026-04-29 🟢 SHIPPED
+
+Branch: `devin/1777486095-refund-case-enhancements` (HEAD = `9f2cce8`). All `pnpm typecheck` 4/4 green. Owner watched the Sprint I demo and asked for refinements:
+
+- ✅ **Cancel/Delete behind a 3-dot menu** — replaced always-visible ghost buttons with a `MoreHorizontal` Popover. Cancel and Delete each open a `Dialog` with a Textarea; Save button stays disabled until reason is ≥3 chars. (`72720da`)
+- ✅ **Lighter Aura mark** — `aura-logo.tsx` rewritten as a stroke-only angular `A` monogram in brand magenta with a small loyalty pip; matched in `payment-method-icons.tsx` AuraGlyph. (Sprint I.1)
+- ✅ **Simplified Aura Points sidecar in `/cases/new`** — replaced gradient card with a clean white tile, smaller logo, soft Loyalty pill, dedicated points input. (Sprint I.1)
+- ✅ **Compact customer-call follow-up strip** — replaced the verbose Section card with a single amber strip; three short buttons (Answered / No answer / Skip). Strip only renders while `customerCallStatus === 'PENDING'`; once any outcome is recorded the strip disappears entirely. (`72720da`)
+- ✅ **Refined progress stepper** — `case-status-stepper.tsx` redesigned with a Progress header + percentage, a 1px linear progress bar, slim 20px circular nodes, a single accent ring on the current step, thin 1px connectors, shorter labels (Pending / Execution). (`9f2cce8`)
+- ✅ **Consolidated Overview layout** — combined Customer + Order into a single "Details" `<dl>`, inlined the Aura row at the bottom of Payment, and trimmed the duplicate "Progress" label outside the stepper. People stays in the right rail with no avatars. (`9f2cce8`)
+
 ### Sprint I — Refund-case ARN workflow + UX polish 2026-04-29 (no secrets) 🟢 SHIPPED
 
 Branch: `devin/1777486095-refund-case-enhancements` (HEAD = `70cb90d`, 9 commits ahead of `main`). All `pnpm typecheck` 4/4 green. Owner request (translated from Arabic): cancel button + remove people avatars, real Customer History, polished case-creation/Aura cards, ARN entry after approval, customer-call follow-up, redesigned case detail page.
