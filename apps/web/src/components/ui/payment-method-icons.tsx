@@ -238,33 +238,23 @@ function AppleLogo({ size }: { size: PaymentSize }) {
 }
 
 function AuraGlyph({ size }: { size: PaymentSize }) {
-  // Aura brand mark — magenta→coral gradient squircle with a stylised "A".
-  // Matches <AuraLogo /> used elsewhere so the brand reads the same across
-  // the payment chip, sidecar card and wordmark.
+  // Aura brand mark — angular A monogram in brand magenta with a small
+  // loyalty pip. Matches <AuraLogo /> so the chip reads identically to
+  // the sidecar card and the wordmark in the new-case form.
   const cls = size === 'md' ? 'h-6 w-6' : 'h-3.5 w-3.5';
-  const gradId = size === 'md' ? 'aura-glyph-grad-md' : 'aura-glyph-grad-sm';
   return (
-    <svg viewBox="0 0 48 48" className={cls} aria-hidden fill="none">
-      <defs>
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FF4FA2" />
-          <stop offset="100%" stopColor="#9A0063" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="44" height="44" rx="13" fill={`url(#${gradId})`} />
-      <path
-        d="M14 35 L24 13 L34 35"
-        stroke="#ffffff"
-        strokeWidth="4"
+    <svg viewBox="0 0 32 32" className={cls} aria-hidden fill="none">
+      <g
+        stroke="#E6007E"
+        strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-      <path
-        d="M18.5 27 L29.5 27"
-        stroke="#ffffff"
-        strokeWidth="3.2"
-        strokeLinecap="round"
-      />
+        fill="none"
+      >
+        <path d="M6 26 L16 6 L26 26" />
+        <path d="M11 19 L21 19" strokeWidth="2.2" />
+      </g>
+      <circle cx="26" cy="26" r="2" fill="#E6007E" />
     </svg>
   );
 }

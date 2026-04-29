@@ -427,39 +427,29 @@ export function NewCaseForm({
           }}
           aria-pressed={includeAura}
           className={cn(
-            'group relative flex w-full items-center gap-4 overflow-hidden rounded-xl border p-4 text-start transition-all',
+            'group relative flex w-full items-center gap-3 rounded-lg border p-3.5 text-start transition-colors',
             includeAura
-              ? 'border-[#E6007E]/60 bg-gradient-to-br from-[#FFF1F8] via-[#FFE4F0] to-[#FFD3E5] shadow-sm ring-2 ring-[#E6007E]/15'
-              : 'border-border bg-surface hover:border-[#E6007E]/40 hover:shadow-sm',
+              ? 'border-[#E6007E]/50 bg-[#FFF7FB]'
+              : 'border-border bg-surface hover:border-[#E6007E]/30 hover:bg-[#FFF7FB]/60',
           )}
         >
-          {/* Decorative blur — subtle Aura glow on the right edge. */}
-          <div
-            aria-hidden
-            className={cn(
-              'pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl transition-opacity',
-              includeAura
-                ? 'bg-[#E6007E]/30 opacity-100'
-                : 'bg-[#E6007E]/15 opacity-0 group-hover:opacity-100',
-            )}
-          />
-          <div className="relative">
-            <AuraLogo size={44} />
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-md border border-[#E6007E]/15 bg-white">
+            <AuraLogo size={22} />
           </div>
-          <div className="relative flex-1 min-w-0">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-heading">Aura Points</span>
-              <span className="rounded-full border border-[#E6007E]/30 bg-white/70 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#9A0063]">
+              <span className="rounded-full bg-[#E6007E]/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#9A0063]">
                 Loyalty
               </span>
             </div>
             <div className="mt-0.5 text-xs text-muted-foreground">
-              Refund loyalty points alongside the payment.
+              Also refund loyalty points alongside the payment.
             </div>
           </div>
           <div
             className={cn(
-              'relative flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors',
+              'flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 transition-colors',
               includeAura
                 ? 'border-[#E6007E] bg-[#E6007E] text-white'
                 : 'border-border bg-white',
@@ -470,8 +460,8 @@ export function NewCaseForm({
         </button>
 
         {includeAura && (
-          <div className="rounded-lg border border-[#E6007E]/20 bg-white/60 p-4">
-            <Label htmlFor="auraPoints" className="text-xs uppercase tracking-wider text-[#9A0063]">
+          <div className="rounded-lg border border-border bg-surface p-4">
+            <Label htmlFor="auraPoints" className="text-xs font-medium text-muted-foreground">
               Points to refund
             </Label>
             <div className="mt-1.5 flex items-center gap-2">
