@@ -27,6 +27,7 @@ Output:
     docs/power-automate/packages/wow-inbound-listener-hmac.zip
     docs/power-automate/packages/wow-approval-batch.zip
     docs/power-automate/packages/wow-test-customer-promo.zip
+    docs/power-automate/packages/wow-customer-promo-auto.zip
 """
 
 from __future__ import annotations
@@ -420,6 +421,26 @@ def main() -> int:
         ),
         flow_definition_path=FLOWS_DIR / "test-customer-promo-flow-definition.json",
         output_path=PACKAGES_DIR / "wow-test-customer-promo.zip",
+    )
+
+    build_package(
+        package_name="wow-customer-promo-auto",
+        display_name="WOW Refund — 7. Auto-send Customer Promo Email (HTTP-triggered, fires when system allocates a promo)",
+        description=(
+            "Production flow that fires automatically every time the WOW "
+            "Refund app allocates a promo code to a customer. The "
+            "platform's dispatcher POSTs the rendered "
+            "CUSTOMER_PROMO_COMPENSATION email here and the flow forwards "
+            "it through Outlook with a styled HTML card (gradient header, "
+            "code box, value/expires table, brand sign-off). Filters on "
+            "templateKey at the top: only CUSTOMER_PROMO_COMPENSATION is "
+            "handled — anything else returns 400 so misroutes are "
+            "obvious. Wire this up to POWER_AUTOMATE_PROMO_WEBHOOK_URL "
+            "for a dedicated promo channel, OR branch off the main "
+            "outbound mailer (#1/#3) via a Switch on templateKey."
+        ),
+        flow_definition_path=FLOWS_DIR / "customer-promo-auto-flow-definition.json",
+        output_path=PACKAGES_DIR / "wow-customer-promo-auto.zip",
     )
 
     return 0

@@ -26,6 +26,7 @@ and import each one with two clicks.
 | 4 | [`wow-inbound-listener-hmac.zip`](./packages/wow-inbound-listener-hmac.zip) | Production hardening of #2 — signs the body with HMAC-SHA256 before posting to the webhook | Outlook → App | **HMAC signed** | New email arrives | Office 365 Outlook + Azure Function |
 | 5 | [`wow-approval-batch.zip`](./packages/wow-approval-batch.zip) | **Replaces** the plain `APPROVAL_BATCH_MANAGER` email with a real Microsoft Approvals card (Approve / Reject buttons in Outlook + Teams + PA mobile) | App → Approvals → App | URL-secret | HTTP POST | Microsoft Approvals + Outlook |
 | 6 | [`wow-test-customer-promo.zip`](./packages/wow-test-customer-promo.zip) | **Sanity test only.** Manual button trigger that sends one promo-code email to whatever address you type. No platform integration — just confirms Outlook + mailbox + sender identity work. Delete after on-boarding. | Manual → Outlook | None (manual) | Button | Office 365 Outlook |
+| 7 | [`wow-customer-promo-auto.zip`](./packages/wow-customer-promo-auto.zip) | **Auto-send promo email.** HTTP-triggered: every time the app allocates a promo to a customer, this flow forwards `CUSTOMER_PROMO_COMPENSATION` to Outlook with a styled HTML card (gradient header, code box, value/expires table). Filters on `templateKey` — anything other than the promo template returns 400. Wire into `POWER_AUTOMATE_PROMO_WEBHOOK_URL`, **or** branch off the main router via a `Switch` | App → Outlook | URL-secret (HTTP POST) | HTTP POST | Office 365 Outlook |
 
 ### Email templates the app produces (and which flow handles them)
 
@@ -45,7 +46,7 @@ the optional Approvals override (#5).
 | `AURA_BATCH_TEAM` | Aura team | Daily Aura points refund batch | en | flow #1 (or #3) |
 | `AURA_BATCH_SENT` | Internal | Aura batch confirmation from operations | en | flow #1 (or #3) |
 | `CUSTOMER_REFUND_COMPLETED` | The customer | Refund processed end-to-end | en, ar | flow #1 (or #3) |
-| `CUSTOMER_PROMO_COMPENSATION` | **The customer** | Goodwill promo code allocated | en | flow #1 (or #3) — **mirrored by flow #6 for testing** |
+| `CUSTOMER_PROMO_COMPENSATION` | **The customer** | Goodwill promo code allocated | en | flow #1 (or #3) for the unified router · **flow #7 for a dedicated auto-send channel with rich HTML** · flow #6 for manual sanity testing |
 | `STORE_<key>` | Store managers | Help-desk store-communication templates | en | flow #1 (or #3) |
 | `scheduled_report.summary` | Admin | Scheduled report run | en | flow #1 (or #3) |
 
@@ -152,6 +153,7 @@ push customer-facing traffic through it.
 | --- | --- | --- |
 | 0. Sanity test | **#6 `wow-test-customer-promo.zip`** | Outlook connection, mailbox identity, sending limits, anti-spam reputation. Click Run, fill in your own email, expect a real promo email in seconds. |
 | 1. Outbound | **#1 `wow-outbound-mailer.zip`** (or #3 for HMAC) | The platform can send every email it produces (every `templateKey` in the catalog above). |
+| 1b. (optional) Dedicated promo channel | **#7 `wow-customer-promo-auto.zip`** | A second outbound URL just for `CUSTOMER_PROMO_COMPENSATION`. Useful when the customer-facing promo email needs a different sender / branding / SLA than the operator mail. Either set `POWER_AUTOMATE_PROMO_WEBHOOK_URL` on the platform, or call it from #1 via a `Switch` on `templateKey`. |
 | 2. Inbound | **#2 `wow-inbound-listener.zip`** (or #4 for HMAC) | Manager / Finance / Aura / customer replies make it back into the platform, get classified, advance batches automatically. |
 | 3. *(Optional)* Approvals | **#5 `wow-approval-batch.zip`** | Country managers see one-click Approve / Reject cards in Outlook + Teams + PA mobile instead of replying with text. Wire up only after #1 + #2 are stable. |
 
@@ -393,11 +395,79 @@ flow has no further role.
 
 ---
 
-## 7. Mapping flows to platform env vars
+## 7. Auto-send customer-promo flow — `wow-customer-promo-auto.zip`
+
+A **production HTTP-triggered flow** that is dedicated to a single
+template: `CUSTOMER_PROMO_COMPENSATION`. Use it when you want the
+customer-facing promo email to look polished (gradient header, code
+box, value/expires table, brand sign-off) without having to embed
+that HTML inside the unified router (#1 / #3).
+
+It accepts the same dispatcher payload as flow #1 — `templateKey`,
+`to`, `subject`, `body`, `variables` — but only acts on payloads
+where `templateKey == "CUSTOMER_PROMO_COMPENSATION"`. Anything else
+returns **400** so misroutes are obvious. The HTML body is built from
+the `variables` block (`customerName`, `promoCode`, `value`,
+`currency`, `expiresAt`, `brandName`); each falls back to a sensible
+default via `coalesce(...)`.
+
+### Two ways to wire it up
+
+**Option A — dedicated webhook URL (cleanest):**
+
+1. **Import → Import Package (Legacy)** →
+   [`packages/wow-customer-promo-auto.zip`](./packages/wow-customer-promo-auto.zip).
+2. Map the **Office 365 Outlook** connection.
+3. Save → Turn on → copy the HTTP POST URL of the trigger.
+4. Set on the platform:
+   ```
+   POWER_AUTOMATE_PROMO_WEBHOOK_URL=https://prod-XX.westeurope.logic.azure.com/...
+   ```
+   (The dispatcher will preferentially route
+   `CUSTOMER_PROMO_COMPENSATION` to this URL when set, falling back to
+   `POWER_AUTOMATE_WEBHOOK_URL` otherwise.)
+
+**Option B — branch off the main router:**
+
+Keep `POWER_AUTOMATE_WEBHOOK_URL` pointing at flow #1 / #3, then in
+that flow add a `Switch` on `triggerBody()?['templateKey']` and have
+the `CUSTOMER_PROMO_COMPENSATION` case POST to flow #7's trigger URL
+instead of calling Send-Email directly. Useful if you want every
+outbound email tracked in the same Power Automate run history.
+
+### Smoke test before going live
+
+```bash
+curl -X POST '<flow-7-trigger-url>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "templateKey": "CUSTOMER_PROMO_COMPENSATION",
+    "to": "you@example.com",
+    "subject": "A little something from Chipotle",
+    "body": "plain-text fallback",
+    "logId": "manual-smoke-1",
+    "variables": {
+      "customerName": "Berka",
+      "promoCode": "C-CHI-BH-25-S852RS",
+      "value": "25",
+      "currency": "BHD",
+      "expiresAt": "2026-12-31",
+      "brandName": "Chipotle"
+    }
+  }'
+```
+
+A `200` with `delivered: true` means the styled HTML promo email
+just landed in the recipient's mailbox.
+
+---
+
+## 8. Mapping flows to platform env vars
 
 | Env var | Used by | Set to |
 | ------- | ------- | ------ |
 | `POWER_AUTOMATE_WEBHOOK_URL` | App → outbound mailer (#1 / #3) or approval flow (#5) | the trigger URL of the flow you chose |
+| `POWER_AUTOMATE_PROMO_WEBHOOK_URL` | App → dedicated promo channel (#7) | the trigger URL of flow #7. Optional. When unset, `CUSTOMER_PROMO_COMPENSATION` falls back to `POWER_AUTOMATE_WEBHOOK_URL` |
 | `POWER_AUTOMATE_SIGNING_SECRET` | App → outbound (#3 verifies it server-side) | a 32-byte random hex string; same value goes into the `<OUTBOUND_SIGNING_SECRET>` placeholder in flow #3 |
 | `POWER_AUTOMATE_INBOUND_SECRET` | Inbound webhook → app | a 32-byte random hex string; **must be unset / empty** for #2; **must match `<INBOUND_SECRET>`** for #4 |
 
@@ -408,7 +478,7 @@ package #2 works.
 
 ---
 
-## 8. Test the integration locally
+## 9. Test the integration locally
 
 ### a) Smoke-test the **inbound** webhook (no Power Automate needed)
 
@@ -458,7 +528,7 @@ confirm.
 
 ---
 
-## 9. Editing the flows
+## 10. Editing the flows
 
 The JSON in `flows/` is the source of truth. To customise:
 

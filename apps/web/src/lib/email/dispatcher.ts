@@ -41,6 +41,11 @@ export interface EmailDispatchResult {
 }
 
 const WEBHOOK_URL = process.env['POWER_AUTOMATE_WEBHOOK_URL'] ?? '';
+// Optional dedicated channel for CUSTOMER_PROMO_COMPENSATION emails.
+// When set, customer-promo dispatches POST here instead of WEBHOOK_URL
+// so operators can wire flow #7 (auto-send promo) and keep the unified
+// router #1 / #3 for everything else. Falls back to WEBHOOK_URL when blank.
+const PROMO_WEBHOOK_URL = process.env['POWER_AUTOMATE_PROMO_WEBHOOK_URL'] ?? '';
 const SIGNING_SECRET = process.env['POWER_AUTOMATE_SIGNING_SECRET'] ?? '';
 
 export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatchResult> {
@@ -86,8 +91,15 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
     },
   });
 
+  // Pick the webhook: customer-promo emails go to the dedicated channel
+  // when one is configured.
+  const targetWebhook =
+    payload.templateKey === 'CUSTOMER_PROMO_COMPENSATION' && PROMO_WEBHOOK_URL
+      ? PROMO_WEBHOOK_URL
+      : WEBHOOK_URL;
+
   // If no webhook configured (dev), log to console and mark SENT
-  if (!WEBHOOK_URL) {
+  if (!targetWebhook) {
     console.log('\n══════════════════════════════════════════════════════════════');
     console.log('📧 EMAIL (dev mode — no Power Automate webhook configured)');
     console.log('──────────────────────────────────────────────────────────────');
@@ -135,7 +147,7 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
   const signature = SIGNING_SECRET ? signBody(outboundBody, SIGNING_SECRET) : '';
 
   try {
-    const res = await fetch(WEBHOOK_URL, {
+    const res = await fetch(targetWebhook, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
