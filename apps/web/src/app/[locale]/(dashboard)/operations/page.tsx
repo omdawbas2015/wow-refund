@@ -226,6 +226,7 @@ export default async function OperationsPage({
         take: 12,
       },
       notes: {
+        where: { deletedAt: null },
         include: { author: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
         take: 5,
