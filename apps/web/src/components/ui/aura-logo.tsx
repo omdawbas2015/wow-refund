@@ -1,13 +1,16 @@
 import { cn } from '@/lib/utils';
 
 /**
- * Aura brand mark — soft squircle with a radial highlight and a hand-
- * lettered A wordmark. Uses gradient + inner glow so it reads as a
- * modern loyalty badge rather than a flat pink disc.
+ * Aura brand mark. A clean, type-led monogram: an angular "A" stroked
+ * in Aura magenta with a subtle dot (the loyalty pip) anchored in the
+ * lower-right quadrant. No fill, no glow, no squircle — the mark is
+ * confident at 16 px and elegant at 64 px because every line carries
+ * weight.
  *
- * Rendered as inline SVG so it scales crisply and inherits sizing from
- * the caller. The color palette is Aura's brand pink tuned toward a
- * magenta → coral gradient.
+ * Renders inline so it inherits caller sizing and stays crisp on
+ * retina. Uses currentColor for the dot so it picks up theme accents
+ * cleanly (we still draw the strokes in brand magenta so it reads as
+ * Aura wherever it sits).
  */
 export function AuraLogo({
   size = 28,
@@ -18,12 +21,10 @@ export function AuraLogo({
   className?: string;
   title?: string;
 }) {
-  const gradId = `aura-grad-${size}`;
-  const glowId = `aura-glow-${size}`;
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 120 120"
+      viewBox="0 0 32 32"
       width={size}
       height={size}
       role="img"
@@ -31,65 +32,21 @@ export function AuraLogo({
       className={cn('shrink-0', className)}
     >
       <title>{title}</title>
-      <defs>
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FF4FA2" />
-          <stop offset="55%" stopColor="#E6007E" />
-          <stop offset="100%" stopColor="#9A0063" />
-        </linearGradient>
-        <radialGradient id={glowId} cx="35%" cy="30%" r="60%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
-          <stop offset="60%" stopColor="#ffffff" stopOpacity="0.08" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-
-      {/* Rounded squircle base */}
-      <rect
-        x="4"
-        y="4"
-        width="112"
-        height="112"
-        rx="32"
-        ry="32"
-        fill={`url(#${gradId})`}
-      />
-      {/* Soft top-left highlight */}
-      <rect
-        x="4"
-        y="4"
-        width="112"
-        height="112"
-        rx="32"
-        ry="32"
-        fill={`url(#${glowId})`}
-      />
-
-      {/* Stylised "A" — two tapered strokes meeting at an apex, with a
-          crossbar that reads as the horizon line on the loyalty mark. */}
+      {/* Angular A monogram — two diagonals + crossbar, all stroked.
+          Coordinates kept on a 32-grid so the lines snap cleanly at
+          common sizes (16, 24, 32, 48). */}
       <g
         fill="none"
-        stroke="#ffffff"
+        stroke="#E6007E"
+        strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path d="M36 86 L60 32 L84 86" strokeWidth="10" />
-        <path d="M47 66 L73 66" strokeWidth="8" />
+        <path d="M6 26 L16 6 L26 26" />
+        <path d="M11 19 L21 19" strokeWidth="2.2" />
       </g>
-
-      {/* Ring accent — subtle outer halo */}
-      <rect
-        x="4"
-        y="4"
-        width="112"
-        height="112"
-        rx="32"
-        ry="32"
-        fill="none"
-        stroke="#ffffff"
-        strokeOpacity="0.18"
-        strokeWidth="1.5"
-      />
+      {/* Loyalty pip — small filled dot tucked under the right leg. */}
+      <circle cx="26" cy="26" r="2" fill="#E6007E" />
     </svg>
   );
 }
