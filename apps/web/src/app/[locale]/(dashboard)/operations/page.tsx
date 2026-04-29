@@ -211,7 +211,9 @@ export default async function OperationsPage({
       country: { include: { registry: true } },
       brand: true,
       approvedBy: { select: { name: true, email: true } },
-      approvalBatch: { select: { batchNumber: true, recipientEmails: true, responseRawBody: true } },
+      approvalBatch: {
+        select: { batchNumber: true, recipientEmails: true, responseRawBody: true },
+      },
       components: {
         include: {
           paymentMethod: { select: { key: true, label: true } },
@@ -272,7 +274,9 @@ export default async function OperationsPage({
         let channel = 'Phone';
         let outcome = l.message;
         try {
-          const meta = l.metadata ? JSON.parse(l.metadata) as { channel?: string; outcome?: string } : null;
+          const meta = l.metadata
+            ? (JSON.parse(l.metadata) as { channel?: string; outcome?: string })
+            : null;
           if (meta?.channel) channel = meta.channel;
           if (meta?.outcome) outcome = meta.outcome;
         } catch {
@@ -296,43 +300,15 @@ export default async function OperationsPage({
     };
   });
 
-  // Sidebar feeds for the pool view: live KNET batches with ARN progress,
-  // live Aura batches, and a global recent-activity strip.
-  const poolLiveKnet = liveKnetBatches.map((b) => ({
-    id: b.id,
-    batchNumber: b.batchNumber,
-    status: b.status,
-    sentAtLabel: formatRelative(b.sentAt),
-    totalComponents: b.totalComponents,
-    arnsReceived: b.arnsReceived,
-  }));
-  const poolLiveAura = liveAuraBatches.map((b) => ({
-    id: b.id,
-    batchNumber: b.batchNumber,
-    status: b.status,
-    sentAtLabel: formatRelative(b.sentAt),
-  }));
-  const recentActivityRows = await prisma.activityLog.findMany({
-    where: { kind: { in: ['component.refunded', 'batch.completed', 'batch.replied', 'aura.confirmed'] } },
-    orderBy: { createdAt: 'desc' },
-    take: 6,
-  });
-  const poolRecentActivity = recentActivityRows.map((a) => ({
-    id: a.id,
-    message: a.message,
-    whenLabel: formatRelative(a.createdAt) ?? '',
-  }));
-
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-display-md font-normal tracking-tight text-heading">
-              Refund Pool
-            </h1>
+            <h1 className="text-display-md font-normal tracking-tight text-heading">Refund Pool</h1>
             <p className="mt-1 text-body">
-              Every refund-related queue in one place: cases waiting on manager approval, KNET components ready for the next batch, and Aura point returns awaiting confirmation. Pick the lane that needs your attention.
+              A cleaner desk for approved refund tickets. Review customers and refund rails here,
+              then use the batch tabs for approval, KNET and Aura work.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -343,7 +319,7 @@ export default async function OperationsPage({
               Bulk operations
             </Link>
             <Badge variant="outline" className="text-xs">
-              Phase 3 · live batches
+              v0.43 · cleaner desk
             </Badge>
           </div>
         </div>
@@ -351,21 +327,19 @@ export default async function OperationsPage({
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <SummaryCard
-          label="Pending approvals"
-          value={totalPendingApprovals}
-          hint={`${countryRows.filter((c) => c.pendingCount > 0).length} countr${
-            countryRows.filter((c) => c.pendingCount > 0).length === 1 ? 'y' : 'ies'
-          } with cases`}
+          label="Refund tickets"
+          value={poolData.length}
+          hint="Approved cases ready for agent follow-up"
         />
         <SummaryCard
-          label="KNET components ready"
-          value={totalKnetReady}
-          hint={`${liveKnetBatches.length} live KNET batch${liveKnetBatches.length === 1 ? '' : 'es'}`}
+          label="Batch work"
+          value={totalPendingApprovals + totalKnetReady + totalPendingAura}
+          hint="Approvals, KNET components and Aura cases"
         />
         <SummaryCard
-          label="Aura cases pending"
-          value={totalPendingAura}
-          hint={`${liveAuraBatches.length} live Aura batch${liveAuraBatches.length === 1 ? '' : 'es'}`}
+          label="Live batches"
+          value={liveApprovalBatches.length + liveKnetBatches.length + liveAuraBatches.length}
+          hint="Active approval, KNET and Aura batches"
         />
       </div>
 
@@ -373,43 +347,40 @@ export default async function OperationsPage({
         <TabsList className="h-10">
           <TabsTrigger value="pool" asChild>
             <Link href="?tab=pool" scroll={false}>
-              Pool ({poolData.length})
+              Tickets ({poolData.length})
             </Link>
           </TabsTrigger>
           <TabsTrigger value="approvals" asChild>
             <Link href="?tab=approvals" scroll={false}>
-              Approvals
+              Approval batches ({totalPendingApprovals})
             </Link>
           </TabsTrigger>
           <TabsTrigger value="knet" asChild>
             <Link href="?tab=knet" scroll={false}>
-              KNET
+              KNET batches ({totalKnetReady})
             </Link>
           </TabsTrigger>
           <TabsTrigger value="aura" asChild>
             <Link href="?tab=aura" scroll={false}>
-              Aura
+              Aura batches ({totalPendingAura})
             </Link>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pool" className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Single canvas for every approved case waiting on a refund. Pick a case from the list to see the customer
-            details, refund components (with ARN status), the customer contact log, the manager approval reply, and the
-            full activity timeline. Use the right column to monitor live KNET / Aura batches.
+            This tab is only for refund tickets: customer details, payment components, contact log,
+            manager reply and timeline. Batch creation and batch monitoring stay in their own tabs
+            so the pool stays readable.
           </p>
-          <RefundPoolPanel
-            cases={poolData}
-            liveKnetBatches={poolLiveKnet}
-            liveAuraBatches={poolLiveAura}
-            recentActivity={poolRecentActivity}
-          />
+          <RefundPoolPanel cases={poolData} />
         </TabsContent>
 
         <TabsContent value="approvals" className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Cases sitting at <span className="font-medium text-foreground">Pending approval</span>. Pick a country, send the manager an approval email, and watch the live batch as the manager replies. Approved cases automatically move to the KNET / Aura lanes below.
+            Cases sitting at <span className="font-medium text-foreground">Pending approval</span>.
+            Pick a country, send the manager an approval email, and watch the live batch as the
+            manager replies. Approved cases automatically move to the KNET / Aura lanes below.
           </p>
           <ApprovalBatchesPanel
             countries={countryRows}
@@ -438,7 +409,9 @@ export default async function OperationsPage({
 
         <TabsContent value="knet" className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Approved cases with KNET components ready to be added to the next file. Build a batch, send it, then enter the ARNs received back from the bank to mark the components <span className="font-medium text-foreground">Refunded</span>.
+            Approved cases with KNET components ready to be added to the next file. Build a batch,
+            send it, then enter the ARNs received back from the bank to mark the components{' '}
+            <span className="font-medium text-foreground">Refunded</span>.
           </p>
           <KnetBatchesPanel
             pendingComponents={pendingKnetComponents.map((c) => ({
@@ -476,7 +449,8 @@ export default async function OperationsPage({
 
         <TabsContent value="aura" className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Approved cases that owe Aura points back to the customer. Group them into a batch, hand it off to the Aura team, and confirm once the points have been credited.
+            Approved cases that owe Aura points back to the customer. Group them into a batch, hand
+            it off to the Aura team, and confirm once the points have been credited.
           </p>
           <AuraBatchesPanel
             pendingCases={pendingAuraCases.map((c) => ({
@@ -502,15 +476,7 @@ export default async function OperationsPage({
   );
 }
 
-function SummaryCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: number;
-  hint: string;
-}) {
+function SummaryCard({ label, value, hint }: { label: string; value: number; hint: string }) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -518,7 +484,7 @@ function SummaryCard({
         <CardDescription className="text-xs">{hint}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="text-display-sm font-light tabular text-heading">{value}</div>
+        <div className="tabular text-display-sm font-light text-heading">{value}</div>
       </CardContent>
     </Card>
   );

@@ -61,15 +61,24 @@ export interface PoolCase {
   auraPoints: number | null;
   auraStatus: string;
   components: PoolCaseComponent[];
-  contactLog: { id: string; channel: string; outcome: string; whenLabel: string; agent: string | null }[];
-  timeline: { id: string; kind: string; message: string; whenLabel: string; actor: string | null }[];
+  contactLog: {
+    id: string;
+    channel: string;
+    outcome: string;
+    whenLabel: string;
+    agent: string | null;
+  }[];
+  timeline: {
+    id: string;
+    kind: string;
+    message: string;
+    whenLabel: string;
+    actor: string | null;
+  }[];
 }
 
 export interface RefundPoolPanelProps {
   cases: PoolCase[];
-  liveKnetBatches: { id: string; batchNumber: string; status: string; sentAtLabel: string | null; totalComponents: number; arnsReceived: number }[];
-  liveAuraBatches: { id: string; batchNumber: string; status: string; sentAtLabel: string | null }[];
-  recentActivity: { id: string; message: string; whenLabel: string }[];
 }
 
 const PAYMENT_ICON: Record<string, typeof Wallet> = {
@@ -100,7 +109,7 @@ function statusTone(status: string) {
   }
 }
 
-export function RefundPoolPanel({ cases, liveKnetBatches, liveAuraBatches, recentActivity }: RefundPoolPanelProps) {
+export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
   const [search, setSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
@@ -115,7 +124,13 @@ export function RefundPoolPanel({ cases, liveKnetBatches, liveAuraBatches, recen
       if (countryFilter !== 'all' && c.countryCode !== countryFilter) return false;
       if (search.trim()) {
         const q = search.trim().toLowerCase();
-        const hay = [c.caseNumber, c.customerName, c.customerEmail, c.orderNumber, c.customerPhone ?? '']
+        const hay = [
+          c.caseNumber,
+          c.customerName,
+          c.customerEmail,
+          c.orderNumber,
+          c.customerPhone ?? '',
+        ]
           .join(' ')
           .toLowerCase();
         if (!hay.includes(q)) return false;
@@ -124,11 +139,16 @@ export function RefundPoolPanel({ cases, liveKnetBatches, liveAuraBatches, recen
     });
   }, [cases, paymentFilter, countryFilter, search]);
 
-  const selected = useMemo(() => filtered.find((c) => c.id === selectedId) ?? filtered[0] ?? null, [filtered, selectedId]);
+  const selected = useMemo(
+    () => filtered.find((c) => c.id === selectedId) ?? filtered[0] ?? null,
+    [filtered, selectedId],
+  );
 
   const countryOptions = useMemo(() => {
     const set = new Map<string, { code: string; flag: string; name: string }>();
-    cases.forEach((c) => set.set(c.countryCode, { code: c.countryCode, flag: c.countryFlag, name: c.countryName }));
+    cases.forEach((c) =>
+      set.set(c.countryCode, { code: c.countryCode, flag: c.countryFlag, name: c.countryName }),
+    );
     return [...set.values()];
   }, [cases]);
 
@@ -144,8 +164,8 @@ export function RefundPoolPanel({ cases, liveKnetBatches, liveAuraBatches, recen
         <CardHeader>
           <CardTitle>No cases ready for refund</CardTitle>
           <CardDescription>
-            Approved cases land here automatically once a country manager confirms the daily approval batch. Use the
-            Approvals tab to send today&apos;s batch to managers.
+            Approved cases land here automatically once a country manager confirms the daily
+            approval batch. Use the Approvals tab to send today&apos;s batch to managers.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -153,53 +173,76 @@ export function RefundPoolPanel({ cases, liveKnetBatches, liveAuraBatches, recen
   }
 
   return (
-    <div className="grid grid-cols-12 gap-4">
-      {/* LEFT COLUMN — case list */}
-      <div className="col-span-12 lg:col-span-4 xl:col-span-3">
-        <div className="space-y-3">
-          <div className="rounded-lg border border-border bg-card p-3">
-            <div className="relative">
-              <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search case, customer, order"
-                className="pl-8"
-              />
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle className="text-base">Refund tickets</CardTitle>
+              <CardDescription>
+                Work one approved case at a time. Batch creation and follow-up live in the batch
+                tabs.
+              </CardDescription>
             </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <FilterChip active={paymentFilter === 'all'} onClick={() => setPaymentFilter('all')}>
-                All ({cases.length})
-              </FilterChip>
-              {paymentOptions.map((p) => (
-                <FilterChip
-                  key={p.key}
-                  active={paymentFilter === p.key}
-                  onClick={() => setPaymentFilter(p.key)}
-                >
-                  {p.label}
-                </FilterChip>
-              ))}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <FilterChip active={countryFilter === 'all'} onClick={() => setCountryFilter('all')}>
-                All countries
-              </FilterChip>
-              {countryOptions.map((c) => (
-                <FilterChip
-                  key={c.code}
-                  active={countryFilter === c.code}
-                  onClick={() => setCountryFilter(c.code)}
-                >
-                  {c.flag} {c.code}
-                </FilterChip>
-              ))}
-            </div>
+            <Badge variant="outline" className="w-fit">
+              {filtered.length} of {cases.length} tickets
+            </Badge>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="relative">
+            <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search case, customer, order, phone"
+              className="pl-8"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <FilterChip active={paymentFilter === 'all'} onClick={() => setPaymentFilter('all')}>
+              All payments
+            </FilterChip>
+            {paymentOptions.map((p) => (
+              <FilterChip
+                key={p.key}
+                active={paymentFilter === p.key}
+                onClick={() => setPaymentFilter(p.key)}
+              >
+                {p.label}
+              </FilterChip>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <FilterChip active={countryFilter === 'all'} onClick={() => setCountryFilter('all')}>
+              All countries
+            </FilterChip>
+            {countryOptions.map((c) => (
+              <FilterChip
+                key={c.code}
+                active={countryFilter === c.code}
+                onClick={() => setCountryFilter(c.code)}
+              >
+                {c.flag} {c.code}
+              </FilterChip>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-          <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+      <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-border pb-3">
+            <CardTitle className="text-sm">Ticket queue</CardTitle>
+            <CardDescription className="text-xs">
+              Pick a case to review its refund rails.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="max-h-[calc(100vh-370px)] space-y-2 overflow-y-auto p-3">
             {filtered.length === 0 ? (
-              <p className="px-2 py-3 text-sm text-muted-foreground">No cases match your filters.</p>
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                No cases match your filters.
+              </p>
             ) : (
               filtered.map((c) => {
                 const isActive = selected?.id === c.id;
@@ -241,12 +284,9 @@ export function RefundPoolPanel({ cases, liveKnetBatches, liveAuraBatches, recen
                 );
               })
             )}
-          </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
 
-      {/* CENTER COLUMN — selected case detail */}
-      <div className="col-span-12 lg:col-span-5 xl:col-span-6">
         {selected ? (
           <CaseDetail c={selected} />
         ) : (
@@ -256,85 +296,6 @@ export function RefundPoolPanel({ cases, liveKnetBatches, liveAuraBatches, recen
             </CardContent>
           </Card>
         )}
-      </div>
-
-      {/* RIGHT COLUMN — sidebar */}
-      <div className="col-span-12 lg:col-span-3">
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Live KNET batches</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 pt-0">
-              {liveKnetBatches.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No active KNET batches.</p>
-              ) : (
-                liveKnetBatches.map((b) => (
-                  <Link
-                    key={b.id}
-                    href={`/operations/knet/${b.id}`}
-                    className="block rounded-md border border-border p-2 hover:bg-surface-subtle"
-                  >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium">{b.batchNumber}</span>
-                      <Badge variant="outline" className="text-[10px]">
-                        {b.status}
-                      </Badge>
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {b.arnsReceived}/{b.totalComponents} ARNs · {b.sentAtLabel ?? 'not sent'}
-                    </div>
-                  </Link>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Live Aura batches</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 pt-0">
-              {liveAuraBatches.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No active Aura batches.</p>
-              ) : (
-                liveAuraBatches.map((b) => (
-                  <Link
-                    key={b.id}
-                    href={`/operations/aura/${b.id}`}
-                    className="block rounded-md border border-border p-2 hover:bg-surface-subtle"
-                  >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium">{b.batchNumber}</span>
-                      <Badge variant="outline" className="text-[10px]">
-                        {b.status}
-                      </Badge>
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">{b.sentAtLabel ?? 'not sent'}</div>
-                  </Link>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Recent activity</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 pt-0">
-              {recentActivity.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No recent activity.</p>
-              ) : (
-                recentActivity.map((a) => (
-                  <div key={a.id} className="text-xs text-muted-foreground">
-                    <div className="text-foreground">{a.message}</div>
-                    <div>{a.whenLabel}</div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );
@@ -373,7 +334,9 @@ function CaseDetail({ c }: { c: PoolCase }) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{c.countryFlag} {c.countryName}</span>
+                <span>
+                  {c.countryFlag} {c.countryName}
+                </span>
                 <span>·</span>
                 <Building2 className="h-3 w-3" />
                 <span>{c.brandName}</span>
@@ -395,13 +358,19 @@ function CaseDetail({ c }: { c: PoolCase }) {
           </div>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-          <Fact label="Refund amount" value={`${c.refundAmount.toFixed(2)} ${c.currency}`} highlight />
+          <Fact
+            label="Refund amount"
+            value={`${c.refundAmount.toFixed(2)} ${c.currency}`}
+            highlight
+          />
           <Fact label="Order amount" value={`${c.orderAmount.toFixed(2)} ${c.currency}`} />
           <Fact label="Order #" value={c.orderNumber} />
           <Fact label="Approved by" value={c.approvedByLabel ?? '—'} />
           <Fact label="Approved at" value={c.approvedAt ?? '—'} />
           <Fact label="Approval batch" value={c.approvalBatchNumber ?? '—'} />
-          {c.auraPoints ? <Fact label="Aura points" value={`${c.auraPoints} (${c.auraStatus})`} /> : null}
+          {c.auraPoints ? (
+            <Fact label="Aura points" value={`${c.auraPoints} (${c.auraStatus})`} />
+          ) : null}
           {c.externalCaseNumber ? <Fact label="CRM ref" value={c.externalCaseNumber} /> : null}
         </CardContent>
       </Card>
@@ -452,8 +421,8 @@ function CaseDetail({ c }: { c: PoolCase }) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Refund components</CardTitle>
           <CardDescription className="text-xs">
-            Each component is one payment rail. KNET components must be added to a daily KNET batch (right column).
-            ARN is filled in once Finance returns the bank&apos;s reference number.
+            Each component is one payment rail. KNET components must be added to a daily KNET batch
+            (right column). ARN is filled in once Finance returns the bank&apos;s reference number.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -469,7 +438,9 @@ function CaseDetail({ c }: { c: PoolCase }) {
                   <div>
                     <div className="font-medium">
                       {cmp.paymentLabel}
-                      {cmp.last4 ? <span className="ml-1 text-xs text-muted-foreground">·· {cmp.last4}</span> : null}
+                      {cmp.last4 ? (
+                        <span className="ml-1 text-xs text-muted-foreground">·· {cmp.last4}</span>
+                      ) : null}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {cmp.amount.toFixed(2)} {cmp.currency}
@@ -557,7 +528,10 @@ function CaseDetail({ c }: { c: PoolCase }) {
                 l.channel === 'Phone' ? Phone : l.channel === 'Email' ? Mail : MessageCircle;
               const Icon = channelIcon;
               return (
-                <div key={l.id} className="flex items-start gap-3 rounded-md border border-border p-2">
+                <div
+                  key={l.id}
+                  className="flex items-start gap-3 rounded-md border border-border p-2"
+                >
                   <Icon className="mt-0.5 h-3.5 w-3.5 text-muted-foreground" />
                   <div className="flex-1">
                     <div className="text-xs">
@@ -586,7 +560,9 @@ function CaseDetail({ c }: { c: PoolCase }) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border border-border bg-surface-subtle p-2 text-xs">{c.approvalReply}</div>
+            <div className="rounded-md border border-border bg-surface-subtle p-2 text-xs">
+              {c.approvalReply}
+            </div>
           </CardContent>
         </Card>
       ) : null}
@@ -605,7 +581,12 @@ function CaseDetail({ c }: { c: PoolCase }) {
               const Icon = isComplete ? CheckCircle2 : Clock;
               return (
                 <div key={e.id} className="flex items-start gap-2 text-xs">
-                  <Icon className={cn('mt-0.5 h-3.5 w-3.5', isComplete ? 'text-emerald-600' : 'text-muted-foreground')} />
+                  <Icon
+                    className={cn(
+                      'mt-0.5 h-3.5 w-3.5',
+                      isComplete ? 'text-emerald-600' : 'text-muted-foreground',
+                    )}
+                  />
                   <div>
                     <div className="text-foreground">{e.message}</div>
                     <div className="text-[11px] text-muted-foreground">
