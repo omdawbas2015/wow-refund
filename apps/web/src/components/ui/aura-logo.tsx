@@ -1,17 +1,20 @@
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 /**
- * Aura brand mark — drawn lockup matching the rest of the payment-chip
- * strip (KNET / Apple Pay / Mastercard). White AURA wordmark on Aura's
- * brand-blue (#3366ff) field, with the macron bar above the leading A
- * that identifies the brand.
+ * Aura partner-brand chip rendered from the asset shipped under
+ * `/public/brand/aura-mark.png`. Used everywhere the system needs
+ * to identify Aura as a refund rail (case payment strip, batch
+ * action dialogs, the new-case picker).
  *
- * `size` is the rendered chip height in px. The chip keeps the standard
- * card-aspect ratio (≈1.55:1) so it slots into the same row as other
- * payment marks without throwing the alignment off.
+ * `size` is the rendered chip height in px — width follows the
+ * card-aspect ratio (≈1.55:1) so it slots into the same row as
+ * Apple Pay / KNET / Mastercard chips without breaking alignment.
+ * Defaults are deliberately small (18px) so the chip reads as a
+ * payment mark instead of a dominant logo.
  */
 export function AuraLogo({
-  size = 28,
+  size = 18,
   className,
   title = 'Aura',
 }: {
@@ -19,14 +22,8 @@ export function AuraLogo({
   className?: string;
   title?: string;
 }) {
-  // Card-chip aspect ratio (matches `Chip` in payment-method-icons.tsx).
   const width = Math.round(size * 1.55);
-  // Optical sizing — wordmark fills the chip without crowding edges.
-  const fontPx = Math.round(size * 0.32);
-  const barWidth = fontPx * 1.85;
-  const barHeight = Math.max(1, Math.round(fontPx * 0.18));
-  const barOffset = fontPx * 0.32;
-  const radius = Math.max(2, Math.round(size * 0.12));
+  const radius = Math.max(2, Math.round(size * 0.18));
 
   return (
     <span
@@ -34,7 +31,7 @@ export function AuraLogo({
       aria-label={title}
       title={title}
       className={cn(
-        'inline-flex flex-none items-center justify-center bg-[#3366ff]',
+        'inline-flex flex-none items-center justify-center overflow-hidden bg-white',
         className,
       )}
       style={{
@@ -43,28 +40,14 @@ export function AuraLogo({
         borderRadius: `${radius}px`,
       }}
     >
-      <span
-        aria-hidden
-        className="relative inline-flex flex-col items-center leading-none"
-      >
-        <span
-          className="rounded-[1px] bg-white"
-          style={{
-            width: `${barWidth}px`,
-            height: `${barHeight}px`,
-            marginBottom: `${barOffset}px`,
-          }}
-        />
-        <span
-          className="font-extrabold uppercase text-white"
-          style={{
-            fontSize: `${fontPx}px`,
-            letterSpacing: '0.12em',
-          }}
-        >
-          AURA
-        </span>
-      </span>
+      <Image
+        src="/brand/aura-mark.png"
+        alt={title}
+        width={width}
+        height={size}
+        className="h-full w-full object-cover"
+        priority={false}
+      />
     </span>
   );
 }

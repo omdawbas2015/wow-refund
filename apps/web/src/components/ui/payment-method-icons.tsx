@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -188,48 +189,21 @@ function KnetBadge({ label, size }: RendererProps) {
 }
 
 function AuraBadge({ label, size }: RendererProps) {
-  // Aura's brand mark is the AURA wordmark in white on the brand-blue
-  // field, with a macron bar above the leading A. We draw it directly
-  // (matching the KNET / Apple Pay treatment) so the chip stays sharp
-  // at any size and consistent with the rest of the strip.
+  // Aura's brand mark ships as a partner asset (gradient field with
+  // the wordmark) under /public/brand. We render it edge-to-edge so
+  // the chip itself reads as the brand without any extra coloring.
+  const w = size === 'md' ? 56 : 28;
+  const h = size === 'md' ? 36 : 18;
   return (
-    <Chip label={label} size={size} className="bg-[#3366ff]">
-      <AuraGlyph size={size} />
-    </Chip>
-  );
-}
-
-function AuraGlyph({ size }: { size: PaymentSize }) {
-  // Hand-drawn AURA wordmark — white on brand blue, with a flat macron
-  // bar centered above the lockup (Aura's identifying trait). Sizes are
-  // hand-tuned to match KNET's optical weight inside the chip.
-  const fontPx = size === 'md' ? 11 : 6.5;
-  const barWidth = fontPx * 1.85;
-  const barHeight = Math.max(1, Math.round(fontPx * 0.18));
-  const barOffset = fontPx * 0.32;
-  return (
-    <span
-      aria-hidden
-      className="relative inline-flex flex-col items-center leading-none"
-    >
-      <span
-        className="rounded-[1px] bg-white"
-        style={{
-          width: `${barWidth}px`,
-          height: `${barHeight}px`,
-          marginBottom: `${barOffset}px`,
-        }}
+    <Chip label={label} size={size} className="bg-white">
+      <Image
+        src="/brand/aura-mark.png"
+        alt={label}
+        width={w}
+        height={h}
+        className="h-full w-full object-cover"
       />
-      <span
-        className="font-extrabold uppercase text-white"
-        style={{
-          fontSize: `${fontPx}px`,
-          letterSpacing: '0.12em',
-        }}
-      >
-        AURA
-      </span>
-    </span>
+    </Chip>
   );
 }
 

@@ -83,7 +83,7 @@ export function AuraBatchActions(props: Props) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center gap-3 space-y-0">
-        <AuraLogo size={28} />
+        <AuraLogo size={20} />
         <CardTitle>Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -145,7 +145,7 @@ export function AuraBatchActions(props: Props) {
         <DialogContent>
           <DialogHeader>
             <div className="mb-2 flex items-center gap-2">
-              <AuraLogo size={36} className="ring-1 ring-inset ring-black/10" />
+              <AuraLogo size={24} className="ring-1 ring-inset ring-black/10" />
               <Mail className="h-5 w-5 text-muted-foreground" />
             </div>
             <DialogTitle>Send batch to the Aura team?</DialogTitle>
