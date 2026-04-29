@@ -83,8 +83,7 @@ export function KnetBatchesPanel({
           <div>
             <CardTitle>Send KNET batch</CardTitle>
             <CardDescription>
-              Roll up approved KNET components without an ARN, email Finance, and wait for the
-              ARN suggestions.
+              Email approved KNET components to Finance and wait for ARNs.
             </CardDescription>
           </div>
           <Button
@@ -134,8 +133,7 @@ export function KnetBatchesPanel({
         <CardHeader>
           <CardTitle>Live KNET batches</CardTitle>
           <CardDescription>
-            Batches awaiting ARN replies from Finance. ARNs suggested by Power Automate
-            need an agent verification before the case is marked refunded.
+            Verify each suggested ARN to mark the case refunded.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -172,9 +170,10 @@ function KnetBatchCard({ batch, pending }: { batch: LiveBatch; pending: boolean 
             </span>
           ) : null}
         </div>
-        <div className="text-xs text-muted-foreground">
-          {batch.verifiedComponents}/{batch.arnsReceived}/{batch.totalComponents}
-          <span className="ms-1 uppercase">verified/received/total</span>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <Stat label="Verified" value={batch.verifiedComponents} />
+          <Stat label="Received" value={batch.arnsReceived} />
+          <Stat label="Total" value={batch.totalComponents} />
         </div>
       </div>
 
@@ -196,6 +195,15 @@ function KnetBatchCard({ batch, pending }: { batch: LiveBatch; pending: boolean 
         </tbody>
       </table>
     </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="font-mono font-medium tabular-nums text-foreground">{value}</span>
+      <span className="uppercase tracking-wide">{label}</span>
+    </span>
   );
 }
 

@@ -43,7 +43,7 @@ export default async function NewKnetBatchPage() {
       <div className="mb-6">
         <h1 className="text-display-md font-normal tracking-tight text-heading">New KNET batch</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Bundle KNET components from approved cases and dispatch to Finance for ARN return.
+          Pick the KNET components to send to Finance.
         </p>
       </div>
 
@@ -51,8 +51,7 @@ export default async function NewKnetBatchPage() {
         <CardHeader>
           <CardTitle>KNET components awaiting batch</CardTitle>
           <CardDescription>
-            Select the components to include. Components attach to the batch and lock as
-            <code> AWAITING_BATCH</code> until the batch is sent.
+            Selected components are locked into the batch until it’s sent.
           </CardDescription>
         </CardHeader>
         <CardContent>
