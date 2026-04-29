@@ -135,6 +135,7 @@ export default async function CasesPage({
   const rows: CaseRow[] = cases.map((c) => ({
     id: c.id,
     caseNumber: c.caseNumber,
+    externalCaseNumber: c.externalCaseNumber ?? null,
     status: c.status as CaseStatus,
     customerName: c.customerName,
     customerEmail: c.customerEmail,

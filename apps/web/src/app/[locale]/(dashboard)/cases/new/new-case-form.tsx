@@ -433,7 +433,7 @@ export function NewCaseForm({
               : 'border-border bg-surface hover:border-[#E6007E]/30 hover:bg-[#FFF7FB]/60',
           )}
         >
-          <AuraLogo size={24} />
+          <AuraLogo size={28} />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-heading">Aura points</div>
             <div className="mt-0.5 text-xs text-muted-foreground">
