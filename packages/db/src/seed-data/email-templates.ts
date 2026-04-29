@@ -114,6 +114,28 @@ export const emailTemplates: readonly EmailTemplateSeed[] = [
     description: 'Arabic version of customer refund completed email.',
   },
   {
+    key: 'CUSTOMER_REFUND_FOLLOWUP_NO_ANSWER',
+    category: 'Customer',
+    locale: 'en',
+    subject: 'Re: Your refund for order {{orderNumber}}',
+    body:
+      'Dear {{customerName}},\n\nWe tried to reach you to confirm that your refund for order {{orderNumber}} (payment reference {{arn}}) was processed successfully.\n\nIf the amount has reflected in your account, no further action is required from your side. If you need anything or have questions about the refund, please reply to this email and we will get back to you.\n\nThank you for shopping with {{brandName}}.\n\n— The {{brandName}} Team',
+    placeholders: ['customerName', 'orderNumber', 'arn', 'brandName'],
+    description:
+      'Follow-up reply on the ARN email when the agent could not reach the customer by phone.',
+  },
+  {
+    key: 'CUSTOMER_REFUND_FOLLOWUP_NO_ANSWER',
+    category: 'Customer',
+    locale: 'ar',
+    subject: 'رد: استرداد طلبك رقم {{orderNumber}}',
+    body:
+      'عزيزي {{customerName}}،\n\nحاولنا التواصل معك للتأكيد على استرداد طلبك رقم {{orderNumber}} (رقم المرجع {{arn}}).\n\nإذا كان المبلغ قد ظهر في حسابك، فلا حاجة لاتخاذ أي إجراء من جانبك. وإذا كنت تحتاج إلى أي شيء أو لديك استفسار بخصوص الاسترداد، يرجى الرد على هذا البريد وسنتواصل معك.\n\nشكراً لتسوقك من {{brandName}}.\n\n— فريق {{brandName}}',
+    placeholders: ['customerName', 'orderNumber', 'arn', 'brandName'],
+    description:
+      'Arabic version of the no-answer follow-up reply on the ARN email.',
+  },
+  {
     key: 'CUSTOMER_PROMO_COMPENSATION',
     category: 'Customer',
     locale: 'en',
