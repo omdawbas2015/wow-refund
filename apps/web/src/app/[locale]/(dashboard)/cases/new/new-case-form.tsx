@@ -17,6 +17,7 @@ import {
 import { AlertTriangle, Check, MinusCircle, Percent } from 'lucide-react';
 import Link from 'next/link';
 import { PaymentBrand } from '@/components/ui/payment-method-icons';
+import { AuraLogo } from '@/components/ui/aura-logo';
 import { cn } from '@/lib/utils';
 
 type Country = { id: string; code: string; name: string; flag: string; currency: string };
@@ -416,7 +417,7 @@ export function NewCaseForm({
         )}
       </section>
 
-      {/* ── Aura Points (sidecar) ── */}
+      {/* ── Aura Points (loyalty add-on) ── */}
       <section className="space-y-3">
         <button
           type="button"
@@ -424,43 +425,69 @@ export function NewCaseForm({
             setIncludeAura(!includeAura);
             if (includeAura) setAuraPoints('');
           }}
+          aria-pressed={includeAura}
           className={cn(
-            'flex w-full items-center gap-3 rounded-lg border p-3 text-start transition-all',
+            'group relative flex w-full items-center gap-4 overflow-hidden rounded-xl border p-4 text-start transition-all',
             includeAura
-              ? 'border-[#E6007E] bg-[#E6007E]/5 ring-2 ring-[#E6007E]/15'
-              : 'border-border bg-surface hover:border-heading/30 hover:shadow-sm',
+              ? 'border-[#E6007E]/60 bg-gradient-to-br from-[#FFF1F8] via-[#FFE4F0] to-[#FFD3E5] shadow-sm ring-2 ring-[#E6007E]/15'
+              : 'border-border bg-surface hover:border-[#E6007E]/40 hover:shadow-sm',
           )}
         >
-          <PaymentBrand brandKey="AURA" size="md" />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-heading">Aura Points</div>
-            <div className="text-xs text-muted-foreground">
-              Include loyalty points refund alongside the payment
+          {/* Decorative blur — subtle Aura glow on the right edge. */}
+          <div
+            aria-hidden
+            className={cn(
+              'pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full blur-3xl transition-opacity',
+              includeAura
+                ? 'bg-[#E6007E]/30 opacity-100'
+                : 'bg-[#E6007E]/15 opacity-0 group-hover:opacity-100',
+            )}
+          />
+          <div className="relative">
+            <AuraLogo size={44} />
+          </div>
+          <div className="relative flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-heading">Aura Points</span>
+              <span className="rounded-full border border-[#E6007E]/30 bg-white/70 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#9A0063]">
+                Loyalty
+              </span>
+            </div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              Refund loyalty points alongside the payment.
             </div>
           </div>
-          <div className={cn(
-            'flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors',
-            includeAura
-              ? 'border-[#E6007E] bg-[#E6007E] text-white'
-              : 'border-border',
-          )}>
+          <div
+            className={cn(
+              'relative flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors',
+              includeAura
+                ? 'border-[#E6007E] bg-[#E6007E] text-white'
+                : 'border-border bg-white',
+            )}
+          >
             {includeAura && <Check className="h-3 w-3" />}
           </div>
         </button>
 
         {includeAura && (
-          <div className="ms-4 space-y-1.5 border-s-2 border-[#E6007E]/30 ps-4">
-            <Label htmlFor="auraPoints">Points to refund</Label>
-            <Input
-              id="auraPoints"
-              type="number"
-              min="0"
-              step="1"
-              value={auraPoints}
-              onChange={(e) => setAuraPoints(e.target.value)}
-              placeholder="Enter points"
-              required
-            />
+          <div className="rounded-lg border border-[#E6007E]/20 bg-white/60 p-4">
+            <Label htmlFor="auraPoints" className="text-xs uppercase tracking-wider text-[#9A0063]">
+              Points to refund
+            </Label>
+            <div className="mt-1.5 flex items-center gap-2">
+              <Input
+                id="auraPoints"
+                type="number"
+                min="0"
+                step="1"
+                value={auraPoints}
+                onChange={(e) => setAuraPoints(e.target.value)}
+                placeholder="0"
+                required
+                className="font-mono text-base"
+              />
+              <span className="text-sm text-muted-foreground">points</span>
+            </div>
           </div>
         )}
       </section>
