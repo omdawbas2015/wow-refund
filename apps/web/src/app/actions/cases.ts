@@ -9,6 +9,7 @@ import {
   type CaseStatusValue,
 } from '@wow/validators';
 import { auth } from '@/auth';
+import { dispatchEmail } from '@/lib/email/dispatcher';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -541,6 +542,320 @@ export async function markAllNotificationsReadAction(): Promise<ActionResult> {
       data: { readAt: new Date() },
     });
     revalidatePath('/', 'layout');
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg };
+  }
+}
+
+/**
+ * Roles that may execute the post-approval refund — set the ARN on each
+ * payment component, send the customer the ARN email, and progress the
+ * case to REFUNDED. Mirrors the Refund-Operations team in the operating
+ * model: ADMIN for break-glass, OPERATIONS for the actual day-to-day.
+ */
+const EXECUTE_ROLES = new Set(['ADMIN', 'OPERATIONS']);
+
+/**
+ * Set the ARN on a single payment component. Only allowed once the case
+ * is APPROVED or already in execution. Each component records its own
+ * ARN — KNET is the most common case but the schema supports multiple
+ * components, so we expose this per-component.
+ *
+ * Marks the component REFUNDED. The case is *not* auto-progressed here;
+ * `completeRefundAction` handles that once every component has an ARN
+ * (or the operator marks the case refunded manually).
+ */
+export async function setComponentArnAction(input: {
+  caseId: string;
+  componentId: string;
+  arn: string;
+}): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    if (!EXECUTE_ROLES.has(user.role ?? '')) {
+      return {
+        ok: false,
+        error: 'Only Refund Operations can record an ARN.',
+      };
+    }
+    const caseId = String(input.caseId ?? '').trim();
+    const componentId = String(input.componentId ?? '').trim();
+    const arn = String(input.arn ?? '').trim();
+    if (!caseId || !componentId) return { ok: false, error: 'Missing case or component id.' };
+    if (arn.length < 3) {
+      return { ok: false, error: 'Please enter a valid ARN.' };
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.refundCase.findUnique({
+        where: { id: caseId },
+        select: { id: true, status: true, deletedAt: true },
+      });
+      if (!existing) return { ok: false as const, error: 'Case not found' };
+      if (existing.deletedAt) return { ok: false as const, error: 'Case is archived' };
+      if (
+        existing.status !== 'APPROVED' &&
+        existing.status !== 'IN_EXECUTION' &&
+        existing.status !== 'PARTIALLY_REFUNDED'
+      ) {
+        return {
+          ok: false as const,
+          error: `ARN can only be set after the case is approved (current: ${existing.status}).`,
+        };
+      }
+
+      const component = await tx.refundComponent.findFirst({
+        where: { id: componentId, caseId },
+        select: { id: true, status: true },
+      });
+      if (!component) return { ok: false as const, error: 'Component not found' };
+
+      // First-time ARN entry transitions the case from APPROVED to
+      // IN_EXECUTION so the Progress rail reflects what's happening.
+      if (existing.status === 'APPROVED') {
+        await tx.refundCase.update({
+          where: { id: caseId },
+          data: { status: 'IN_EXECUTION' },
+        });
+        await tx.activityLog.create({
+          data: {
+            caseId,
+            actorId: user.id,
+            actorLabel: user.name,
+            kind: 'case.in_execution',
+            message: 'Case moved to IN_EXECUTION (first ARN recorded)',
+          },
+        });
+      }
+
+      await tx.refundComponent.update({
+        where: { id: componentId },
+        data: {
+          arn,
+          arnVerifiedAt: new Date(),
+          status: 'REFUNDED',
+          refundedById: user.id,
+          refundedAt: new Date(),
+        },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          caseId,
+          actorId: user.id,
+          actorLabel: user.name,
+          kind: 'component.arn_set',
+          message: `recorded ARN ${arn}`,
+        },
+      });
+
+      return { ok: true as const };
+    });
+
+    if (!result.ok) return result;
+    revalidatePath(`/cases/${caseId}`);
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg };
+  }
+}
+
+/**
+ * Finalise the refund: move the case to REFUNDED, mark
+ * customerCallStatus = PENDING, and dispatch the
+ * CUSTOMER_REFUND_COMPLETED email with the ARN(s) so the customer has
+ * the payment reference. Requires every component to have an ARN.
+ */
+export async function completeRefundAction(input: {
+  caseId: string;
+}): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    if (!EXECUTE_ROLES.has(user.role ?? '')) {
+      return { ok: false, error: 'Only Refund Operations can complete a refund.' };
+    }
+    const caseId = String(input.caseId ?? '').trim();
+    if (!caseId) return { ok: false, error: 'Missing case id.' };
+
+    const refundCase = await prisma.refundCase.findUnique({
+      where: { id: caseId },
+      include: {
+        components: { include: { paymentMethod: true } },
+        brand: true,
+      },
+    });
+    if (!refundCase) return { ok: false, error: 'Case not found' };
+    if (refundCase.deletedAt) return { ok: false, error: 'Case is archived' };
+    if (
+      refundCase.status !== 'IN_EXECUTION' &&
+      refundCase.status !== 'PARTIALLY_REFUNDED' &&
+      refundCase.status !== 'APPROVED'
+    ) {
+      return {
+        ok: false,
+        error: `Case must be in execution before it can be marked refunded (current: ${refundCase.status}).`,
+      };
+    }
+    const missingArn = refundCase.components.filter((c) => !c.arn || !c.arn.trim());
+    if (missingArn.length > 0) {
+      return {
+        ok: false,
+        error: `Record an ARN for every component before completing the refund (${missingArn.length} missing).`,
+      };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.refundCase.update({
+        where: { id: caseId },
+        data: {
+          status: 'REFUNDED',
+          customerNotifiedAt: new Date(),
+          customerCallStatus: 'PENDING',
+          customerCallUpdatedAt: new Date(),
+        },
+      });
+      await tx.activityLog.create({
+        data: {
+          caseId,
+          actorId: user.id,
+          actorLabel: user.name,
+          kind: 'case.refunded',
+          message: 'Case marked as refunded; customer notified with ARN',
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: user.id,
+          actorEmail: user.email,
+          action: 'case.refunded',
+          entityType: 'CASE',
+          entityId: caseId,
+          beforeData: JSON.stringify({ status: refundCase.status }),
+          afterData: JSON.stringify({ status: 'REFUNDED' }),
+        },
+      });
+    });
+
+    // Send the ARN email outside the transaction. EmailLog already records
+    // its own audit row so we don't lose visibility on failure.
+    const componentsTable = refundCase.components
+      .map(
+        (c) =>
+          `- ${c.paymentMethod.label}: ${c.amount.toFixed(3)} ${c.currency} (ARN ${c.arn ?? ''})`,
+      )
+      .join('\n');
+    const arnSummary = refundCase.components
+      .map((c) => c.arn)
+      .filter((x): x is string => !!x)
+      .join(', ');
+    await dispatchEmail({
+      templateKey: 'CUSTOMER_REFUND_COMPLETED',
+      locale: 'en',
+      to: refundCase.customerEmail,
+      variables: {
+        customerName: refundCase.customerName,
+        orderNumber: refundCase.orderNumber,
+        componentsTable,
+        totalAmount: `${refundCase.totalRefundAmount.toFixed(3)} ${refundCase.orderCurrency}`,
+        arn: arnSummary,
+        brandName: refundCase.brand.name,
+      },
+      context: { type: 'CASE', id: caseId },
+    });
+
+    revalidatePath(`/cases/${caseId}`);
+    revalidatePath('/cases');
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg };
+  }
+}
+
+/**
+ * Record the outcome of the agent's post-refund call to the customer.
+ * - ANSWERED → nothing more to do; the ARN email is enough.
+ * - NO_ANSWER → dispatch the follow-up reply on the ARN thread so the
+ *   customer still has a written confirmation.
+ * - NOT_NEEDED → suppresses the prompt without sending a follow-up.
+ */
+export async function markCustomerCallAction(input: {
+  caseId: string;
+  outcome: 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED';
+}): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    const caseId = String(input.caseId ?? '').trim();
+    const outcome = input.outcome;
+    if (!caseId) return { ok: false, error: 'Missing case id.' };
+    if (outcome !== 'ANSWERED' && outcome !== 'NO_ANSWER' && outcome !== 'NOT_NEEDED') {
+      return { ok: false, error: 'Invalid outcome.' };
+    }
+
+    const refundCase = await prisma.refundCase.findUnique({
+      where: { id: caseId },
+      include: {
+        components: true,
+        brand: true,
+      },
+    });
+    if (!refundCase) return { ok: false, error: 'Case not found' };
+    if (refundCase.deletedAt) return { ok: false, error: 'Case is archived' };
+    if (refundCase.status !== 'REFUNDED' && refundCase.status !== 'PARTIALLY_REFUNDED') {
+      return {
+        ok: false,
+        error: 'Customer call follow-up is only available after the refund is sent.',
+      };
+    }
+
+    const now = new Date();
+    await prisma.refundCase.update({
+      where: { id: caseId },
+      data: {
+        customerCallStatus: outcome,
+        customerCallUpdatedAt: now,
+        customerCallById: user.id,
+        ...(outcome === 'NO_ANSWER' ? { customerCallFollowUpAt: now } : {}),
+      },
+    });
+    await prisma.activityLog.create({
+      data: {
+        caseId,
+        actorId: user.id,
+        actorLabel: user.name,
+        kind: `case.customer_call.${outcome.toLowerCase()}`,
+        message:
+          outcome === 'ANSWERED'
+            ? 'Reached the customer to confirm the refund'
+            : outcome === 'NO_ANSWER'
+              ? 'Could not reach the customer; sent ARN follow-up reply'
+              : 'Marked customer call as not needed',
+      },
+    });
+
+    if (outcome === 'NO_ANSWER') {
+      const arnSummary = refundCase.components
+        .map((c) => c.arn)
+        .filter((x): x is string => !!x)
+        .join(', ');
+      await dispatchEmail({
+        templateKey: 'CUSTOMER_REFUND_FOLLOWUP_NO_ANSWER',
+        locale: 'en',
+        to: refundCase.customerEmail,
+        variables: {
+          customerName: refundCase.customerName,
+          orderNumber: refundCase.orderNumber,
+          arn: arnSummary,
+          brandName: refundCase.brand.name,
+        },
+        context: { type: 'CASE', id: caseId },
+      });
+    }
+
+    revalidatePath(`/cases/${caseId}`);
     return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
