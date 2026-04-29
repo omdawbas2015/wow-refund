@@ -406,10 +406,19 @@ function OverviewTab({
   canExecute: boolean;
   inExecutionStage: boolean;
 }) {
+  // Subtle staggered entry — keeps the page calm but adds motion as
+  // sections come into view. Disabled at the user's request via
+  // prefers-reduced-motion (handled by `motion-safe:` variant).
+  const enter =
+    'motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-300';
+
   return (
     <div className="space-y-5">
-      {/* Summary cards row */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      {/* Summary cards row — focused on the three numbers an operator
+          actually needs at a glance: order, refund, refund-of-order
+          ratio. Order # / Aura are present in dedicated sections so we
+          don't repeat them up top. */}
+      <div className={cn('grid gap-3 sm:grid-cols-3', enter)}>
         <SummaryCard
           label="Order amount"
           value={formatMoney(caseData.orderAmount, caseData.orderCurrency)}
@@ -422,58 +431,54 @@ function OverviewTab({
           highlight
           badge={caseData.isPartial ? 'Partial' : undefined}
         />
-        {caseData.auraPoints ? (
-          <SummaryCard
-            label="Aura points"
-            value={caseData.auraPoints.toLocaleString()}
-            badge={caseData.auraStatus}
-          />
-        ) : (
-          <SummaryCard
-            label="Order #"
-            value={caseData.orderNumber}
-            mono
-          />
-        )}
+        <SummaryCard
+          label="% of order"
+          value={
+            caseData.orderAmount > 0
+              ? `${((caseData.totalRefundAmount / caseData.orderAmount) * 100).toFixed(1)}%`
+              : '—'
+          }
+          mono
+        />
       </div>
 
       {/* Main content grid */}
       <div className="grid gap-5 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-5">
-          {/* Customer */}
-          <Section title="Customer">
-            <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
-              <FieldInline label="Name" value={caseData.customerName} />
-              <FieldInline
-                label="Email"
-                value={
-                  <CopyableValue value={caseData.customerEmail} label="Copy email" />
-                }
-              />
-              <FieldInline
-                label="Phone"
-                value={
-                  caseData.customerPhone ? (
-                    <CopyableValue
-                      value={caseData.customerPhone}
-                      label="Copy phone"
-                      mono
-                    />
-                  ) : (
-                    '---'
-                  )
-                }
-              />
-              {caseData.customerNotes && (
-                <div className="sm:col-span-2">
-                  <FieldInline label="Notes" value={caseData.customerNotes} />
-                </div>
-              )}
-            </div>
-          </Section>
+          {/* Customer — the page header already shows name + email so we
+              focus the section on the agent-only fields (phone + notes). */}
+          {(caseData.customerPhone || caseData.customerNotes) && (
+            <Section title="Customer" className={enter}>
+              <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
+                {caseData.customerPhone && (
+                  <FieldInline
+                    label="Phone"
+                    value={
+                      <CopyableValue
+                        value={caseData.customerPhone}
+                        label="Copy phone"
+                        mono
+                      />
+                    }
+                  />
+                )}
+                <FieldInline
+                  label="Email"
+                  value={
+                    <CopyableValue value={caseData.customerEmail} label="Copy email" />
+                  }
+                />
+                {caseData.customerNotes && (
+                  <div className="sm:col-span-2">
+                    <FieldInline label="Agent notes" value={caseData.customerNotes} />
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
 
           {/* Order */}
-          <Section title="Order">
+          <Section title="Order" className={enter}>
             <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
               <FieldInline
                 label="Order #"
@@ -835,9 +840,22 @@ function SummaryCard({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+  className,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="rounded-lg border border-border bg-surface overflow-hidden">
+    <div
+      className={cn(
+        'rounded-lg border border-border bg-surface overflow-hidden',
+        className,
+      )}
+    >
       <div className="border-b border-border bg-surface-subtle/50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {title}
       </div>
