@@ -55,6 +55,9 @@ export default async function CaseDetailsPage({
 
   const role = session?.user?.role ?? null;
   const canApprove = role === 'ADMIN' || role === 'MANAGER';
+  // Refund-Operations workflow (record ARN, complete refund, customer
+  // call follow-up). Mirrors EXECUTE_ROLES on the server.
+  const canExecute = role === 'ADMIN' || role === 'OPERATIONS';
   const isDeleted = !!refundCase.deletedAt;
 
   // For @mention picker: list active users
@@ -156,6 +159,7 @@ export default async function CaseDetailsPage({
             : null,
           approvedAt: refundCase.approvedAt?.toISOString() ?? null,
           cancelledReason: refundCase.cancelledReason,
+          customerCallStatus: refundCase.customerCallStatus,
         }}
         components={refundCase.components.map((c) => ({
           id: c.id,
@@ -185,6 +189,7 @@ export default async function CaseDetailsPage({
         mentionableUsers={mentionableUsers}
         currentUserId={session?.user?.id ?? ''}
         canApprove={canApprove}
+        canExecute={canExecute}
         isDeleted={isDeleted}
       />
     </div>

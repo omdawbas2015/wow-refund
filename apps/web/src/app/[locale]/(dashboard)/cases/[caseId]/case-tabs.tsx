@@ -2,7 +2,14 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { addCaseNoteAction, updateCaseStatusAction, deleteCaseAction } from '@/app/actions/cases';
+import {
+  addCaseNoteAction,
+  updateCaseStatusAction,
+  deleteCaseAction,
+  setComponentArnAction,
+  completeRefundAction,
+  markCustomerCallAction,
+} from '@/app/actions/cases';
 import { Button } from '@/components/ui/button';
 import { ComponentStatusBadge } from '@/components/ui/case-status-badge';
 import { cn } from '@/lib/utils';
@@ -16,6 +23,9 @@ import {
   CheckCircle2,
   Trash2,
   Ban,
+  Mail,
+  Phone,
+  PhoneOff,
 } from 'lucide-react';
 import { CustomerHistory } from './customer-history';
 import { CaseStatusStepper, type CaseStatus } from '@/components/ui/case-status-stepper';
@@ -50,6 +60,7 @@ type CaseData = {
   approvedBy: { id: string; name: string; avatarUrl: string | null } | null;
   approvedAt: string | null;
   cancelledReason: string | null;
+  customerCallStatus: 'NOT_APPLICABLE' | 'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED';
 };
 
 type Component = {
@@ -99,6 +110,7 @@ export function CaseTabs({
   mentionableUsers,
   currentUserId,
   canApprove: canUserApprove,
+  canExecute: canUserExecute,
   isDeleted = false,
 }: {
   locale: string;
@@ -109,6 +121,7 @@ export function CaseTabs({
   mentionableUsers: Mentionable[];
   currentUserId: string;
   canApprove: boolean;
+  canExecute: boolean;
   isDeleted?: boolean;
 }) {
   const [active, setActive] = useState<TabKey>('overview');
@@ -178,10 +191,18 @@ export function CaseTabs({
 
   const canSubmit = !isDeleted && caseData.status === 'DRAFT';
   const isPendingApproval = !isDeleted && caseData.status === 'PENDING_APPROVAL';
-  const canStartExecution = !isDeleted && caseData.status === 'APPROVED';
-  const canMarkRefunded =
+  // Execution flow lives inline on the Payment section (per-component ARN
+  // entry) rather than a top-bar button. Once every component has an ARN
+  // we surface "Send refund email & complete" in the action bar.
+  const inExecutionStage =
     !isDeleted &&
-    (caseData.status === 'IN_EXECUTION' || caseData.status === 'PARTIALLY_REFUNDED');
+    (caseData.status === 'APPROVED' ||
+      caseData.status === 'IN_EXECUTION' ||
+      caseData.status === 'PARTIALLY_REFUNDED');
+  const allComponentsHaveArn =
+    components.length > 0 && components.every((c) => !!c.arn?.trim());
+  const canCompleteRefund =
+    inExecutionStage && canUserExecute && allComponentsHaveArn;
   // Cancel is allowed from any non-terminal status — matches the state
   // machine in @wow/validators. Explicit from the UI so an agent who
   // opened the wrong case can correct themselves without contacting ops.
@@ -196,8 +217,7 @@ export function CaseTabs({
   const showActionBar =
     canSubmit ||
     isPendingApproval ||
-    canStartExecution ||
-    canMarkRefunded ||
+    canCompleteRefund ||
     canCancel ||
     canDelete;
 
@@ -233,24 +253,32 @@ export function CaseTabs({
                 Waiting for country manager approval
               </span>
             )}
-            {canStartExecution && (
-              <Button
-                size="sm"
-                disabled={isPending}
-                onClick={() => transitionStatus('IN_EXECUTION')}
-              >
-                Start execution
-              </Button>
+            {inExecutionStage && !canUserExecute && (
+              <span className="rounded-md bg-surface-subtle/60 px-2.5 py-1.5 text-xs text-muted-foreground">
+                Awaiting Refund Operations to record ARN
+              </span>
             )}
-            {canMarkRefunded && (
+            {canCompleteRefund && (
               <Button
                 size="sm"
                 variant="success"
                 disabled={isPending}
-                onClick={() => transitionStatus('REFUNDED')}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      'Send the ARN email to the customer and mark this case refunded?',
+                    )
+                  )
+                    return;
+                  startTransition(async () => {
+                    const result = await completeRefundAction({ caseId: caseData.id });
+                    if (result.ok) router.refresh();
+                    else alert(result.error);
+                  });
+                }}
               >
-                <CheckCircle2 className="h-4 w-4" />
-                Mark refunded
+                <Mail className="h-4 w-4" />
+                Send ARN email & complete
               </Button>
             )}
             <div className="ms-auto" />
@@ -328,7 +356,13 @@ export function CaseTabs({
         </div>
 
         {active === 'overview' && (
-          <OverviewTab caseData={caseData} components={components} locale={locale} />
+          <OverviewTab
+            caseData={caseData}
+            components={components}
+            locale={locale}
+            canExecute={canUserExecute}
+            inExecutionStage={inExecutionStage}
+          />
         )}
         {active === 'notes' && (
           <NotesTab
@@ -363,16 +397,15 @@ function OverviewTab({
   caseData,
   components,
   locale,
+  canExecute,
+  inExecutionStage,
 }: {
   caseData: CaseData;
   components: Component[];
   locale: string;
+  canExecute: boolean;
+  inExecutionStage: boolean;
 }) {
-  const paymentMethods = components.map((c) => ({
-    key: c.paymentMethodKey,
-    label: c.paymentMethodLabel,
-  }));
-
   return (
     <div className="space-y-5">
       {/* Summary cards row */}
@@ -462,53 +495,32 @@ function OverviewTab({
             </div>
           </Section>
 
-          {/* Payment */}
+          {/* Payment + per-component ARN entry */}
           <Section title="Payment">
             {components.length === 0 ? (
               <div className="p-4 text-sm text-muted-foreground">No payment components.</div>
             ) : (
               <div className="divide-y divide-border">
                 {components.map((c) => (
-                  <div key={c.id} className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
-                    <div className="flex items-center gap-2">
-                      <PaymentMethodIcons
-                        methods={[{ key: c.paymentMethodKey, label: c.paymentMethodLabel }]}
-                        size="sm"
-                      />
-                    </div>
-                    <div className="font-mono text-sm font-medium">
-                      {formatMoney(c.amount, c.currency)}
-                    </div>
-                    {c.authCode && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        Auth:{' '}
-                        <span className="font-mono font-medium text-foreground">
-                          {c.authCode}
-                        </span>
-                        <CopyButton
-                          value={c.authCode}
-                          size="xs"
-                          label="Copy auth code"
-                        />
-                      </div>
-                    )}
-                    {c.arn && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        ARN:{' '}
-                        <span className="font-mono font-medium text-foreground">
-                          {c.arn}
-                        </span>
-                        <CopyButton value={c.arn} size="xs" label="Copy ARN" />
-                      </div>
-                    )}
-                    <div className="ms-auto">
-                      <ComponentStatusBadge status={c.status} />
-                    </div>
-                  </div>
+                  <PaymentComponentRow
+                    key={c.id}
+                    component={c}
+                    caseId={caseData.id}
+                    canExecute={canExecute}
+                    inExecutionStage={inExecutionStage}
+                  />
                 ))}
               </div>
             )}
           </Section>
+
+          {/* Customer call follow-up — surfaced once the case is REFUNDED. */}
+          {(caseData.status === 'REFUNDED' || caseData.status === 'PARTIALLY_REFUNDED') && (
+            <CustomerCallFollowUp
+              caseId={caseData.id}
+              status={caseData.customerCallStatus}
+            />
+          )}
 
           {/* Aura — presented like Payment so the sidecar compensation is
               legible at a glance (logo + points + status badge). */}
@@ -889,6 +901,231 @@ function CopyableValue({
         <CopyButton value={value} size="xs" label={label} />
       </span>
     </span>
+  );
+}
+
+/**
+ * One row in the Payment section. Shows the brand chip + amount + auth/
+ * ARN inline; when the case is in execution and the viewer can execute,
+ * exposes an inline ARN form so Refund Operations can stamp the ARN
+ * without leaving the page.
+ */
+function PaymentComponentRow({
+  component,
+  caseId,
+  canExecute,
+  inExecutionStage,
+}: {
+  component: Component;
+  caseId: string;
+  canExecute: boolean;
+  inExecutionStage: boolean;
+}) {
+  const router = useRouter();
+  const [arnDraft, setArnDraft] = useState(component.arn ?? '');
+  const [editing, setEditing] = useState(!component.arn);
+  const [isPending, startTransition] = useTransition();
+
+  const showInlineForm = inExecutionStage && canExecute && editing;
+
+  function save(e: React.FormEvent) {
+    e.preventDefault();
+    const arn = arnDraft.trim();
+    if (arn.length < 3) {
+      alert('Please enter a valid ARN.');
+      return;
+    }
+    startTransition(async () => {
+      const result = await setComponentArnAction({
+        caseId,
+        componentId: component.id,
+        arn,
+      });
+      if (result.ok) {
+        setEditing(false);
+        router.refresh();
+      } else {
+        alert(result.error);
+      }
+    });
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
+      <div className="flex items-center gap-2">
+        <PaymentMethodIcons
+          methods={[{ key: component.paymentMethodKey, label: component.paymentMethodLabel }]}
+          size="sm"
+        />
+      </div>
+      <div className="font-mono text-sm font-medium">
+        {formatMoney(component.amount, component.currency)}
+      </div>
+      {component.authCode && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          Auth:{' '}
+          <span className="font-mono font-medium text-foreground">{component.authCode}</span>
+          <CopyButton value={component.authCode} size="xs" label="Copy auth code" />
+        </div>
+      )}
+      {component.arn && !editing && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          ARN:{' '}
+          <span className="font-mono font-medium text-foreground">{component.arn}</span>
+          <CopyButton value={component.arn} size="xs" label="Copy ARN" />
+          {inExecutionStage && canExecute && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ms-1 h-6 px-1.5 text-[11px]"
+              onClick={() => setEditing(true)}
+            >
+              Edit
+            </Button>
+          )}
+        </div>
+      )}
+      <div className="ms-auto">
+        <ComponentStatusBadge status={component.status} />
+      </div>
+      {showInlineForm && (
+        <form
+          onSubmit={save}
+          className="basis-full space-y-1.5 rounded-md border border-dashed border-primary/30 bg-primary/5 p-3"
+        >
+          <label className="text-xs font-medium text-muted-foreground" htmlFor={`arn-${component.id}`}>
+            Acquirer Reference Number (ARN)
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <input
+              id={`arn-${component.id}`}
+              value={arnDraft}
+              onChange={(e) => setArnDraft(e.target.value)}
+              placeholder="e.g. 24010120010000000123456"
+              className="min-w-[18rem] flex-1 rounded-md border border-border bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              autoFocus
+            />
+            <Button type="submit" size="sm" disabled={isPending}>
+              {isPending ? 'Saving…' : 'Save ARN'}
+            </Button>
+            {component.arn && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setArnDraft(component.arn ?? '');
+                  setEditing(false);
+                }}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Saving will mark this component refunded; the customer is notified once every component
+            has an ARN and you click <span className="font-medium">Send ARN email & complete</span>.
+          </p>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Customer call follow-up panel — surfaced once the ARN email has been
+ * dispatched and the case is REFUNDED. Operator records whether the
+ * customer answered the confirmation call. NO_ANSWER fires the
+ * follow-up email reply on the ARN thread.
+ */
+function CustomerCallFollowUp({
+  caseId,
+  status,
+}: {
+  caseId: string;
+  status: 'NOT_APPLICABLE' | 'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED';
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function record(outcome: 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED') {
+    startTransition(async () => {
+      const result = await markCustomerCallAction({ caseId, outcome });
+      if (result.ok) router.refresh();
+      else alert(result.error);
+    });
+  }
+
+  return (
+    <Section title="Customer call follow-up">
+      <div className="space-y-3 p-4">
+        {status === 'PENDING' && (
+          <>
+            <p className="text-sm text-muted-foreground">
+              The ARN email has been sent. Try to call the customer to confirm receipt — then
+              record the outcome below.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="success"
+                disabled={isPending}
+                onClick={() => record('ANSWERED')}
+              >
+                <Phone className="h-4 w-4" />
+                Customer answered — done
+              </Button>
+              <Button
+                size="sm"
+                disabled={isPending}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      'Send the no-answer follow-up reply to the customer on the ARN email?',
+                    )
+                  )
+                    return;
+                  record('NO_ANSWER');
+                }}
+              >
+                <PhoneOff className="h-4 w-4" />
+                No answer — send follow-up email
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={isPending}
+                onClick={() => record('NOT_NEEDED')}
+              >
+                Not needed
+              </Button>
+            </div>
+          </>
+        )}
+        {status === 'ANSWERED' && (
+          <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+            <Phone className="h-4 w-4" />
+            Customer reached — refund confirmed by phone.
+          </div>
+        )}
+        {status === 'NO_ANSWER' && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Mail className="h-4 w-4" />
+            Customer didn&apos;t answer; follow-up reply was sent on the ARN email.
+          </div>
+        )}
+        {status === 'NOT_NEEDED' && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4" />
+            Marked as not needing a follow-up call.
+          </div>
+        )}
+        {status === 'NOT_APPLICABLE' && (
+          <div className="text-sm text-muted-foreground">No follow-up needed yet.</div>
+        )}
+      </div>
+    </Section>
   );
 }
 
