@@ -570,9 +570,11 @@ export async function markAllNotificationsReadAction(): Promise<ActionResult> {
  * Roles that may execute the post-approval refund — set the ARN on each
  * payment component, send the customer the ARN email, and progress the
  * case to REFUNDED. Mirrors the Refund-Operations team in the operating
- * model: ADMIN for break-glass, OPERATIONS for the actual day-to-day.
+ * model: ADMIN for break-glass, REFUND_AGENT for the actual day-to-day
+ * (seeded role key); OPERATIONS stays accepted as a legacy alias for any
+ * older user records that still carry it.
  */
-const EXECUTE_ROLES = new Set(['ADMIN', 'OPERATIONS']);
+const EXECUTE_ROLES = new Set(['ADMIN', 'REFUND_AGENT', 'OPERATIONS']);
 
 /**
  * Set the ARN on a single payment component. Only allowed once the case
