@@ -6,10 +6,12 @@ import { Link } from '@/i18n/routing';
 import {
   ArrowDownRight,
   ArrowUpRight,
-  ClipboardList,
+  Clock,
+  FileCheck2,
   Filter,
   Maximize2,
   Search as SearchIcon,
+  UserPlus,
 } from 'lucide-react';
 import { type SparkPoint } from './kpi-sparkline';
 import { RefundVolumeChart } from './refund-volume-chart';
@@ -82,6 +84,7 @@ export default async function DashboardHome() {
     totalCases,
     pendingCases,
     completedCases,
+    awaitingPaymentCases,
     pendingApprovals,
     casesCreatedRecent,
     casesCreatedPrev,
@@ -93,6 +96,12 @@ export default async function DashboardHome() {
     prisma.refundCase.count({ where: { deletedAt: null } }),
     prisma.refundCase.count({ where: { deletedAt: null, status: 'PENDING_APPROVAL' } }),
     prisma.refundCase.count({ where: { deletedAt: null, status: 'REFUNDED' } }),
+    // "Awaiting payment" → cases approved by an admin but not yet executed
+    // (still in APPROVED or IN_EXECUTION). These are the rows the Refund
+    // Pool needs to pay out next.
+    prisma.refundCase.count({
+      where: { deletedAt: null, status: { in: ['APPROVED', 'IN_EXECUTION'] } },
+    }),
     prisma.user.count({ where: { status: 'PENDING' } }),
     prisma.refundCase.findMany({
       where: { deletedAt: null, createdAt: { gte: since } },
@@ -286,25 +295,26 @@ export default async function DashboardHome() {
           <CardContent>
             <ul className="space-y-2">
               <PendingTask
+                icon={FileCheck2}
                 label="Cases pending approval"
+                description="Awaiting an admin sign-off"
                 count={pendingCases}
                 href="/cases?status=PENDING_APPROVAL"
                 tone="amber"
               />
               <PendingTask
+                icon={UserPlus}
                 label="User access requests"
+                description="New sign-ups waiting for access"
                 count={pendingApprovals}
                 href="/admin/pending-approvals"
                 tone="rose"
               />
               <PendingTask
+                icon={Clock}
                 label="Cases awaiting payment"
-                count={
-                  // Render an at-a-glance "0" if we don't have a count yet —
-                  // it's still useful to show the row so the operator knows
-                  // where to look.
-                  0
-                }
+                description="Approved, queued for the next batch"
+                count={awaitingPaymentCases}
                 href="/operations"
                 tone="primary"
               />
@@ -424,12 +434,16 @@ export default async function DashboardHome() {
 }
 
 function PendingTask({
+  icon: Icon,
   label,
+  description,
   count,
   href,
   tone,
 }: {
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
+  description: string;
   count: number;
   href: string;
   tone: 'primary' | 'amber' | 'rose';
@@ -444,17 +458,24 @@ function PendingTask({
     <li>
       <Link
         href={href}
-        className="flex items-center justify-between gap-3 rounded-md border border-transparent px-2 py-2 transition-colors hover:border-border hover:bg-surface-subtle"
+        className="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-surface px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-surface-subtle"
       >
-        <span className="flex items-center gap-2.5">
+        <span className="flex items-start gap-3">
           <span
-            className={`flex h-7 w-7 items-center justify-center rounded-md ${toneClass}`}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${toneClass}`}
           >
-            <ClipboardList className="h-3.5 w-3.5" />
+            <Icon className="h-4 w-4" />
           </span>
-          <span className="text-sm font-medium text-foreground">{label}</span>
+          <span className="flex flex-col">
+            <span className="text-[13px] font-medium leading-tight text-foreground">
+              {label}
+            </span>
+            <span className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+              {description}
+            </span>
+          </span>
         </span>
-        <span className="font-mono text-sm font-semibold tabular text-foreground">
+        <span className="font-mono text-base font-semibold tabular text-foreground">
           {count}
         </span>
       </Link>
