@@ -99,21 +99,21 @@ export function CaseStatusStepper({
   return (
     <div className={cn('rounded-lg border border-border bg-surface p-4', className)}>
       {/* Progress header */}
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
           {isAr ? 'التقدم' : 'Progress'}
         </span>
         <span className="font-mono text-[11px] font-medium tabular-nums text-foreground">
           {progressPct}%
         </span>
       </div>
-      <div className="mb-4 h-1 w-full overflow-hidden rounded-full bg-border/60">
+      <div className="mb-5 h-1.5 w-full overflow-hidden rounded-full bg-border/60">
         <div
           className={cn(
             'h-full rounded-full transition-[width] duration-500 ease-out',
-            terminal === 'rejected' && 'bg-destructive/70',
+            terminal === 'rejected' && 'bg-rose-500/80',
             terminal === 'cancelled' && 'bg-muted-foreground/40',
-            !terminal && 'bg-primary',
+            !terminal && 'bg-emerald-500',
           )}
           style={{ width: `${progressPct}%` }}
         />
@@ -123,19 +123,19 @@ export function CaseStatusStepper({
       {(terminal || partial) && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {terminal === 'rejected' && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-medium text-destructive">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-700 dark:text-rose-400">
               <X className="h-3 w-3" />
               {isAr ? 'مرفوض' : 'Rejected'}
             </span>
           )}
           {terminal === 'cancelled' && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-500/10 px-2.5 py-1 text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
               <Ban className="h-3 w-3" />
               {isAr ? 'ملغى' : 'Cancelled'}
             </span>
           )}
           {partial && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/10 px-2.5 py-1 text-[11px] font-medium text-teal-700 dark:text-teal-400">
               {isAr ? 'استرداد جزئي' : 'Partial'}
             </span>
           )}
@@ -195,39 +195,37 @@ function Rail({
               <span
                 aria-hidden
                 className={cn(
-                  'absolute start-[10px] top-[26px] h-[calc(100%-12px)] w-px',
+                  'absolute start-[11px] top-[28px] h-[calc(100%-14px)] w-[2px]',
                   connectorDashed
-                    ? 'border-s border-dashed border-primary/50 bg-transparent'
+                    ? 'border-s-2 border-dashed border-emerald-500/50 bg-transparent'
                     : connectorDone
-                      ? 'bg-primary'
+                      ? 'bg-emerald-500'
                       : 'bg-border',
                 )}
               />
             )}
 
-            {/* Node — slim 20 px circle */}
+            {/* Node — 22 px circle, no offset ring (avoids clipping inside
+                tight rails). Current step pulses gently to draw the eye. */}
             <div
               className={cn(
-                'relative z-10 flex h-5 w-5 flex-none items-center justify-center rounded-full transition-all duration-300',
-                state === 'done' && !isTerminalHere && 'bg-primary text-primary-foreground',
+                'relative z-10 flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full transition-all duration-300',
+                state === 'done' && !isTerminalHere && 'bg-emerald-500 text-white shadow-sm',
                 state === 'current' &&
                   !isTerminalHere &&
-                  'bg-surface text-primary ring-2 ring-primary ring-offset-2 ring-offset-surface',
+                  'bg-white text-emerald-600 ring-2 ring-emerald-500 dark:bg-zinc-900',
                 state === 'upcoming' && 'border border-border bg-surface text-muted-foreground',
                 isTerminalHere &&
                   terminal === 'rejected' &&
-                  'bg-destructive text-destructive-foreground',
+                  'bg-rose-500 text-white shadow-sm',
                 isTerminalHere &&
                   terminal === 'cancelled' &&
-                  'bg-muted text-muted-foreground',
+                  'bg-zinc-300 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300',
               )}
             >
               {state === 'done' && !isTerminalHere && <Check className="h-3 w-3" strokeWidth={3} />}
               {state === 'current' && !isTerminalHere && (
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              )}
-              {state === 'upcoming' && !isTerminalHere && (
-                <span className="text-[9px] font-medium leading-none">{idx + 1}</span>
+                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
               )}
               {isTerminalHere && terminal === 'rejected' && (
                 <X className="h-3 w-3" strokeWidth={3} />
@@ -244,10 +242,10 @@ function Rail({
                 state === 'current' && !isTerminalHere && 'font-semibold text-heading',
                 state === 'done' && !isTerminalHere && 'text-foreground',
                 state === 'upcoming' && 'text-muted-foreground',
-                isTerminalHere && terminal === 'rejected' && 'font-semibold text-destructive',
+                isTerminalHere && terminal === 'rejected' && 'font-semibold text-rose-700 dark:text-rose-400',
                 isTerminalHere &&
                   terminal === 'cancelled' &&
-                  'font-semibold text-muted-foreground',
+                  'font-semibold text-zinc-700 dark:text-zinc-300',
               )}
             >
               {label}
