@@ -253,12 +253,14 @@ export function RefundPoolPanel({ cases, canExecute }: RefundPoolPanelProps) {
     );
   }
 
+  const showMoreFilters = paymentOptions.length > 1 || countryOptions.length > 1;
+
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-sm">
-      {/* Toolbar — search + smart filters row 1, rail + country chips row 2 */}
-      <div className="flex flex-col gap-2 border-b border-border px-3 py-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[220px]">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* Toolbar */}
+      <div className="border-b border-border px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full max-w-sm flex-1 min-w-[220px]">
             <SearchIcon className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
@@ -267,66 +269,79 @@ export function RefundPoolPanel({ cases, canExecute }: RefundPoolPanelProps) {
               className="h-9 min-w-0 ps-8"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {QUICK_FILTERS.map((f) => (
-              <FilterChip
-                key={f.key}
-                active={quick === f.key}
-                onClick={() => setQuick(f.key)}
-              >
-                {f.label}
-                {f.key !== 'all' && (
-                  <span
-                    className={cn(
-                      'ms-1.5 inline-block rounded-full px-1.5 text-[10px] font-semibold',
-                      quick === f.key ? 'bg-white/25' : 'bg-surface-subtle',
-                    )}
-                  >
-                    {counts[f.key as keyof typeof counts]}
-                  </span>
-                )}
-              </FilterChip>
-            ))}
-          </div>
-          <div className="ms-auto flex items-center gap-1 text-xs text-muted-foreground">
-            <span>{filtered.length}</span> / <span>{cases.length}</span>
+          <div className="ms-auto text-[11px] text-muted-foreground tabular-nums">
+            {filtered.length} / {cases.length}
           </div>
         </div>
-        {(paymentOptions.length > 1 || countryOptions.length > 1) && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <FilterChip active={paymentFilter === 'all'} onClick={() => setPaymentFilter('all')}>
-              Any rail
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {QUICK_FILTERS.map((f) => (
+            <FilterChip key={f.key} active={quick === f.key} onClick={() => setQuick(f.key)}>
+              {f.label}
+              {f.key !== 'all' && (
+                <span
+                  className={cn(
+                    'ms-1.5 inline-block rounded-full px-1.5 text-[10px] font-semibold tabular-nums',
+                    quick === f.key ? 'bg-white/25' : 'bg-surface-subtle',
+                  )}
+                >
+                  {counts[f.key as keyof typeof counts]}
+                </span>
+              )}
             </FilterChip>
-            {paymentOptions.map((p) => (
-              <FilterChip
-                key={p.key}
-                active={paymentFilter === p.key}
-                onClick={() => setPaymentFilter(p.key)}
-              >
-                {p.label}
-              </FilterChip>
-            ))}
-            <span className="mx-1 h-4 w-px bg-border" />
-            <FilterChip active={countryFilter === 'all'} onClick={() => setCountryFilter('all')}>
-              Any country
-            </FilterChip>
-            {countryOptions.map((c) => (
-              <FilterChip
-                key={c.code}
-                active={countryFilter === c.code}
-                onClick={() => setCountryFilter(c.code)}
-              >
-                {c.flag} {c.code}
-              </FilterChip>
-            ))}
-          </div>
-        )}
+          ))}
+          {showMoreFilters && (
+            <>
+              <span className="mx-1 h-4 w-px bg-border" />
+              {paymentOptions.length > 1 && (
+                <>
+                  <FilterChip
+                    active={paymentFilter === 'all'}
+                    onClick={() => setPaymentFilter('all')}
+                  >
+                    Any rail
+                  </FilterChip>
+                  {paymentOptions.map((p) => (
+                    <FilterChip
+                      key={p.key}
+                      active={paymentFilter === p.key}
+                      onClick={() => setPaymentFilter(p.key)}
+                    >
+                      {p.label}
+                    </FilterChip>
+                  ))}
+                </>
+              )}
+              {countryOptions.length > 1 && (
+                <>
+                  <span className="mx-1 h-4 w-px bg-border" />
+                  <FilterChip
+                    active={countryFilter === 'all'}
+                    onClick={() => setCountryFilter('all')}
+                  >
+                    Any country
+                  </FilterChip>
+                  {countryOptions.map((c) => (
+                    <FilterChip
+                      key={c.code}
+                      active={countryFilter === c.code}
+                      onClick={() => setCountryFilter(c.code)}
+                    >
+                      {c.flag} {c.code}
+                    </FilterChip>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Split: queue | workbench */}
-      <div className="grid min-h-[680px] lg:grid-cols-[minmax(420px,460px)_1fr]">
-        <div className="border-b border-border lg:border-b-0 lg:border-e">
-          <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
+      {/* Split: queue | workbench. Single column on mobile, two columns
+          from md (768px) upward so the operator can always see both the
+          queue and the workbench on a normal laptop. */}
+      <div className="grid min-h-[640px] md:grid-cols-[minmax(300px,360px)_1fr]">
+        <div className="border-b border-border md:border-b-0 md:border-e">
+          <div className="max-h-[calc(100vh-220px)] overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="px-4 py-6 text-sm text-muted-foreground">
                 No cases match your filters.
@@ -344,7 +359,7 @@ export function RefundPoolPanel({ cases, canExecute }: RefundPoolPanelProps) {
           </div>
         </div>
 
-        <div className="bg-surface-subtle/40">
+        <div>
           {selected ? (
             <TicketWorkbench key={selected.id} c={selected} canExecute={canExecute} />
           ) : (
@@ -443,22 +458,29 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
   const age = ageBadge(c.ageHours);
   const inExecutionStage =
     c.status === 'APPROVED' || c.status === 'IN_EXECUTION' || c.status === 'PARTIALLY_REFUNDED';
+  const arnsDone = c.components.length - c.pendingArns;
 
   return (
-    <aside className="sticky top-0 max-h-[calc(100vh-210px)] overflow-y-auto p-4">
-      {/* Header strip */}
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{c.countryFlag}</span>
-            <span className="truncate">{c.countryName}</span>
-            <span>·</span>
-            <span className="truncate">{c.brandName}</span>
-            <span>·</span>
-            <span className="truncate">Order {c.orderNumber}</span>
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h2 className="font-mono text-lg font-semibold text-heading">
+    <aside className="max-h-[calc(100vh-220px)] overflow-y-auto">
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <header className="space-y-2 px-6 pb-5 pt-5">
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="text-sm leading-none">{c.countryFlag}</span>
+          <span>{c.countryName}</span>
+          <span>·</span>
+          <span>{c.brandName}</span>
+          <span>·</span>
+          <span>Order {c.orderNumber}</span>
+          <Link
+            href={`/cases/${c.id}`}
+            className="ms-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            <ExternalLink className="h-3 w-3" /> Open full case
+          </Link>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="truncate font-mono text-xl font-semibold text-heading">
               {c.externalCaseNumber || c.caseNumber}
             </h2>
             <CopyButton
@@ -468,88 +490,71 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
             />
             <span
               className={cn(
-                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
                 next.tone,
               )}
             >
               {next.label}
             </span>
           </div>
-          <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Refund</span>
-            <span className="font-mono font-semibold text-heading">
+          <div className="text-end">
+            <div className="font-mono text-lg font-semibold tabular-nums text-heading">
               {money(c.refundAmount, c.currency)}
-            </span>
-            <span>·</span>
-            <span className={cn('inline-flex items-center gap-1', age.tone)}>
+            </div>
+            <div
+              className={cn(
+                'mt-0.5 flex items-center justify-end gap-1 text-[11px]',
+                age.tone,
+              )}
+            >
               <Clock className="h-3 w-3" />
               approved {c.approvedAt ?? '—'}
-            </span>
-            {c.approvedByLabel && (
-              <>
-                <span>·</span>
-                <span>by {c.approvedByLabel}</span>
-              </>
+              {c.approvedByLabel ? ` · by ${c.approvedByLabel}` : ''}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Customer ───────────────────────────────────────────── */}
+      <Section title="Customer">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-heading">{c.customerName}</div>
+            <div className="truncate text-xs text-muted-foreground">{c.customerEmail}</div>
+          </div>
+          {c.customerPhone && (
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-sm text-heading">{c.customerPhone}</span>
+              <CopyButton value={c.customerPhone} size="xs" label="Copy phone" />
+            </div>
+          )}
+          <div className="ms-auto">
+            {c.customerPhone ? (
+              <a
+                href={`tel:${c.customerPhone}`}
+                className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+              >
+                <PhoneCall className="h-3.5 w-3.5" /> Call customer
+              </a>
+            ) : (
+              <span className="text-xs text-muted-foreground">No phone on file</span>
             )}
           </div>
         </div>
-        <Link
-          href={`/cases/${c.id}`}
-          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs font-medium hover:bg-surface-subtle"
-        >
-          <ExternalLink className="h-3 w-3" /> Open full case
-        </Link>
-      </div>
+      </Section>
 
-      {/* Customer strip — Call is the only action surfaced here; the
-          refund email is sent automatically by completeRefundAction, so
-          there's no need for an email shortcut. */}
-      <section className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-border bg-card p-3">
-        <div className="min-w-0">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Customer
-          </div>
-          <div className="truncate text-sm font-medium text-heading">{c.customerName}</div>
-          <div className="truncate text-xs text-muted-foreground">{c.customerEmail}</div>
-        </div>
-        {c.customerPhone && (
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Phone
-            </div>
-            <div className="flex items-center gap-1.5 font-mono text-sm font-medium text-heading">
-              {c.customerPhone}
-              <CopyButton value={c.customerPhone} size="xs" label="Copy phone" />
-            </div>
-          </div>
-        )}
-        <div className="ms-auto flex items-center gap-2">
-          {c.customerPhone ? (
-            <a
-              href={`tel:${c.customerPhone}`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              <PhoneCall className="h-3.5 w-3.5" /> Call customer
-            </a>
-          ) : (
-            <span className="text-xs text-muted-foreground">No phone on file</span>
-          )}
-        </div>
-      </section>
-
-      {/* Refund rails — the main work area */}
-      <section className="mb-4 rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Refund rails
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {c.components.length - c.pendingArns} / {c.components.length} with ARN
-          </div>
-        </div>
+      {/* ── Refund rails ──────────────────────────────────────── */}
+      <Section
+        title="Refund rails"
+        aside={
+          <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+            {arnsDone} / {c.components.length} ARN
+          </span>
+        }
+      >
         <div className="divide-y divide-border">
           {c.components.length === 0 ? (
-            <p className="px-3 py-4 text-sm text-muted-foreground">No payment components.</p>
+            <p className="py-1 text-sm text-muted-foreground">No payment components.</p>
           ) : (
             c.components.map((cmp) => (
               <RailRow
@@ -561,9 +566,9 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
             ))
           )}
           {c.auraPoints ? (
-            <div className="flex flex-wrap items-center gap-3 px-3 py-3">
-              <AuraLogo size={20} />
-              <div className="font-mono text-sm font-medium">
+            <div className="flex flex-wrap items-center gap-3 py-3">
+              <AuraLogo size={28} />
+              <div className="font-mono text-sm font-medium text-heading">
                 {c.auraPoints.toLocaleString()}{' '}
                 <span className="text-xs font-normal text-muted-foreground">points</span>
               </div>
@@ -574,7 +579,7 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
           ) : null}
         </div>
         {canExecute && c.status !== 'REFUNDED' && (
-          <div className="border-t border-border px-3 py-2.5">
+          <div className="mt-3">
             <CompleteRefundButton
               caseId={c.id}
               allArnsIn={c.allArnsIn}
@@ -582,79 +587,111 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
             />
           </div>
         )}
-      </section>
+      </Section>
 
-      {/* Customer call follow-up — persists after the refund email was sent */}
+      {/* ── Customer call follow-up ───────────────────────────── */}
       {(c.status === 'REFUNDED' || c.status === 'PARTIALLY_REFUNDED') &&
         c.customerCallStatus !== 'NOT_APPLICABLE' && (
-          <section className="mb-4">
+          <Section title="Customer call">
             <CallFollowUp
               caseId={c.id}
               status={c.customerCallStatus}
               updatedAt={c.customerCallUpdatedAt}
               canExecute={canExecute}
             />
-          </section>
+          </Section>
         )}
 
-      {/* Notes */}
-      <section className="mb-4 rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Notes
-          </div>
+      {/* ── Notes ─────────────────────────────────────────────── */}
+      <Section
+        title="Notes"
+        aside={
           <Link
             href={`/cases/${c.id}?tab=notes`}
             className="text-[11px] text-muted-foreground hover:text-foreground"
           >
             View all
           </Link>
-        </div>
-        <div className="divide-y divide-border">
-          {c.notes.length === 0 ? (
-            <p className="px-3 py-3 text-xs text-muted-foreground">No notes yet.</p>
-          ) : (
-            c.notes.map((n) => (
-              <div key={n.id} className="px-3 py-2.5">
+        }
+      >
+        {c.notes.length > 0 && (
+          <ul className="mb-3 space-y-3">
+            {c.notes.map((n) => (
+              <li key={n.id}>
                 <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                   <span className="font-medium text-foreground">{n.authorName}</span>
                   <span>{n.whenLabel}</span>
                 </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{n.body}</p>
-              </div>
-            ))
-          )}
-        </div>
-        <div className="border-t border-border p-2.5">
-          <AddNoteForm caseId={c.id} />
-        </div>
-      </section>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm text-foreground">{n.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <AddNoteForm caseId={c.id} />
+      </Section>
 
-      {/* Context: approval + root cause + last activity */}
-      <section className="mb-4 rounded-xl border border-border bg-card p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Context
-        </div>
-        <dl className="grid gap-y-1.5 text-xs sm:grid-cols-2 sm:gap-x-4">
-          {c.approvalBatchNumber && (
-            <Fact label="Approval batch" value={c.approvalBatchNumber} mono />
-          )}
-          {c.rootCauseSummary && <Fact label="Root cause" value={c.rootCauseSummary} />}
-          {c.timeline[0] && (
-            <Fact
-              label="Last activity"
-              value={`${c.timeline[0].message} · ${c.timeline[0].whenLabel}`}
-            />
-          )}
-          {c.contactLog[0] && (
-            <Fact
-              label="Last contact"
-              value={`${c.contactLog[0].channel}: ${c.contactLog[0].outcome} · ${c.contactLog[0].whenLabel}`}
-            />
-          )}
-        </dl>
-      </section>
+      {/* ── Context ───────────────────────────────────────────── */}
+      {(c.approvalBatchNumber ||
+        c.rootCauseSummary ||
+        c.timeline[0] ||
+        c.contactLog[0]) && (
+        <Section title="Context" last>
+          <dl className="grid gap-y-2 text-xs sm:grid-cols-2 sm:gap-x-6">
+            {c.approvalBatchNumber && (
+              <Fact label="Approval batch" value={c.approvalBatchNumber} mono />
+            )}
+            {c.rootCauseSummary && <Fact label="Root cause" value={c.rootCauseSummary} />}
+            {c.timeline[0] && (
+              <Fact
+                label="Last activity"
+                value={`${c.timeline[0].message} · ${c.timeline[0].whenLabel}`}
+              />
+            )}
+            {c.contactLog[0] && (
+              <Fact
+                label="Last contact"
+                value={`${c.contactLog[0].channel}: ${c.contactLog[0].outcome} · ${c.contactLog[0].whenLabel}`}
+              />
+            )}
+          </dl>
+        </Section>
+      )}
     </aside>
+  );
+}
+
+/**
+ * Flat workbench section: a single horizontal divider above, a small
+ * uppercase label, and the body. No nested cards — the whole workbench
+ * reads as one continuous pane with section breaks, which keeps the
+ * UI calm even when every section is shown at once.
+ */
+function Section({
+  title,
+  aside,
+  last,
+  children,
+}: {
+  title: string;
+  aside?: React.ReactNode;
+  last?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={cn(
+        'border-t border-border px-6 py-5',
+        last ? '' : '',
+      )}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          {title}
+        </h3>
+        {aside ? <div>{aside}</div> : null}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -707,24 +744,24 @@ function RailRow({
   }
 
   return (
-    <div className="px-3 py-3">
+    <div className="py-3 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <PaymentMethodIcons
           methods={[{ key: component.paymentKey, label: component.paymentLabel }]}
           size="sm"
         />
-        <div className="font-mono text-sm font-medium tabular-nums">
+        <div className="font-mono text-sm font-medium tabular-nums text-heading">
           {money(component.amount, component.currency)}
         </div>
         {component.authCode && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <span>Auth</span>
             <span className="font-mono text-foreground">{component.authCode}</span>
             <CopyButton value={component.authCode} size="xs" label="Copy auth" />
           </div>
         )}
         {component.last4 && (
-          <div className="text-xs text-muted-foreground">•••• {component.last4}</div>
+          <div className="text-[11px] text-muted-foreground">•••• {component.last4}</div>
         )}
         {component.batchNumber && (
           <Link
@@ -741,26 +778,26 @@ function RailRow({
       </div>
 
       {component.arn && !editing ? (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="font-semibold text-emerald-700">ARN</span>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+            ARN
+          </span>
           <span className="font-mono font-medium text-foreground">{component.arn}</span>
           <CopyButton value={component.arn} size="xs" label="Copy ARN" />
           {canExecute && (
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
-              className="ms-1 h-6 px-1.5 text-[11px]"
               onClick={() => setEditing(true)}
+              className="ms-1 text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
             >
               Edit
-            </Button>
+            </button>
           )}
         </div>
       ) : canExecute ? (
         <form
           onSubmit={save}
-          className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-subtle/40 p-2"
+          className="mt-2 flex flex-wrap items-center gap-2"
         >
           <label
             htmlFor={`pool-arn-${component.id}`}

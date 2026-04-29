@@ -21,12 +21,14 @@ export function AuraLogo({
   className?: string;
   title?: string;
 }) {
-  // 14:9 aspect — tracks the payment chip dimensions so AuraLogo can
-  // sit on the payment row without throwing off vertical rhythm.
-  const width = Math.round((size * 14) / 9);
+  // ~2.2 : 1 aspect — enough to fit the 16px 'AURA' wordmark next to
+  // the circular Aura mark without clipping. Earlier iterations used a
+  // 14:9 ratio to match the credit-card chips, but the wordmark got
+  // truncated to 'AUF' at every render size.
+  const width = Math.round(size * 2.2);
   const radius = Math.max(2, Math.round(size * 0.18));
   const iconSize = Math.round(size * 0.78);
-  const wordmarkSize = Math.round(size * 0.6);
+  const wordmarkSize = Math.round(size * 0.58);
 
   return (
     <span
