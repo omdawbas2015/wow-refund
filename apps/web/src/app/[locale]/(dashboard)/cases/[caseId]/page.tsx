@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { Mail, Phone, User as UserIcon } from 'lucide-react';
 import { prisma } from '@wow/db';
 import { auth } from '@/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,17 +66,27 @@ export default async function CaseDetailsPage({
     take: 100,
   });
 
+  // Primary heading is the externalCaseNumber the agent typed when
+  // creating the case. The auto-generated REF-XX-YYYY-NNNNN sits as a
+  // muted sub-id underneath. Cases imported before externalCaseNumber
+  // was required fall back to the auto number as the heading.
+  const headingRef = refundCase.externalCaseNumber ?? refundCase.caseNumber;
+  const showInternalSubId =
+    refundCase.externalCaseNumber !== null &&
+    refundCase.externalCaseNumber !== refundCase.caseNumber;
+  const customerInitial = (refundCase.customerName || '?').charAt(0).toUpperCase();
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="flex items-center gap-1 text-display-sm font-normal tracking-tight text-heading font-mono">
-              {refundCase.caseNumber}
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="flex items-center gap-1 text-display-sm font-semibold tracking-tight text-heading">
+              {headingRef}
               <CopyButton
-                value={refundCase.caseNumber}
+                value={headingRef}
                 size="sm"
-                label="Copy case number"
+                label="Copy case reference"
                 className="ms-1"
               />
             </h1>
@@ -86,10 +97,16 @@ export default async function CaseDetailsPage({
               </span>
             )}
           </div>
-          <p className="mt-1 text-body">
-            {refundCase.customerName} ·{' '}
-            <span className="text-muted-foreground">{refundCase.customerEmail}</span>
-          </p>
+          {showInternalSubId && (
+            <p className="mt-1 flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+              <span>{refundCase.caseNumber}</span>
+              <CopyButton
+                value={refundCase.caseNumber}
+                size="sm"
+                label="Copy internal case number"
+              />
+            </p>
+          )}
         </div>
         <div className="text-end text-sm text-muted-foreground">
           <div>
@@ -99,6 +116,53 @@ export default async function CaseDetailsPage({
           <div>Created {formatDateTime(refundCase.createdAt)}</div>
         </div>
       </div>
+
+      {/* Customer panel — bordered card with avatar + name + contact rows.
+          Replaces the inline "Name · email" line so customer info reads
+          as its own information block. */}
+      <Card className="mb-6">
+        <CardContent className="flex flex-wrap items-center gap-4 p-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/12 text-base font-semibold text-primary">
+            {customerInitial}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="truncate">{refundCase.customerName}</span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5" />
+                <span className="truncate">{refundCase.customerEmail}</span>
+              </span>
+              {refundCase.customerPhone ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" />
+                  <span dir="ltr">{refundCase.customerPhone}</span>
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-end">
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Order
+              </div>
+              <div className="font-mono text-sm font-medium text-foreground">
+                {refundCase.orderNumber}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Refund
+              </div>
+              <div className="text-sm font-semibold tabular text-foreground">
+                {formatMoney(refundCase.totalRefundAmount, refundCase.orderCurrency)}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <CaseTabs
         locale={locale}
