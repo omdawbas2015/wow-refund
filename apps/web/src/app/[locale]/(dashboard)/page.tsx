@@ -128,6 +128,10 @@ export default async function DashboardHome() {
     days,
   );
 
+  // Each KPI card gets a soft pastel band so the four metrics read as
+  // distinct surfaces at a glance — matches the Elegance dashboard
+  // pattern (see provided design reference). Backgrounds stay subtle
+  // enough to avoid clashing with dark mode or the spark line.
   const stats: {
     label: string;
     value: number;
@@ -136,11 +140,12 @@ export default async function DashboardHome() {
     sparkTint: 'primary' | 'warning' | 'success' | 'destructive';
     trend: SparkPoint[];
     unit: string;
+    surface: string;
   }[] = [
-    { label: 'Total cases', value: totalCases, icon: FileText, tint: 'text-primary', sparkTint: 'primary', trend: trendCreated, unit: 'created' },
-    { label: 'Pending approval', value: pendingCases, icon: Clock, tint: 'text-warning', sparkTint: 'warning', trend: trendPending, unit: 'submitted' },
-    { label: 'Completed', value: completedCases, icon: CheckCircle2, tint: 'text-success', sparkTint: 'success', trend: trendRefunded, unit: 'refunded' },
-    { label: 'User approvals', value: pendingApprovals, icon: AlertCircle, tint: 'text-destructive', sparkTint: 'destructive', trend: trendUserApprovals, unit: 'requests' },
+    { label: 'Total cases', value: totalCases, icon: FileText, tint: 'text-primary', sparkTint: 'primary', trend: trendCreated, unit: 'created', surface: 'bg-primary/5' },
+    { label: 'Pending approval', value: pendingCases, icon: Clock, tint: 'text-warning', sparkTint: 'warning', trend: trendPending, unit: 'submitted', surface: 'bg-amber-500/5' },
+    { label: 'Completed', value: completedCases, icon: CheckCircle2, tint: 'text-success', sparkTint: 'success', trend: trendRefunded, unit: 'refunded', surface: 'bg-emerald-500/5' },
+    { label: 'User approvals', value: pendingApprovals, icon: AlertCircle, tint: 'text-destructive', sparkTint: 'destructive', trend: trendUserApprovals, unit: 'requests', surface: 'bg-rose-500/5' },
   ];
 
   return (
@@ -157,7 +162,7 @@ export default async function DashboardHome() {
           const Icon = stat.icon;
           const sum = stat.trend.reduce((s, p) => s + p.value, 0);
           return (
-            <Card key={stat.label}>
+            <Card key={stat.label} className={stat.surface}>
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-body">{stat.label}</CardTitle>
                 <Icon className={`h-5 w-5 ${stat.tint}`} />
