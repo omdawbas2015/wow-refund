@@ -189,20 +189,32 @@ function KnetBadge({ label, size }: RendererProps) {
 }
 
 function AuraBadge({ label, size }: RendererProps) {
-  // Aura icon-only treatment (magenta circle with Arabic أورا), sized
-  // to fit the standard payment-chip footprint without horizontal
-  // letterboxing — the wordmark version is too wide for this chip.
-  const dim = size === 'md' ? 28 : 14;
+  // Aura chip composed in CSS to match Apple Pay's pattern: small
+  // bitmap icon + wordmark next to it. The wordmark uses the official
+  // Aura magenta (#ee0677). Composing in CSS (vs. dropping in a
+  // pre-rendered logo PNG) lets us hit the exact h-9 / w-14 chip
+  // footprint without letterboxing or excess white halo.
+  const iconDim = size === 'md' ? 18 : 9;
   return (
     <Chip label={label} size={size} className="bg-white">
-      <Image
-        src="/brand/aura-icon.png"
-        alt={label}
-        width={dim * 2}
-        height={dim * 2}
-        className="object-contain"
-        style={{ height: `${dim}px`, width: `${dim}px` }}
-      />
+      <span className="inline-flex items-center gap-[2px]">
+        <Image
+          src="/brand/aura-icon.png"
+          alt=""
+          width={iconDim * 2}
+          height={iconDim * 2}
+          className="object-contain"
+          style={{ height: `${iconDim}px`, width: `${iconDim}px` }}
+        />
+        <span
+          className={cn(
+            'font-semibold leading-none tracking-[0.04em] text-[#ee0677]',
+            size === 'md' ? 'text-[10px]' : 'text-[6px]',
+          )}
+        >
+          AURA
+        </span>
+      </span>
     </Chip>
   );
 }
