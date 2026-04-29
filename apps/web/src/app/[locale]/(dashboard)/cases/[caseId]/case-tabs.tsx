@@ -26,12 +26,23 @@ import {
   Mail,
   Phone,
   PhoneOff,
+  MoreHorizontal,
 } from 'lucide-react';
 import { CustomerHistory } from './customer-history';
 import { CaseStatusStepper, type CaseStatus } from '@/components/ui/case-status-stepper';
 import { PaymentMethodIcons } from '@/components/ui/payment-method-icons';
 import { AuraLogo } from '@/components/ui/aura-logo';
 import { CopyButton } from '@/components/ui/copy-button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
 
 type CaseData = {
   id: string;
@@ -168,25 +179,42 @@ export function CaseTabs({
     });
   }
 
-  function deleteCase() {
-    const reason = window.prompt('Reason for deleting this case?');
-    if (!reason || reason.trim().length < 3) return;
+  // Cancel / Delete reason modals — both gate on a typed reason so the
+  // audit trail is always meaningful. The kebab menu is the only entry
+  // point so neither is one stray click away from a workflow button.
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reasonDraft, setReasonDraft] = useState('');
+
+  function openCancelDialog() {
+    setReasonDraft('');
+    setCancelDialogOpen(true);
+  }
+
+  function openDeleteDialog() {
+    setReasonDraft('');
+    setDeleteDialogOpen(true);
+  }
+
+  function confirmCancel() {
+    const reason = reasonDraft.trim();
+    if (reason.length < 3) return;
+    setCancelDialogOpen(false);
+    transitionStatus('CANCELLED', reason);
+  }
+
+  function confirmDelete() {
+    const reason = reasonDraft.trim();
+    if (reason.length < 3) return;
+    setDeleteDialogOpen(false);
     startTransition(async () => {
-      const result = await deleteCaseAction({ caseId: caseData.id, reason: reason.trim() });
+      const result = await deleteCaseAction({ caseId: caseData.id, reason });
       if (result.ok) {
         router.refresh();
       } else {
         alert(result.error);
       }
     });
-  }
-
-  function cancelCase() {
-    const reason = window.prompt(
-      'Cancelling this case cannot be undone. Reason for cancellation?',
-    );
-    if (!reason || reason.trim().length < 3) return;
-    transitionStatus('CANCELLED', reason.trim());
   }
 
   const canSubmit = !isDeleted && caseData.status === 'DRAFT';
@@ -282,32 +310,138 @@ export function CaseTabs({
               </Button>
             )}
             <div className="ms-auto" />
-            {canCancel && (
+            {(canCancel || canDelete) && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label="More actions"
+                    disabled={isPending}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-56 p-1">
+                  {canCancel && (
+                    <button
+                      type="button"
+                      onClick={openCancelDialog}
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start text-sm text-foreground hover:bg-muted"
+                    >
+                      <Ban className="h-4 w-4 text-muted-foreground" />
+                      Cancel case
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={openDeleteDialog}
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start text-sm text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete case
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+        )}
+
+        {/* Cancel reason dialog */}
+        <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cancel this case?</DialogTitle>
+              <DialogDescription>
+                The case stays on file for audit but no refund will be processed. Tell us why so
+                the next person reading this knows what happened.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <label
+                htmlFor="cancel-reason"
+                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+              >
+                Reason
+              </label>
+              <Textarea
+                id="cancel-reason"
+                value={reasonDraft}
+                onChange={(e) => setReasonDraft(e.target.value)}
+                placeholder="e.g. Created in error — wrong order number"
+                rows={3}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
               <Button
-                size="sm"
+                type="button"
                 variant="ghost"
-                disabled={isPending}
-                onClick={cancelCase}
-                className="text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                onClick={() => setCancelDialogOpen(false)}
+              >
+                Keep case
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={reasonDraft.trim().length < 3 || isPending}
+                onClick={confirmCancel}
               >
                 <Ban className="h-4 w-4" />
                 Cancel case
               </Button>
-            )}
-            {canDelete && (
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete reason dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete this case?</DialogTitle>
+              <DialogDescription>
+                The case is soft-deleted and only visible to admins for audit. Tell us why.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <label
+                htmlFor="delete-reason"
+                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+              >
+                Reason
+              </label>
+              <Textarea
+                id="delete-reason"
+                value={reasonDraft}
+                onChange={(e) => setReasonDraft(e.target.value)}
+                placeholder="e.g. Duplicate of REF-KW-2026-000007"
+                rows={3}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
               <Button
-                size="sm"
+                type="button"
                 variant="ghost"
-                disabled={isPending}
-                onClick={deleteCase}
-                className="text-destructive hover:bg-destructive/5 hover:text-destructive"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Keep case
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={reasonDraft.trim().length < 3 || isPending}
+                onClick={confirmDelete}
               >
                 <Trash2 className="h-4 w-4" />
                 Delete case
               </Button>
-            )}
-          </div>
-        )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         {isDeleted && (
           <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
             <Trash2 className="h-4 w-4" />
@@ -519,13 +653,14 @@ function OverviewTab({
             )}
           </Section>
 
-          {/* Customer call follow-up — surfaced once the case is REFUNDED. */}
-          {(caseData.status === 'REFUNDED' || caseData.status === 'PARTIALLY_REFUNDED') && (
-            <CustomerCallFollowUp
-              caseId={caseData.id}
-              status={caseData.customerCallStatus}
-            />
-          )}
+          {/* Customer call follow-up — surfaces only while the case is
+              REFUNDED and we're still waiting for the agent to confirm
+              receipt by phone. Once the call is resolved (any outcome)
+              the case is fully closed and we hide the panel entirely. */}
+          {(caseData.status === 'REFUNDED' || caseData.status === 'PARTIALLY_REFUNDED') &&
+            caseData.customerCallStatus === 'PENDING' && (
+              <CustomerCallFollowUp caseId={caseData.id} />
+            )}
 
           {/* Aura — presented like Payment so the sidecar compensation is
               legible at a glance (logo + points + status badge). */}
@@ -1052,18 +1187,13 @@ function PaymentComponentRow({
 }
 
 /**
- * Customer call follow-up panel — surfaced once the ARN email has been
- * dispatched and the case is REFUNDED. Operator records whether the
- * customer answered the confirmation call. NO_ANSWER fires the
- * follow-up email reply on the ARN thread.
+ * Compact follow-up strip shown while the case is REFUNDED but the
+ * agent still needs to confirm receipt by phone. The component only
+ * renders for the PENDING state — once any outcome is recorded the
+ * caller hides the strip entirely so the closed case stays visually
+ * uncluttered. NO_ANSWER fires the follow-up reply on the ARN thread.
  */
-function CustomerCallFollowUp({
-  caseId,
-  status,
-}: {
-  caseId: string;
-  status: 'NOT_APPLICABLE' | 'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED';
-}) {
+function CustomerCallFollowUp({ caseId }: { caseId: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -1076,74 +1206,40 @@ function CustomerCallFollowUp({
   }
 
   return (
-    <Section title="Customer call follow-up">
-      <div className="space-y-3 p-4">
-        {status === 'PENDING' && (
-          <>
-            <p className="text-sm text-muted-foreground">
-              The ARN email has been sent. Try to call the customer to confirm receipt — then
-              record the outcome below.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="success"
-                disabled={isPending}
-                onClick={() => record('ANSWERED')}
-              >
-                <Phone className="h-4 w-4" />
-                Customer answered — done
-              </Button>
-              <Button
-                size="sm"
-                disabled={isPending}
-                onClick={() => {
-                  if (
-                    !window.confirm(
-                      'Send the no-answer follow-up reply to the customer on the ARN email?',
-                    )
-                  )
-                    return;
-                  record('NO_ANSWER');
-                }}
-              >
-                <PhoneOff className="h-4 w-4" />
-                No answer — send follow-up email
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={isPending}
-                onClick={() => record('NOT_NEEDED')}
-              >
-                Not needed
-              </Button>
-            </div>
-          </>
-        )}
-        {status === 'ANSWERED' && (
-          <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
-            <Phone className="h-4 w-4" />
-            Customer reached — refund confirmed by phone.
-          </div>
-        )}
-        {status === 'NO_ANSWER' && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Mail className="h-4 w-4" />
-            Customer didn&apos;t answer; follow-up reply was sent on the ARN email.
-          </div>
-        )}
-        {status === 'NOT_NEEDED' && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4" />
-            Marked as not needing a follow-up call.
-          </div>
-        )}
-        {status === 'NOT_APPLICABLE' && (
-          <div className="text-sm text-muted-foreground">No follow-up needed yet.</div>
-        )}
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/5">
+      <Phone className="h-4 w-4 flex-none text-amber-600 dark:text-amber-400" />
+      <div className="flex-1 min-w-0 text-sm text-foreground">
+        Call the customer to confirm receipt.
       </div>
-    </Section>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Button
+          size="sm"
+          variant="success"
+          disabled={isPending}
+          onClick={() => record('ANSWERED')}
+        >
+          <Phone className="h-4 w-4" />
+          Answered
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => record('NO_ANSWER')}
+        >
+          <PhoneOff className="h-4 w-4" />
+          No answer
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={isPending}
+          onClick={() => record('NOT_NEEDED')}
+        >
+          Skip
+        </Button>
+      </div>
+    </div>
   );
 }
 
