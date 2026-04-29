@@ -1,8 +1,8 @@
 # WOW Refund Platform — HANDOVER for the next Devin session
 
-> **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-29 19:05 UTC.
+> **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-29 19:55 UTC.
 >
-> **Active branch:** `devin/1777488929-feedback-on-pool` (HEAD = `f2629c8`, based on `devin/1777476899-refund-pool-redesign` + Sprint I cherry-picks). Latest follow-up sprint (Aura wordmark + persistent customer-call panel) is on this branch.
+> **Active branch:** `devin/1777488929-feedback-on-pool` (HEAD = `4741bdb`, based on `devin/1777476899-refund-pool-redesign` + Sprint I cherry-picks). Most recent sprint replaced the hand-drawn AURA glyph with the brand-supplied PNG, trimmed verbose ARN copy, polished the case-status stepper, dropped the third "Skip" outcome from the customer-call panel, and replaced the browser `confirm()` on the Aura batch send/cancel flow with a styled Dialog.
 > **Source of truth:** v2/ directory only. The Vite/Express code at the repo root is **legacy and frozen** — do not touch it.
 
 ---
