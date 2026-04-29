@@ -126,6 +126,7 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
           .join(' ');
         const hay = [
           c.caseNumber,
+          c.externalCaseNumber ?? '',
           c.customerName,
           c.customerEmail,
           c.orderNumber,
@@ -259,7 +260,7 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
                       <div className="flex items-center gap-2">
                         <span className="text-sm">{c.countryFlag}</span>
                         <span className="truncate font-mono text-sm font-semibold text-heading">
-                          {c.caseNumber}
+                          {c.externalCaseNumber || c.caseNumber}
                         </span>
                       </div>
                       <div className="mt-1 truncate text-xs text-muted-foreground">
@@ -359,7 +360,9 @@ function TicketInspector({
             <span>·</span>
             <span>{c.brandName}</span>
           </div>
-          <h2 className="mt-1 truncate text-lg font-semibold text-heading">{c.caseNumber}</h2>
+          <h2 className="mt-1 truncate text-lg font-semibold text-heading">
+            {c.externalCaseNumber || c.caseNumber}
+          </h2>
           <p className="line-clamp-2 text-xs text-muted-foreground">{c.rootCauseSummary ?? '—'}</p>
         </div>
         <Link
