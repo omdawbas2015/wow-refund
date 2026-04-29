@@ -58,6 +58,7 @@ export default async function CasesPage({
       isPg ? { contains: value, mode: 'insensitive' as const } : { contains: value };
     where['OR'] = [
       { caseNumber: ciContains(filters.q) },
+      { externalCaseNumber: ciContains(filters.q) },
       { customerName: ciContains(filters.q) },
       { customerEmail: ciContains(filters.q) },
       { orderNumber: ciContains(filters.q) },
@@ -135,6 +136,7 @@ export default async function CasesPage({
   const rows: CaseRow[] = cases.map((c) => ({
     id: c.id,
     caseNumber: c.caseNumber,
+    externalCaseNumber: c.externalCaseNumber ?? null,
     status: c.status as CaseStatus,
     customerName: c.customerName,
     customerEmail: c.customerEmail,

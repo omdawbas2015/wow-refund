@@ -13,6 +13,7 @@ import { ArrowUpRight, Trash2 } from 'lucide-react';
 export type CaseRow = {
   id: string;
   caseNumber: string;
+  externalCaseNumber: string | null;
   status: CaseStatus;
   customerName: string;
   customerEmail: string;
@@ -96,11 +97,11 @@ export function CasesTable({
                           : 'text-primary hover:underline',
                       )}
                     >
-                      {c.caseNumber}
+                      {c.externalCaseNumber ?? c.caseNumber}
                     </Link>
                     <span className="opacity-0 transition-opacity group-hover:opacity-100">
                       <CopyButton
-                        value={c.caseNumber}
+                        value={c.externalCaseNumber ?? c.caseNumber}
                         size="xs"
                         label="Copy case number"
                       />
@@ -186,7 +187,7 @@ export function CasesTable({
                     c.isDeleted ? 'text-muted-foreground line-through' : 'text-primary',
                   )}
                 >
-                  {c.caseNumber}
+                  {c.externalCaseNumber ?? c.caseNumber}
                 </span>
                 {c.isDeleted ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 px-2 py-0.5 text-[10px] font-medium text-zinc-700 dark:text-zinc-300">
