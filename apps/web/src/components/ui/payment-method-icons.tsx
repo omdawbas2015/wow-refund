@@ -188,8 +188,10 @@ function KnetBadge({ label, size }: RendererProps) {
 }
 
 function AuraBadge({ label, size }: RendererProps) {
+  // Neutral white chip — the glyph itself carries the brand color so the
+  // chip matches the visual weight of the other payment brand chips.
   return (
-    <Chip label={label} size={size} className="bg-white">
+    <Chip label={label} size={size} className="bg-white p-0.5">
       <AuraGlyph size={size} />
     </Chip>
   );
@@ -236,22 +238,33 @@ function AppleLogo({ size }: { size: PaymentSize }) {
 }
 
 function AuraGlyph({ size }: { size: PaymentSize }) {
-  // Aura brand mark: pink circle with Arabic calligraphy "نور" inside.
+  // Aura brand mark — magenta→coral gradient squircle with a stylised "A".
+  // Matches <AuraLogo /> used elsewhere so the brand reads the same across
+  // the payment chip, sidecar card and wordmark.
   const cls = size === 'md' ? 'h-6 w-6' : 'h-3.5 w-3.5';
+  const gradId = size === 'md' ? 'aura-glyph-grad-md' : 'aura-glyph-grad-sm';
   return (
     <svg viewBox="0 0 48 48" className={cls} aria-hidden fill="none">
-      <circle cx="24" cy="24" r="20" stroke="#E6007E" strokeWidth="3" fill="none" />
-      <text
-        x="24"
-        y="28"
-        textAnchor="middle"
-        fontFamily="Arial, sans-serif"
-        fontWeight="700"
-        fontSize="16"
-        fill="#E6007E"
-      >
-        نور
-      </text>
+      <defs>
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FF4FA2" />
+          <stop offset="100%" stopColor="#9A0063" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="44" height="44" rx="13" fill={`url(#${gradId})`} />
+      <path
+        d="M14 35 L24 13 L34 35"
+        stroke="#ffffff"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18.5 27 L29.5 27"
+        stroke="#ffffff"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
