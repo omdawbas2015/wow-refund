@@ -433,8 +433,8 @@ export function NewCaseForm({
               : 'border-border bg-surface hover:border-[#E6007E]/30 hover:bg-[#FFF7FB]/60',
           )}
         >
-          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-md border border-[#E6007E]/15 bg-white">
-            <AuraLogo size={22} />
+          <div className="flex h-9 w-14 flex-none items-center justify-center rounded-md border border-[#E6007E]/15 bg-white">
+            <AuraLogo size={13} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

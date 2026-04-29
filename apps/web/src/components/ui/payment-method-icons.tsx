@@ -188,10 +188,11 @@ function KnetBadge({ label, size }: RendererProps) {
 }
 
 function AuraBadge({ label, size }: RendererProps) {
-  // Neutral white chip — the glyph itself carries the brand color so the
-  // chip matches the visual weight of the other payment brand chips.
+  // Aura is a wordmark brand — render the AURA lockup directly inside
+  // the chip the same way KNET shows "KNET". The macron bar above the
+  // leading A is the identifying feature.
   return (
-    <Chip label={label} size={size} className="bg-white p-0.5">
+    <Chip label={label} size={size} className="bg-white">
       <AuraGlyph size={size} />
     </Chip>
   );
@@ -238,23 +239,37 @@ function AppleLogo({ size }: { size: PaymentSize }) {
 }
 
 function AuraGlyph({ size }: { size: PaymentSize }) {
-  // Aura brand mark — angular A monogram in brand magenta with a small
-  // loyalty pip. Matches <AuraLogo /> so the chip reads identically to
-  // the sidecar card and the wordmark in the new-case form.
-  const cls = size === 'md' ? 'h-6 w-6' : 'h-3.5 w-3.5';
+  // Aura wordmark — the AURA lockup with the macron bar over the
+  // leading A, sized to live inside a payment chip alongside KNET /
+  // Apple Pay / Mastercard. The font size is hand-tuned per chip size
+  // so the wordmark fills the chip without crowding the edges.
+  const fontPx = size === 'md' ? 12 : 7;
+  const barWidth = fontPx * 0.55;
+  const barHeight = Math.max(1, Math.round(fontPx * 0.18));
+  const barOffset = fontPx * 0.3;
   return (
-    <svg viewBox="0 0 32 32" className={cls} aria-hidden fill="none">
-      <g
-        stroke="#E6007E"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      >
-        <path d="M6 26 L16 6 L26 26" />
-        <path d="M11 19 L21 19" strokeWidth="2.2" />
-      </g>
-      <circle cx="26" cy="26" r="2" fill="#E6007E" />
-    </svg>
+    <span
+      aria-hidden
+      className="inline-flex items-baseline leading-none whitespace-nowrap"
+      style={{
+        color: '#E6007E',
+        fontWeight: 800,
+        fontSize: `${fontPx}px`,
+        letterSpacing: '0.06em',
+      }}
+    >
+      <span className="relative inline-block">
+        <span
+          className="absolute left-1/2 -translate-x-1/2 rounded-[1px] bg-current"
+          style={{
+            top: `-${barOffset}px`,
+            width: `${barWidth}px`,
+            height: `${barHeight}px`,
+          }}
+        />
+        A
+      </span>
+      <span>URA</span>
+    </span>
   );
 }

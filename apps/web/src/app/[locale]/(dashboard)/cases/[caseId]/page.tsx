@@ -160,6 +160,8 @@ export default async function CaseDetailsPage({
           approvedAt: refundCase.approvedAt?.toISOString() ?? null,
           cancelledReason: refundCase.cancelledReason,
           customerCallStatus: refundCase.customerCallStatus,
+          customerCallUpdatedAt:
+            refundCase.customerCallUpdatedAt?.toISOString() ?? null,
         }}
         components={refundCase.components.map((c) => ({
           id: c.id,

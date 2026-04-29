@@ -72,6 +72,7 @@ type CaseData = {
   approvedAt: string | null;
   cancelledReason: string | null;
   customerCallStatus: 'NOT_APPLICABLE' | 'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED';
+  customerCallUpdatedAt: string | null;
 };
 
 type Component = {
@@ -642,10 +643,9 @@ function OverviewTab({
                 ))}
                 {caseData.auraPoints ? (
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
-                    <div className="flex items-center gap-2">
-                      <AuraLogo size={20} />
-                      <span className="text-sm font-medium text-heading">Aura</span>
-                    </div>
+                    <span className="inline-flex h-9 w-14 flex-none items-center justify-center rounded-md ring-1 ring-inset ring-black/10 bg-white">
+                      <AuraLogo size={13} />
+                    </span>
                     <div className="font-mono text-sm font-medium">
                       {caseData.auraPoints.toLocaleString()}{' '}
                       <span className="text-xs font-normal text-muted-foreground">
@@ -661,14 +661,20 @@ function OverviewTab({
             )}
           </Section>
 
-          {/* Customer call follow-up — surfaces only while the case is
-              REFUNDED and we're still waiting for the agent to confirm
-              receipt by phone. Once the call is resolved (any outcome)
-              the case is fully closed and we hide the strip entirely. */}
+          {/* Customer call follow-up — persists once the case is
+              REFUNDED so the recorded outcome stays on the page just
+              like the saved ARN does for the payment row. PENDING
+              shows the action buttons; resolved states show what was
+              decided + a Change link to re-record. */}
           {(caseData.status === 'REFUNDED' ||
             caseData.status === 'PARTIALLY_REFUNDED') &&
-            caseData.customerCallStatus === 'PENDING' && (
-              <CustomerCallFollowUp caseId={caseData.id} />
+            caseData.customerCallStatus !== 'NOT_APPLICABLE' && (
+              <CustomerCallFollowUp
+                caseId={caseData.id}
+                status={caseData.customerCallStatus}
+                updatedAt={caseData.customerCallUpdatedAt}
+                locale={locale}
+              />
             )}
 
           {/* Root cause — collapsed to a single inline strip when no
@@ -1181,58 +1187,157 @@ function PaymentComponentRow({
 }
 
 /**
- * Compact follow-up strip shown while the case is REFUNDED but the
- * agent still needs to confirm receipt by phone. The component only
- * renders for the PENDING state — once any outcome is recorded the
- * caller hides the strip entirely so the closed case stays visually
- * uncluttered. NO_ANSWER fires the follow-up reply on the ARN thread.
+ * Persistent follow-up panel shown once the case is REFUNDED. While the
+ * call is PENDING the panel offers three outcome buttons; once any
+ * outcome is recorded the panel keeps rendering with a labelled summary
+ * and a Change action so the recorded decision stays auditable on the
+ * page (mirrors how a saved ARN keeps showing on its payment row).
+ * NO_ANSWER fires the follow-up reply on the ARN thread server-side.
  */
-function CustomerCallFollowUp({ caseId }: { caseId: string }) {
+function CustomerCallFollowUp({
+  caseId,
+  status,
+  updatedAt,
+  locale,
+}: {
+  caseId: string;
+  status: 'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED' | 'NOT_APPLICABLE';
+  updatedAt: string | null;
+  locale: string;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
 
   function record(outcome: 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED') {
     startTransition(async () => {
       const result = await markCustomerCallAction({ caseId, outcome });
-      if (result.ok) router.refresh();
-      else alert(result.error);
+      if (result.ok) {
+        setEditing(false);
+        router.refresh();
+      } else {
+        alert(result.error);
+      }
     });
   }
 
+  const showButtons = status === 'PENDING' || editing;
+
+  if (showButtons) {
+    return (
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/5">
+        <Phone className="h-4 w-4 flex-none text-amber-600 dark:text-amber-400" />
+        <div className="flex-1 min-w-0 text-sm text-foreground">
+          Call the customer to confirm receipt.
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button
+            size="sm"
+            variant="success"
+            disabled={isPending}
+            onClick={() => record('ANSWERED')}
+          >
+            <Phone className="h-4 w-4" />
+            Answered
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => record('NO_ANSWER')}
+          >
+            <PhoneOff className="h-4 w-4" />
+            No answer
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={isPending}
+            onClick={() => record('NOT_NEEDED')}
+          >
+            Skip
+          </Button>
+          {editing && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={isPending}
+              onClick={() => setEditing(false)}
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Resolved — stays on the page so the decision is auditable.
+  const meta: Record<
+    'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED',
+    {
+      tone: string;
+      Icon: typeof Phone;
+      title: string;
+      detail: string;
+    }
+  > = {
+    ANSWERED: {
+      tone: 'border-emerald-200 bg-emerald-50/60 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:text-emerald-300',
+      Icon: CheckCircle2,
+      title: 'Customer answered',
+      detail: 'Receipt confirmed by phone — no further follow-up needed.',
+    },
+    NO_ANSWER: {
+      tone: 'border-amber-200 bg-amber-50/60 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-300',
+      Icon: PhoneOff,
+      title: 'No answer',
+      detail: 'Follow-up reply was sent on the ARN email thread.',
+    },
+    NOT_NEEDED: {
+      tone: 'border-muted bg-surface-subtle text-muted-foreground',
+      Icon: Phone,
+      title: 'Follow-up skipped',
+      detail: 'Marked as not needed — no email was sent.',
+    },
+  };
+  const m = meta[status as 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED'];
+
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/5">
-      <Phone className="h-4 w-4 flex-none text-amber-600 dark:text-amber-400" />
-      <div className="flex-1 min-w-0 text-sm text-foreground">
-        Call the customer to confirm receipt.
+    <div
+      className={cn(
+        'flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3',
+        m.tone,
+      )}
+    >
+      <m.Icon className="h-4 w-4 flex-none" />
+      <div className="flex-1 min-w-0 text-sm">
+        <div className="font-medium text-foreground">{m.title}</div>
+        <div className="text-xs text-muted-foreground">
+          {m.detail}
+          {updatedAt && (
+            <>
+              {' · '}
+              {new Date(updatedAt).toLocaleString(
+                locale === 'ar' ? 'ar-EG' : 'en-US',
+                {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                },
+              )}
+            </>
+          )}
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Button
-          size="sm"
-          variant="success"
-          disabled={isPending}
-          onClick={() => record('ANSWERED')}
-        >
-          <Phone className="h-4 w-4" />
-          Answered
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={isPending}
-          onClick={() => record('NO_ANSWER')}
-        >
-          <PhoneOff className="h-4 w-4" />
-          No answer
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={isPending}
-          onClick={() => record('NOT_NEEDED')}
-        >
-          Skip
-        </Button>
-      </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={isPending}
+        onClick={() => setEditing(true)}
+        className="text-xs"
+      >
+        Change
+      </Button>
     </div>
   );
 }
