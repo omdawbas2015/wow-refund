@@ -82,9 +82,7 @@ export function KnetBatchesPanel({
         <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
           <div>
             <CardTitle>Send KNET batch</CardTitle>
-            <CardDescription>
-              Email approved KNET components to Finance and wait for ARNs.
-            </CardDescription>
+            <CardDescription>Email approved components to Finance.</CardDescription>
           </div>
           <Button
             size="sm"
@@ -132,9 +130,7 @@ export function KnetBatchesPanel({
       <Card>
         <CardHeader>
           <CardTitle>Live KNET batches</CardTitle>
-          <CardDescription>
-            Verify each suggested ARN to mark the case refunded.
-          </CardDescription>
+          <CardDescription>Verify each ARN to mark the case refunded.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {liveBatches.length === 0 ? (

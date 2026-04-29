@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   addCaseNoteAction,
   updateCaseStatusAction,
@@ -185,6 +186,7 @@ export function CaseTabs({
   // point so neither is one stray click away from a workflow button.
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [reasonDraft, setReasonDraft] = useState('');
 
   function openCancelDialog() {
@@ -292,19 +294,7 @@ export function CaseTabs({
                 size="sm"
                 variant="success"
                 disabled={isPending}
-                onClick={() => {
-                  if (
-                    !window.confirm(
-                      'Send the ARN email to the customer and mark this case refunded?',
-                    )
-                  )
-                    return;
-                  startTransition(async () => {
-                    const result = await completeRefundAction({ caseId: caseData.id });
-                    if (result.ok) router.refresh();
-                    else alert(result.error);
-                  });
-                }}
+                onClick={() => setCompleteDialogOpen(true)}
               >
                 <Mail className="h-4 w-4" />
                 Send ARN email & complete
@@ -439,6 +429,50 @@ export function CaseTabs({
               >
                 <Trash2 className="h-4 w-4" />
                 Delete case
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Send ARN email & complete confirmation — replaces window.confirm
+            so the action reads as part of the same design language. */}
+        <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send ARN email & complete?</DialogTitle>
+              <DialogDescription>
+                The customer will receive the ARN email and the case will be
+                marked refunded.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setCompleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="success"
+                disabled={isPending}
+                onClick={() => {
+                  setCompleteDialogOpen(false);
+                  startTransition(async () => {
+                    const result = await completeRefundAction({
+                      caseId: caseData.id,
+                    });
+                    if (result.ok) {
+                      router.refresh();
+                    } else {
+                      toast.error(result.error);
+                    }
+                  });
+                }}
+              >
+                <Mail className="h-4 w-4" />
+                Send & complete
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1143,41 +1177,38 @@ function PaymentComponentRow({
       {showInlineForm && (
         <form
           onSubmit={save}
-          className="basis-full space-y-1.5 rounded-md border border-dashed border-primary/30 bg-primary/5 p-3"
+          className="basis-full flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-subtle/40 p-2.5"
         >
-          <label className="text-xs font-medium text-muted-foreground" htmlFor={`arn-${component.id}`}>
-            Acquirer Reference Number (ARN)
+          <label
+            className="text-xs font-medium text-muted-foreground"
+            htmlFor={`arn-${component.id}`}
+          >
+            ARN
           </label>
-          <div className="flex flex-wrap gap-2">
-            <input
-              id={`arn-${component.id}`}
-              value={arnDraft}
-              onChange={(e) => setArnDraft(e.target.value)}
-              placeholder="e.g. 24010120010000000123456"
-              className="min-w-[18rem] flex-1 rounded-md border border-border bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              autoFocus
-            />
-            <Button type="submit" size="sm" disabled={isPending}>
-              {isPending ? 'Saving…' : 'Save ARN'}
+          <input
+            id={`arn-${component.id}`}
+            value={arnDraft}
+            onChange={(e) => setArnDraft(e.target.value)}
+            placeholder="Enter ARN"
+            className="min-w-[16rem] flex-1 rounded-md border border-border bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            autoFocus
+          />
+          <Button type="submit" size="sm" disabled={isPending}>
+            {isPending ? 'Saving…' : 'Save'}
+          </Button>
+          {component.arn && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setArnDraft(component.arn ?? '');
+                setEditing(false);
+              }}
+            >
+              Cancel
             </Button>
-            {component.arn && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setArnDraft(component.arn ?? '');
-                  setEditing(false);
-                }}
-              >
-                Cancel
-              </Button>
-            )}
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            Saving will mark this component refunded; the customer is notified once every component
-            has an ARN and you click <span className="font-medium">Send ARN email & complete</span>.
-          </p>
+          )}
         </form>
       )}
     </div>
