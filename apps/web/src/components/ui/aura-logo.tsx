@@ -1,61 +1,46 @@
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 /**
- * Aura wordmark — geometric `AURA` lockup with the macron bar floating
- * above the leading A, drawn as inline HTML so it inherits the page
- * font and renders crisp at every size. Sits on a light chip alongside
- * Apple Pay / KNET / Mastercard so the four payment marks read as one
- * family. The bar is what carries the brand recognition; the letters
- * are intentionally clean.
+ * Aura brand mark — renders the official AURA wordmark provided by the
+ * brand team. Two visual variants are exposed:
  *
- * `size` controls the type size in pixels. The wordmark is laid out
- * with letter-spacing so it stays balanced from 8px up to 24px.
+ * - `mark` (default): the white wordmark on Aura's brand-blue field. The
+ *   image carries its own background, so this variant slots straight
+ *   into a payment-chip strip without needing an extra wrapper.
+ * - `wordmark`: the larger, full-color gradient lockup. Use this for
+ *   feature areas / headers where the brand is the focal point.
+ *
+ * `size` is the rendered height in px; width is derived from the asset's
+ * intrinsic ratio so the logo never gets squished.
  */
 export function AuraLogo({
-  size = 14,
+  size = 28,
+  variant = 'mark',
   className,
   title = 'Aura',
 }: {
   size?: number;
+  variant?: 'mark' | 'wordmark';
   className?: string;
   title?: string;
 }) {
-  // Bar dimensions are derived from the type size so the lockup keeps
-  // the same proportions whether it's a chip-fit 8px or a sidecar 18px.
-  const barWidth = size * 0.55;
-  const barHeight = Math.max(1, Math.round(size * 0.13));
-  const barOffset = size * 0.28;
+  // Intrinsic ratios derived from the source PNGs.
+  const ratio = variant === 'wordmark' ? 1400 / 787 : 650 / 365;
+  const width = Math.round(size * ratio);
+  const src =
+    variant === 'wordmark' ? '/brand/aura-wordmark.png' : '/brand/aura-mark.png';
 
   return (
-    <span
-      role="img"
-      aria-label={title}
-      title={title}
-      className={cn(
-        'inline-flex items-baseline whitespace-nowrap leading-none',
-        className,
-      )}
-      style={{
-        color: '#E6007E',
-        fontWeight: 800,
-        fontSize: `${size}px`,
-        letterSpacing: '0.04em',
-        fontFeatureSettings: '"tnum" 1, "ss01" 1',
-      }}
-    >
-      <span className="relative inline-block">
-        <span
-          aria-hidden
-          className="absolute left-1/2 -translate-x-1/2 rounded-[1px] bg-current"
-          style={{
-            top: `-${barOffset}px`,
-            width: `${barWidth}px`,
-            height: `${barHeight}px`,
-          }}
-        />
-        A
-      </span>
-      <span>URA</span>
-    </span>
+    <Image
+      src={src}
+      alt={title}
+      width={width}
+      height={size}
+      priority={false}
+      unoptimized
+      className={cn('inline-block', className)}
+      style={{ height: `${size}px`, width: `${width}px` }}
+    />
   );
 }

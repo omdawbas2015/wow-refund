@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -188,12 +189,19 @@ function KnetBadge({ label, size }: RendererProps) {
 }
 
 function AuraBadge({ label, size }: RendererProps) {
-  // Aura is a wordmark brand — render the AURA lockup directly inside
-  // the chip the same way KNET shows "KNET". The macron bar above the
-  // leading A is the identifying feature.
+  // Aura ships its wordmark as a finished asset (white wordmark on the
+  // brand-blue field). We use that asset directly so the chip carries
+  // the official lockup instead of a hand-drawn approximation.
   return (
-    <Chip label={label} size={size} className="bg-white">
-      <AuraGlyph size={size} />
+    <Chip label={label} size={size} className="bg-[#2256ff] p-0">
+      <Image
+        src="/brand/aura-mark.png"
+        alt={label}
+        width={size === 'md' ? 56 : 28}
+        height={size === 'md' ? 36 : 18}
+        unoptimized
+        className="h-full w-full object-cover"
+      />
     </Chip>
   );
 }
@@ -238,38 +246,4 @@ function AppleLogo({ size }: { size: PaymentSize }) {
   );
 }
 
-function AuraGlyph({ size }: { size: PaymentSize }) {
-  // Aura wordmark — the AURA lockup with the macron bar over the
-  // leading A, sized to live inside a payment chip alongside KNET /
-  // Apple Pay / Mastercard. The font size is hand-tuned per chip size
-  // so the wordmark fills the chip without crowding the edges.
-  const fontPx = size === 'md' ? 12 : 7;
-  const barWidth = fontPx * 0.55;
-  const barHeight = Math.max(1, Math.round(fontPx * 0.18));
-  const barOffset = fontPx * 0.3;
-  return (
-    <span
-      aria-hidden
-      className="inline-flex items-baseline leading-none whitespace-nowrap"
-      style={{
-        color: '#E6007E',
-        fontWeight: 800,
-        fontSize: `${fontPx}px`,
-        letterSpacing: '0.06em',
-      }}
-    >
-      <span className="relative inline-block">
-        <span
-          className="absolute left-1/2 -translate-x-1/2 rounded-[1px] bg-current"
-          style={{
-            top: `-${barOffset}px`,
-            width: `${barWidth}px`,
-            height: `${barHeight}px`,
-          }}
-        />
-        A
-      </span>
-      <span>URA</span>
-    </span>
-  );
-}
+

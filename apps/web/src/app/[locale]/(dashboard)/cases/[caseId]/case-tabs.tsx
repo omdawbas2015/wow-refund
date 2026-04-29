@@ -643,8 +643,8 @@ function OverviewTab({
                 ))}
                 {caseData.auraPoints ? (
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
-                    <span className="inline-flex h-9 w-14 flex-none items-center justify-center rounded-md ring-1 ring-inset ring-black/10 bg-white">
-                      <AuraLogo size={13} />
+                    <span className="inline-flex h-9 w-14 flex-none items-center justify-center overflow-hidden rounded-md ring-1 ring-inset ring-black/10">
+                      <AuraLogo size={36} />
                     </span>
                     <div className="font-mono text-sm font-medium">
                       {caseData.auraPoints.toLocaleString()}{' '}
@@ -1209,7 +1209,7 @@ function CustomerCallFollowUp({
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
 
-  function record(outcome: 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED') {
+  function record(outcome: 'ANSWERED' | 'NO_ANSWER') {
     startTransition(async () => {
       const result = await markCustomerCallAction({ caseId, outcome });
       if (result.ok) {
@@ -1228,7 +1228,7 @@ function CustomerCallFollowUp({
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/5">
         <Phone className="h-4 w-4 flex-none text-amber-600 dark:text-amber-400" />
         <div className="flex-1 min-w-0 text-sm text-foreground">
-          Call the customer to confirm receipt.
+          Confirm refund with customer by phone.
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Button
@@ -1248,14 +1248,6 @@ function CustomerCallFollowUp({
           >
             <PhoneOff className="h-4 w-4" />
             No answer
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={isPending}
-            onClick={() => record('NOT_NEEDED')}
-          >
-            Skip
           </Button>
           {editing && (
             <Button
@@ -1286,19 +1278,19 @@ function CustomerCallFollowUp({
       tone: 'border-emerald-200 bg-emerald-50/60 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:text-emerald-300',
       Icon: CheckCircle2,
       title: 'Customer answered',
-      detail: 'Receipt confirmed by phone — no further follow-up needed.',
+      detail: 'Refund confirmed by phone.',
     },
     NO_ANSWER: {
       tone: 'border-amber-200 bg-amber-50/60 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-300',
       Icon: PhoneOff,
       title: 'No answer',
-      detail: 'Follow-up reply was sent on the ARN email thread.',
+      detail: 'Confirmation email sent to the customer.',
     },
     NOT_NEEDED: {
       tone: 'border-muted bg-surface-subtle text-muted-foreground',
       Icon: Phone,
       title: 'Follow-up skipped',
-      detail: 'Marked as not needed — no email was sent.',
+      detail: 'No call was needed.',
     },
   };
   const m = meta[status as 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED'];
