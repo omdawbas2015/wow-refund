@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, X, Ban, Clock, Trash2 } from 'lucide-react';
+import { Check, X, Ban, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type CaseStatus =
@@ -15,59 +15,41 @@ export type CaseStatus =
 
 const STEPS: { key: CaseStatus; label: string; labelAr: string }[] = [
   { key: 'DRAFT', label: 'Draft', labelAr: 'مسودة' },
-  { key: 'PENDING_APPROVAL', label: 'Pending approval', labelAr: 'قيد الموافقة' },
+  { key: 'PENDING_APPROVAL', label: 'Pending', labelAr: 'قيد الموافقة' },
   { key: 'APPROVED', label: 'Approved', labelAr: 'تمت الموافقة' },
-  { key: 'IN_EXECUTION', label: 'In execution', labelAr: 'قيد التنفيذ' },
+  { key: 'IN_EXECUTION', label: 'Execution', labelAr: 'قيد التنفيذ' },
   { key: 'REFUNDED', label: 'Refunded', labelAr: 'تم الاسترداد' },
 ];
 
-type StepState = 'done' | 'current' | 'upcoming';
+const STEP_INDEX: Record<CaseStatus, number> = {
+  DRAFT: 0,
+  PENDING_APPROVAL: 1,
+  APPROVED: 2,
+  IN_EXECUTION: 3,
+  PARTIALLY_REFUNDED: 3,
+  REFUNDED: 4,
+  REJECTED: 1, // rejected at pending-approval
+  CANCELLED: -1, // ambient — no step is current
+};
 
-function computeStates(status: CaseStatus): {
-  states: Record<CaseStatus, StepState>;
-  terminal: 'rejected' | 'cancelled' | null;
-  partial: boolean;
-} {
-  const terminal =
-    status === 'REJECTED' ? 'rejected' : status === 'CANCELLED' ? 'cancelled' : null;
-  const partial = status === 'PARTIALLY_REFUNDED';
+type State = 'done' | 'current' | 'upcoming';
 
-  const stepIndex: Record<CaseStatus, number> = {
-    DRAFT: 0,
-    PENDING_APPROVAL: 1,
-    APPROVED: 2,
-    IN_EXECUTION: 3,
-    PARTIALLY_REFUNDED: 3,
-    REFUNDED: 4,
-    // REJECTED can only fire from PENDING_APPROVAL per the state machine,
-    // so 1 is an accurate "rejected at pending approval" position.
-    REJECTED: 1,
-    // CANCELLED can happen from any non-terminal step; we don't carry the
-    // originating status on the case, so we dim the entire trail and rely
-    // on the "Cancelled" pill above the stepper. Sentinel -1 means "no
-    // current step" — no trail position is marked as current or done.
-    CANCELLED: -1,
-  };
-
-  const states = {} as Record<CaseStatus, StepState>;
-  const currentIdx = stepIndex[status];
-  STEPS.forEach((s, i) => {
-    if (currentIdx < 0) states[s.key] = 'upcoming';
-    else if (i < currentIdx) states[s.key] = 'done';
-    else if (i === currentIdx) states[s.key] = 'current';
-    else states[s.key] = 'upcoming';
-  });
-
-  if (status === 'REFUNDED') {
-    STEPS.forEach((s) => (states[s.key] = 'done'));
-  }
-
-  return { states, terminal, partial };
+function computeState(status: CaseStatus, idx: number): State {
+  const cur = STEP_INDEX[status];
+  if (status === 'REFUNDED') return 'done';
+  if (cur < 0) return 'upcoming';
+  if (idx < cur) return 'done';
+  if (idx === cur) return 'current';
+  return 'upcoming';
 }
 
 /**
- * Compact vertical case-status stepper with subtle animations.
- * Designed for the right rail on the case detail page and drawer.
+ * Vertical case-status stepper for the right rail. The geometry is the
+ * same as before (5 steps, ARN execution maps to step 3) but the visual
+ * weight is significantly reduced: thin connectors, slim circular nodes,
+ * a single accent ring on the current step, and concise labels. A
+ * progress percentage above the rail makes "how far along is this case"
+ * legible at a glance even before reading individual labels.
  */
 export function CaseStatusStepper({
   status,
@@ -80,103 +62,140 @@ export function CaseStatusStepper({
   className?: string;
   deleted?: boolean;
 }) {
-  const { states, terminal, partial } = computeStates(status);
   const isAr = locale === 'ar';
+  const terminal =
+    status === 'REJECTED'
+      ? 'rejected'
+      : status === 'CANCELLED'
+        ? 'cancelled'
+        : null;
+  const partial = status === 'PARTIALLY_REFUNDED';
 
-  // If deleted, we override everything with a simple "Deleted" pill + dimmed trail.
+  // Progress percentage — how many of the 5 steps are visually "done".
+  // CANCELLED/REJECTED show 0% since the journey was halted; REFUNDED
+  // is 100%; in-flight statuses show the proportional value.
+  const stepIdx = STEP_INDEX[status];
+  const progressPct =
+    deleted || terminal
+      ? 0
+      : status === 'REFUNDED'
+        ? 100
+        : stepIdx < 0
+          ? 0
+          : Math.round((stepIdx / (STEPS.length - 1)) * 100);
+
   if (deleted) {
     return (
-      <div
-        className={cn(
-          'rounded-lg border border-border bg-surface-subtle/40 p-4',
-          className,
-        )}
-      >
-        <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+      <div className={cn('rounded-lg border border-border bg-surface-subtle/40 p-4', className)}>
+        <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
           <Trash2 className="h-3 w-3" />
           {isAr ? 'محذوف' : 'Deleted'}
         </div>
-        <VerticalRail states={states} locale={locale} terminal={null} partial={false} dimmed />
+        <Rail status={status} locale={locale} dim />
       </div>
     );
   }
 
   return (
-    <div
-      className={cn(
-        'rounded-lg border border-border bg-surface p-4',
-        className,
-      )}
-    >
+    <div className={cn('rounded-lg border border-border bg-surface p-4', className)}>
+      {/* Progress header */}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          {isAr ? 'التقدم' : 'Progress'}
+        </span>
+        <span className="font-mono text-[11px] font-medium tabular-nums text-foreground">
+          {progressPct}%
+        </span>
+      </div>
+      <div className="mb-4 h-1 w-full overflow-hidden rounded-full bg-border/60">
+        <div
+          className={cn(
+            'h-full rounded-full transition-[width] duration-500 ease-out',
+            terminal === 'rejected' && 'bg-destructive/70',
+            terminal === 'cancelled' && 'bg-muted-foreground/40',
+            !terminal && 'bg-primary',
+          )}
+          style={{ width: `${progressPct}%` }}
+        />
+      </div>
+
+      {/* Terminal / partial pills */}
       {(terminal || partial) && (
         <div className="mb-3 flex flex-wrap gap-1.5">
           {terminal === 'rejected' && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-medium text-destructive">
               <X className="h-3 w-3" />
               {isAr ? 'مرفوض' : 'Rejected'}
             </span>
           )}
           {terminal === 'cancelled' && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
               <Ban className="h-3 w-3" />
               {isAr ? 'ملغى' : 'Cancelled'}
             </span>
           )}
           {partial && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-              <Clock className="h-3 w-3" />
-              {isAr ? 'استرداد جزئي' : 'Partially refunded'}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+              {isAr ? 'استرداد جزئي' : 'Partial'}
             </span>
           )}
         </div>
       )}
-      <VerticalRail states={states} locale={locale} terminal={terminal} partial={partial} />
+
+      <Rail status={status} locale={locale} terminal={terminal} partial={partial} />
     </div>
   );
 }
 
-function VerticalRail({
-  states,
+function Rail({
+  status,
   locale,
   terminal,
   partial,
-  dimmed = false,
+  dim = false,
 }: {
-  states: Record<CaseStatus, StepState>;
+  status: CaseStatus;
   locale: string;
-  terminal: 'rejected' | 'cancelled' | null;
-  partial: boolean;
-  dimmed?: boolean;
+  terminal?: 'rejected' | 'cancelled' | null;
+  partial?: boolean;
+  dim?: boolean;
 }) {
   const isAr = locale === 'ar';
   return (
-    <ol className={cn('relative space-y-0', dimmed && 'opacity-60')}>
+    <ol
+      className={cn(
+        'relative flex flex-col gap-0',
+        dim && 'opacity-50',
+      )}
+    >
       {STEPS.map((step, idx) => {
-        const state = states[step.key];
-        const label = isAr ? step.labelAr : step.label;
+        const state = computeState(status, idx);
         const isLast = idx === STEPS.length - 1;
+        const next = STEPS[idx + 1];
+        const nextState = next ? computeState(status, idx + 1) : null;
+
+        // Connector "done" if this step done AND the next isn't strictly
+        // upcoming. Dashed when the case is partially refunded between
+        // execution and refunded.
+        const connectorDone =
+          !isLast && state === 'done' && nextState !== 'upcoming';
+        const connectorDashed =
+          !isLast && partial && step.key === 'IN_EXECUTION';
 
         const isTerminalHere =
           (terminal === 'rejected' && step.key === 'PENDING_APPROVAL') ||
           (terminal === 'cancelled' && state === 'current');
 
-        const curr = STEPS[idx];
-        const next = STEPS[idx + 1];
-        const connectorDone =
-          !isLast && curr && next
-            ? states[curr.key] === 'done' && states[next.key] !== 'upcoming'
-            : false;
-        const connectorDashed =
-          !isLast && partial && curr?.key === 'IN_EXECUTION';
+        const label = isAr ? step.labelAr : step.label;
 
         return (
-          <li key={step.key} className="relative flex gap-3 pb-3 last:pb-0">
-            {/* Vertical connector (rendered behind) */}
+          <li key={step.key} className="relative flex items-center gap-3 py-1.5">
+            {/* Connector */}
             {!isLast && (
               <span
                 aria-hidden
                 className={cn(
-                  'absolute start-3 top-6 h-[calc(100%-1.25rem)] w-px',
+                  'absolute start-[10px] top-[26px] h-[calc(100%-12px)] w-px',
                   connectorDashed
                     ? 'border-s border-dashed border-primary/50 bg-transparent'
                     : connectorDone
@@ -186,34 +205,29 @@ function VerticalRail({
               />
             )}
 
-            {/* Node */}
+            {/* Node — slim 20 px circle */}
             <div
               className={cn(
-                'relative z-10 flex h-6 w-6 flex-none items-center justify-center rounded-full border transition-all duration-300',
-                state === 'done' &&
-                  !isTerminalHere &&
-                  'border-primary bg-primary text-primary-foreground scale-100',
+                'relative z-10 flex h-5 w-5 flex-none items-center justify-center rounded-full transition-all duration-300',
+                state === 'done' && !isTerminalHere && 'bg-primary text-primary-foreground',
                 state === 'current' &&
                   !isTerminalHere &&
-                  'border-primary bg-surface text-primary ring-4 ring-primary/15 animate-pulse-ring',
-                state === 'upcoming' &&
-                  'border-border bg-surface text-muted-foreground',
+                  'bg-surface text-primary ring-2 ring-primary ring-offset-2 ring-offset-surface',
+                state === 'upcoming' && 'border border-border bg-surface text-muted-foreground',
                 isTerminalHere &&
                   terminal === 'rejected' &&
-                  'border-destructive bg-destructive text-destructive-foreground',
+                  'bg-destructive text-destructive-foreground',
                 isTerminalHere &&
                   terminal === 'cancelled' &&
-                  'border-muted-foreground bg-muted text-muted-foreground',
+                  'bg-muted text-muted-foreground',
               )}
             >
-              {state === 'done' && !isTerminalHere && (
-                <Check className="h-3 w-3" strokeWidth={3} />
-              )}
+              {state === 'done' && !isTerminalHere && <Check className="h-3 w-3" strokeWidth={3} />}
               {state === 'current' && !isTerminalHere && (
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               )}
               {state === 'upcoming' && !isTerminalHere && (
-                <span className="text-[10px] font-medium">{idx + 1}</span>
+                <span className="text-[9px] font-medium leading-none">{idx + 1}</span>
               )}
               {isTerminalHere && terminal === 'rejected' && (
                 <X className="h-3 w-3" strokeWidth={3} />
@@ -224,19 +238,19 @@ function VerticalRail({
             </div>
 
             {/* Label */}
-            <div className="flex-1 pt-0.5">
-              <div
-                className={cn(
-                  'text-sm leading-6 transition-colors',
-                  state === 'current' && !isTerminalHere && 'font-semibold text-heading',
-                  state === 'done' && !isTerminalHere && 'font-medium text-heading',
-                  state === 'upcoming' && 'text-muted-foreground',
-                  isTerminalHere && terminal === 'rejected' && 'font-semibold text-destructive',
-                  isTerminalHere && terminal === 'cancelled' && 'font-semibold text-muted-foreground',
-                )}
-              >
-                {label}
-              </div>
+            <div
+              className={cn(
+                'text-sm leading-none transition-colors',
+                state === 'current' && !isTerminalHere && 'font-semibold text-heading',
+                state === 'done' && !isTerminalHere && 'text-foreground',
+                state === 'upcoming' && 'text-muted-foreground',
+                isTerminalHere && terminal === 'rejected' && 'font-semibold text-destructive',
+                isTerminalHere &&
+                  terminal === 'cancelled' &&
+                  'font-semibold text-muted-foreground',
+              )}
+            >
+              {label}
             </div>
           </li>
         );

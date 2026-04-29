@@ -510,12 +510,11 @@ export function CaseTabs({
         {active === 'activity' && <ActivityTab activity={activity} />}
       </div>
 
-      {/* Right rail: vertical status stepper */}
+      {/* Right rail: vertical status stepper. The stepper renders its
+          own "Progress" header + percentage, so we don't double-up the
+          label here. */}
       <aside className="lg:order-2 lg:col-start-2">
         <div className="lg:sticky lg:top-24">
-          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Progress
-          </div>
           <CaseStatusStepper
             status={caseData.status as CaseStatus}
             locale={locale}
@@ -579,41 +578,11 @@ function OverviewTab({
       {/* Main content grid */}
       <div className="grid gap-5 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-5">
-          {/* Customer — the page header already shows name + email so we
-              focus the section on the agent-only fields (phone + notes). */}
-          {(caseData.customerPhone || caseData.customerNotes) && (
-            <Section title="Customer" className={enter}>
-              <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
-                {caseData.customerPhone && (
-                  <FieldInline
-                    label="Phone"
-                    value={
-                      <CopyableValue
-                        value={caseData.customerPhone}
-                        label="Copy phone"
-                        mono
-                      />
-                    }
-                  />
-                )}
-                <FieldInline
-                  label="Email"
-                  value={
-                    <CopyableValue value={caseData.customerEmail} label="Copy email" />
-                  }
-                />
-                {caseData.customerNotes && (
-                  <div className="sm:col-span-2">
-                    <FieldInline label="Agent notes" value={caseData.customerNotes} />
-                  </div>
-                )}
-              </div>
-            </Section>
-          )}
-
-          {/* Order */}
-          <Section title="Order" className={enter}>
-            <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
+          {/* Details — order + customer in a single section so the page
+              doesn't fragment six separate identity-sized cards. Phone
+              and agent notes are conditional. */}
+          <Section title="Details" className={enter}>
+            <dl className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
               <FieldInline
                 label="Order #"
                 value={
@@ -625,17 +594,39 @@ function OverviewTab({
                 }
               />
               <FieldInline label="Order date" value={formatDate(caseData.orderDate)} />
-              <FieldInline label="Brand" value={`${caseData.countryFlag} ${caseData.brandName}`} />
+              <FieldInline
+                label="Brand"
+                value={`${caseData.countryFlag} ${caseData.brandName}`}
+              />
               <FieldInline label="Country" value={caseData.countryName} />
               <FieldInline
                 label="Branch"
-                value={caseData.branchName ?? <span className="text-muted-foreground">—</span>}
+                value={
+                  caseData.branchName ?? <span className="text-muted-foreground">—</span>
+                }
               />
-            </div>
+              {caseData.customerPhone && (
+                <FieldInline
+                  label="Phone"
+                  value={
+                    <CopyableValue
+                      value={caseData.customerPhone}
+                      label="Copy phone"
+                      mono
+                    />
+                  }
+                />
+              )}
+              {caseData.customerNotes && (
+                <div className="sm:col-span-2">
+                  <FieldInline label="Agent notes" value={caseData.customerNotes} />
+                </div>
+              )}
+            </dl>
           </Section>
 
           {/* Payment + per-component ARN entry */}
-          <Section title="Payment">
+          <Section title="Payment" className={enter}>
             {components.length === 0 ? (
               <div className="p-4 text-sm text-muted-foreground">No payment components.</div>
             ) : (
@@ -649,6 +640,23 @@ function OverviewTab({
                     inExecutionStage={inExecutionStage}
                   />
                 ))}
+                {caseData.auraPoints ? (
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
+                    <div className="flex items-center gap-2">
+                      <AuraLogo size={20} />
+                      <span className="text-sm font-medium text-heading">Aura</span>
+                    </div>
+                    <div className="font-mono text-sm font-medium">
+                      {caseData.auraPoints.toLocaleString()}{' '}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        points
+                      </span>
+                    </div>
+                    <div className="ms-auto">
+                      <AuraStatusBadge status={caseData.auraStatus} />
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </Section>
@@ -656,39 +664,21 @@ function OverviewTab({
           {/* Customer call follow-up — surfaces only while the case is
               REFUNDED and we're still waiting for the agent to confirm
               receipt by phone. Once the call is resolved (any outcome)
-              the case is fully closed and we hide the panel entirely. */}
-          {(caseData.status === 'REFUNDED' || caseData.status === 'PARTIALLY_REFUNDED') &&
+              the case is fully closed and we hide the strip entirely. */}
+          {(caseData.status === 'REFUNDED' ||
+            caseData.status === 'PARTIALLY_REFUNDED') &&
             caseData.customerCallStatus === 'PENDING' && (
               <CustomerCallFollowUp caseId={caseData.id} />
             )}
 
-          {/* Aura — presented like Payment so the sidecar compensation is
-              legible at a glance (logo + points + status badge). */}
-          {caseData.auraPoints ? (
-            <Section title="Aura Points">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
-                <div className="flex items-center gap-2">
-                  <AuraLogo size={28} />
-                  <span className="text-sm font-medium text-heading">Aura</span>
-                </div>
-                <div className="font-mono text-sm font-medium">
-                  {caseData.auraPoints.toLocaleString()}{' '}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    points
-                  </span>
-                </div>
-                <div className="ms-auto">
-                  <AuraStatusBadge status={caseData.auraStatus} />
-                </div>
-              </div>
-            </Section>
-          ) : null}
-
-          {/* Root cause */}
+          {/* Root cause — collapsed to a single inline strip when no
+              free-text notes were captured. */}
           {(caseData.rootCause || caseData.rootCauseNotes) && (
-            <Section title="Root cause">
+            <Section title="Root cause" className={enter}>
               <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
-                {caseData.rootCause && <FieldInline label="Category" value={caseData.rootCause} />}
+                {caseData.rootCause && (
+                  <FieldInline label="Category" value={caseData.rootCause} />
+                )}
                 {caseData.rootCauseNotes && (
                   <div className="sm:col-span-2">
                     <FieldInline label="Notes" value={caseData.rootCauseNotes} />
@@ -699,14 +689,15 @@ function OverviewTab({
           )}
         </div>
 
-        {/* Right column */}
+        {/* Right column — people + customer history. People is compact:
+            dense list with row labels, no avatars per design feedback. */}
         <div className="space-y-5">
-          <Section title="People">
-            <div className="space-y-3 p-4">
+          <Section title="People" className={enter}>
+            <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2 lg:grid-cols-1">
               <PersonRow
                 label="Created by"
                 user={caseData.createdBy}
-                fallback="---"
+                fallback="—"
               />
               <PersonRow
                 label="Assigned to"
@@ -716,10 +707,13 @@ function OverviewTab({
               <PersonRow
                 label="Approved by"
                 user={caseData.approvedBy}
-                fallback="---"
+                fallback="—"
               />
               {caseData.approvedAt && (
-                <FieldInline label="Approved at" value={formatDateTime(caseData.approvedAt)} />
+                <FieldInline
+                  label="Approved at"
+                  value={formatDateTime(caseData.approvedAt)}
+                />
               )}
             </div>
           </Section>
