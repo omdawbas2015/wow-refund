@@ -417,7 +417,7 @@ export function NewCaseForm({
         )}
       </section>
 
-      {/* ── Aura Points (loyalty add-on) ── */}
+      {/* Aura Points add-on */}
       <section className="space-y-3">
         <button
           type="button"
@@ -433,18 +433,11 @@ export function NewCaseForm({
               : 'border-border bg-surface hover:border-[#E6007E]/30 hover:bg-[#FFF7FB]/60',
           )}
         >
-          <div className="flex h-9 w-14 flex-none items-center justify-center rounded-md border border-[#E6007E]/15 bg-white">
-            <AuraLogo size={13} />
-          </div>
+          <AuraLogo size={24} />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-heading">Aura Points</span>
-              <span className="rounded-full bg-[#E6007E]/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#9A0063]">
-                Loyalty
-              </span>
-            </div>
+            <div className="text-sm font-semibold text-heading">Aura points</div>
             <div className="mt-0.5 text-xs text-muted-foreground">
-              Also refund loyalty points alongside the payment.
+              Also refund Aura points alongside the payment.
             </div>
           </div>
           <div
