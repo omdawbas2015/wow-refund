@@ -21,8 +21,13 @@ Run from the repo root:
     python3 v2/docs/power-automate/build-packages.py
 
 Output:
-    v2/docs/power-automate/packages/wow-outbound-mailer.zip
-    v2/docs/power-automate/packages/wow-inbound-listener.zip
+    docs/power-automate/packages/wow-outbound-mailer.zip
+    docs/power-automate/packages/wow-inbound-listener.zip
+    docs/power-automate/packages/wow-outbound-mailer-hmac.zip
+    docs/power-automate/packages/wow-inbound-listener-hmac.zip
+    docs/power-automate/packages/wow-approval-batch.zip
+    docs/power-automate/packages/wow-test-customer-promo.zip
+    docs/power-automate/packages/wow-customer-promo-auto.zip
 """
 
 from __future__ import annotations
@@ -85,6 +90,51 @@ OFFICE365_ICON = (
     "office365/icon.png"
 )
 
+APPROVALS_API_ID = "/providers/Microsoft.PowerApps/apis/shared_approvals"
+APPROVALS_API_NAME = "shared_approvals"
+APPROVALS_DISPLAY = "Approvals"
+APPROVALS_ICON = (
+    "https://connectoricons-prod.azureedge.net/releases/v1.0.1467/1.0.1467.2407/"
+    "approvals/icon.png"
+)
+
+
+CONNECTOR_REGISTRY = {
+    OFFICE365_API_NAME: {
+        "id": OFFICE365_API_ID,
+        "display": OFFICE365_DISPLAY,
+        "icon": OFFICE365_ICON,
+    },
+    APPROVALS_API_NAME: {
+        "id": APPROVALS_API_ID,
+        "display": APPROVALS_DISPLAY,
+        "icon": APPROVALS_ICON,
+    },
+}
+
+
+def discover_connector_names(definition: dict) -> list[str]:
+    """Walk the workflow to find every connectionName referenced under host blocks."""
+    found: set[str] = set()
+
+    def walk(obj):
+        if isinstance(obj, dict):
+            host = obj.get("host")
+            if isinstance(host, dict) and isinstance(host.get("connectionName"), str):
+                name = host["connectionName"]
+                if name in CONNECTOR_REGISTRY:
+                    found.add(name)
+            for v in obj.values():
+                walk(v)
+        elif isinstance(obj, list):
+            for item in obj:
+                walk(item)
+
+    walk(definition.get("triggers", {}))
+    walk(definition.get("actions", {}))
+    # Stable order makes the output deterministic
+    return sorted(found)
+
 
 def build_flow_resource(
     *,
@@ -104,27 +154,29 @@ def build_flow_resource(
     }
 
 
-def build_office365_api_resource() -> dict:
+def build_api_resource(connector_name: str) -> dict:
+    meta = CONNECTOR_REGISTRY[connector_name]
     return {
-        "id": OFFICE365_API_ID,
-        "name": OFFICE365_API_NAME,
+        "id": meta["id"],
+        "name": connector_name,
         "type": "Microsoft.PowerApps/apis",
         "suggestedCreationType": "Existing",
-        "details": {"displayName": OFFICE365_DISPLAY, "iconUri": OFFICE365_ICON},
+        "details": {"displayName": meta["display"], "iconUri": meta["icon"]},
         "configurableBy": "System",
         "hierarchy": "Child",
         "dependsOn": [],
     }
 
 
-def build_office365_connection_resource(api_resource_id: str) -> dict:
+def build_connection_resource(connector_name: str, api_resource_id: str) -> dict:
+    meta = CONNECTOR_REGISTRY[connector_name]
     return {
         "type": "Microsoft.PowerApps/apis/connections",
         "suggestedCreationType": "Existing",
         "creationType": "Existing",
         "details": {
-            "displayName": OFFICE365_DISPLAY,
-            "iconUri": OFFICE365_ICON,
+            "displayName": meta["display"],
+            "iconUri": meta["icon"],
         },
         "configurableBy": "User",
         "hierarchy": "Child",
@@ -161,8 +213,22 @@ def build_package(
     )
 
     flow_id = str(uuid.uuid4())
-    api_resource_id = str(uuid.uuid4())
-    connection_resource_id = str(uuid.uuid4())
+    connectors = discover_connector_names(raw_definition)
+
+    # Allocate a stable api/connection resource id per connector used in
+    # this flow. Power Automate's import wizard groups them in the UI.
+    api_resource_ids: dict[str, str] = {n: str(uuid.uuid4()) for n in connectors}
+    connection_resource_ids: dict[str, str] = {n: str(uuid.uuid4()) for n in connectors}
+
+    connection_references = {
+        n: {
+            "connectionName": n,
+            "source": "Embedded",
+            "id": CONNECTOR_REGISTRY[n]["id"],
+            "tier": "NotSpecified",
+        }
+        for n in connectors
+    }
 
     # Per-flow definition.json — the manual export wraps the workflow
     # definition in a small Microsoft.Flow envelope.
@@ -174,31 +240,32 @@ def build_package(
             "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
             "displayName": display_name,
             "definition": raw_definition,
-            "connectionReferences": {
-                OFFICE365_API_NAME: {
-                    "connectionName": OFFICE365_API_NAME,
-                    "source": "Embedded",
-                    "id": OFFICE365_API_ID,
-                    "tier": "NotSpecified",
-                }
-            },
+            "connectionReferences": connection_references,
             "flowFailureAlertSubscribed": False,
             "isManaged": False,
         },
         "schemaVersion": "1.0.0.0",
     }
 
-    apis_map = {OFFICE365_API_NAME: api_resource_id}
-    connections_map = {OFFICE365_API_NAME: connection_resource_id}
+    apis_map = {n: api_resource_ids[n] for n in connectors}
+    connections_map = {n: connection_resource_ids[n] for n in connectors}
 
     flow_resource = build_flow_resource(
         flow_id=flow_id,
         display_name=display_name,
         description=description,
-        depends_on=[api_resource_id, connection_resource_id],
+        depends_on=[
+            *(api_resource_ids[n] for n in connectors),
+            *(connection_resource_ids[n] for n in connectors),
+        ],
     )
-    api_resource = build_office365_api_resource()
-    connection_resource = build_office365_connection_resource(api_resource_id)
+
+    resources: dict[str, dict] = {flow_id: flow_resource}
+    for n in connectors:
+        resources[api_resource_ids[n]] = build_api_resource(n)
+        resources[connection_resource_ids[n]] = build_connection_resource(
+            n, api_resource_ids[n]
+        )
 
     package_manifest = {
         "schema": "1.0",
@@ -210,11 +277,7 @@ def build_package(
             "creator": "WOW Refund Platform",
             "sourceEnvironment": "",
         },
-        "resources": {
-            flow_id: flow_resource,
-            api_resource_id: api_resource,
-            connection_resource_id: connection_resource,
-        },
+        "resources": resources,
     }
 
     flows_index_manifest = {
@@ -256,12 +319,21 @@ def main() -> int:
 
     build_package(
         package_name="wow-outbound-mailer",
-        display_name="WOW Refund — Outbound mailer (HTTP → Outlook)",
+        display_name="WOW Refund — 1. Outbound Mail Router (sends every email: OTP, signup, approval, KNET, Aura, customer promo, customer refund)",
         description=(
-            "HTTP-triggered flow used by the WOW Refund platform to send "
-            "approval / KNET / Aura emails through the operator mailbox. "
-            "Verifies the X-Wow-Signature header against the value of "
-            "POWER_AUTOMATE_SIGNING_SECRET before sending the email."
+            "Single HTTP entry point that the WOW Refund platform calls every "
+            "time it needs to send an email. The platform renders the subject "
+            "and body itself, attaches a templateKey + logId in the JSON body, "
+            "and POSTs everything to this flow's trigger URL. The flow takes "
+            "those rendered fields and hands them to Office 365 'Send an "
+            "email (V2)'. Templates that flow through here include: "
+            "AUTH_OTP_PASSWORD_RESET, AUTH_ADMIN_NEW_SIGNUP, "
+            "AUTH_SIGNUP_APPROVED, APPROVAL_BATCH_MANAGER, KNET_BATCH_FINANCE, "
+            "AURA_BATCH_TEAM, CUSTOMER_REFUND_COMPLETED, "
+            "CUSTOMER_PROMO_COMPENSATION, STORE_*, scheduled_report.summary. "
+            "Trigger URL itself is the secret; X-Wow-Signature is logged "
+            "only. Use the HMAC-secured variant for production tenants that "
+            "want server-side signature verification."
         ),
         flow_definition_path=FLOWS_DIR / "outbound-flow-definition.json",
         output_path=PACKAGES_DIR / "wow-outbound-mailer.zip",
@@ -269,15 +341,106 @@ def main() -> int:
 
     build_package(
         package_name="wow-inbound-listener",
-        display_name="WOW Refund — Inbound listener (Outlook → webhook)",
+        display_name="WOW Refund — 2. Inbound Mail Listener (manager / Finance / Aura / customer replies → webhook)",
         description=(
-            "Mailbox trigger flow used by the WOW Refund platform to forward "
-            "approval / KNET / Aura replies into the platform webhook. "
-            "Filters on subject prefixes (APB- / KNET- / AURA-) and posts a "
-            "normalised payload with a shared inbound secret in the header."
+            "Watches the operator mailbox and forwards interesting replies to "
+            "the platform webhook so the existing classifier can route them: "
+            "manager 'Approved/Rejected' replies become APPROVAL_RESPONSE, "
+            "Finance ARN replies become KNET_ARN_REPLY, Aura confirmation "
+            "replies become AURA_CONFIRMATION, free-text customer replies "
+            "become CUSTOMER_REPLY. Subject must contain APB- / KNET- / "
+            "AURA- to be picked up; everything else is ignored. Posts an "
+            "unsigned payload, so the platform's POWER_AUTOMATE_INBOUND_SECRET "
+            "must be unset — use the HMAC-signed variant if it's set."
         ),
         flow_definition_path=FLOWS_DIR / "inbound-flow-definition.json",
         output_path=PACKAGES_DIR / "wow-inbound-listener.zip",
+    )
+
+    build_package(
+        package_name="wow-outbound-mailer-hmac",
+        display_name="WOW Refund — 3. Outbound Mail Router (HMAC-secured — verifies X-Wow-Signature before sending)",
+        description=(
+            "Production hardening of the outbound mail router. Same trigger "
+            "contract and same set of templateKeys as flow #1, but verifies "
+            "X-Wow-Signature via the WOW Refund Azure Function HMAC helper "
+            "before sending the email. Returns 401 on signature mismatch "
+            "without sending. Requires the Azure Function helper to be "
+            "deployed first — see docs/power-automate/azure-function-hmac/."
+        ),
+        flow_definition_path=FLOWS_DIR / "outbound-flow-definition.hmac.json",
+        output_path=PACKAGES_DIR / "wow-outbound-mailer-hmac.zip",
+    )
+
+    build_package(
+        package_name="wow-inbound-listener-hmac",
+        display_name="WOW Refund — 4. Inbound Mail Listener (HMAC-signed — signs body before posting to webhook)",
+        description=(
+            "Production hardening of the inbound mail listener. Same trigger "
+            "and filtering as flow #2, but signs the body with HMAC-SHA256 "
+            "via the WOW Refund Azure Function HMAC helper before posting to "
+            "the webhook. Use this when the platform's "
+            "POWER_AUTOMATE_INBOUND_SECRET is set so signed inbound traffic "
+            "is accepted."
+        ),
+        flow_definition_path=FLOWS_DIR / "inbound-flow-definition.hmac.json",
+        output_path=PACKAGES_DIR / "wow-inbound-listener-hmac.zip",
+    )
+
+    build_package(
+        package_name="wow-approval-batch",
+        display_name="WOW Refund — 5. Manager Approval (Approve / Reject card via Microsoft Approvals)",
+        description=(
+            "Drop-in replacement for the plain outbound mail router but ONLY "
+            "for templateKey = APPROVAL_BATCH_MANAGER. Instead of sending a "
+            "plain email, opens a Microsoft Approvals card with Approve / "
+            "Reject buttons (delivered to the manager via Outlook + Teams + "
+            "Power Automate mobile), waits for the response, and POSTs it "
+            "back to the inbound webhook so the existing APPROVAL_RESPONSE "
+            "classifier can advance the batch. Wire up only when you want "
+            "the manager UX to be 'one click' instead of 'reply with "
+            "Approved'."
+        ),
+        flow_definition_path=FLOWS_DIR / "approval-batch-flow-definition.json",
+        output_path=PACKAGES_DIR / "wow-approval-batch.zip",
+    )
+
+    build_package(
+        package_name="wow-test-customer-promo",
+        display_name="WOW Refund — 6. Test: Send Customer Promo Code Email (manual button trigger)",
+        description=(
+            "Diagnostic / smoke-test flow. Hit Run inside Power Automate, "
+            "fill in the customer email + promo code + value + brand fields, "
+            "and the same shape of email that the live "
+            "CUSTOMER_PROMO_COMPENSATION template produces lands in the "
+            "customer mailbox. Validates Outlook connection + mailbox "
+            "identity + sending limits BEFORE the live outbound flow goes "
+            "online. No HTTP trigger, no platform integration — just a "
+            "button you click. Delete it after on-boarding if you don't "
+            "want it sitting in the tenant."
+        ),
+        flow_definition_path=FLOWS_DIR / "test-customer-promo-flow-definition.json",
+        output_path=PACKAGES_DIR / "wow-test-customer-promo.zip",
+    )
+
+    build_package(
+        package_name="wow-customer-promo-auto",
+        display_name="WOW Refund — 7. Auto-send Customer Promo Email (HTTP-triggered, fires when system allocates a promo)",
+        description=(
+            "Production flow that fires automatically every time the WOW "
+            "Refund app allocates a promo code to a customer. The "
+            "platform's dispatcher POSTs the rendered "
+            "CUSTOMER_PROMO_COMPENSATION email here and the flow forwards "
+            "it through Outlook with a styled HTML card (gradient header, "
+            "code box, value/expires table, brand sign-off). Filters on "
+            "templateKey at the top: only CUSTOMER_PROMO_COMPENSATION is "
+            "handled — anything else returns 400 so misroutes are "
+            "obvious. Wire this up to POWER_AUTOMATE_PROMO_WEBHOOK_URL "
+            "for a dedicated promo channel, OR branch off the main "
+            "outbound mailer (#1/#3) via a Switch on templateKey."
+        ),
+        flow_definition_path=FLOWS_DIR / "customer-promo-auto-flow-definition.json",
+        output_path=PACKAGES_DIR / "wow-customer-promo-auto.zip",
     )
 
     return 0

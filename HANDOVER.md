@@ -1,9 +1,52 @@
 # WOW Refund Platform — HANDOVER for the next Devin session
 
-> **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-27 03:40 UTC.
+> **Repo layout note (2026-04-28):** this repository is now the
+> *flattened standalone* version of the platform (`omdawbas2015/wow-refund`).
+> The old `v2/` directory nesting is gone — the Next.js app is at
+> `apps/web/`, the Prisma package at `packages/db/`, manifests at
+> `k8s/`, the Dockerfile at the repo root. When older notes below say
+> `v2/<path>`, read it as `<path>`. There is no longer a legacy
+> Vite/Express root to avoid.
 >
-> **Active branch:** `devin/1777249813-continue-roadmap` (HEAD = `7afb059`, ~121 commits ahead of `main`).
-> **Source of truth:** v2/ directory only. The Vite/Express code at the repo root is **legacy and frozen** — do not touch it.
+> **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-28 UTC.
+>
+> **Status (2026-04-28):** Sprints A → J are all merged into `main` via
+> the `devin/1777416773-finish-handover-roadmap` integration PR. That
+> PR rolls up: Sprint J (Prisma `$extends` PII auto-encrypt/decrypt,
+> real pino + OpenTelemetry SDK, Storybook scaffold) plus 13 hardening
+> PRs (HMAC webhook, real backup runner with S3 + pg_dump, email retry
+> + idempotent inbound webhook, Upstash SSE bridge, OTLP log exporter
+> + redaction, full PII rollout to RefundCase / PromoAllocation /
+> InboundEmail / EmailLog / CaseNote with hash-based search, webhook
+> body cap + session cookie hardening, postgres-service-container
+> integration tests, EmptyState + a11y on 4 more routes). 4/4 typecheck,
+> 310/310 unit tests, `pnpm build` all green on the integration branch.
+>
+> **Remaining (owner action only):**
+> - **#23 Vercel deploy + Neon Postgres** — needs `DATABASE_URL` (Neon),
+>   `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. Code is ready
+>   (see `docs/DEPLOY.md`); cuts over the moment secrets land.
+> - **#21/#22 SSE Upstash + Sentry runtime** — code paths are wired and
+>   no-op without secrets. Needs `UPSTASH_REDIS_REST_URL` +
+>   `UPSTASH_REDIS_REST_TOKEN` + `SENTRY_DSN` + `SENTRY_AUTH_TOKEN` +
+>   `SENTRY_ORG` + `SENTRY_PROJECT` to activate fanout + error tracking +
+>   source-map upload.
+> - **#26 Power Automate flows** — five importable Legacy Packages now
+>   ship under `docs/power-automate/packages/` (outbound mailer, inbound
+>   listener, both with optional HMAC variants, and a Microsoft
+>   Approvals flow). Owner imports them via
+>   `make.powerautomate.com → My flows → Import → Import Package
+>   (Legacy)`, maps connections, and turns flows on. HMAC variants
+>   require deploying the tiny Azure Function under
+>   `docs/power-automate/azure-function-hmac/` (free tier covers
+>   typical traffic).
+>
+> **Active branch:** all work happens on short-lived `devin/<ts>-<slug>` branches that PR into `main`. Recent series:
+> - `devin/1777386253-handoff-category-a` → PR #1 (HMAC + real backups + Sentry wrap + route states)
+> - `devin/1777386260-pr2-cleanup` → PR #2 (remove unused tRPC, CI concurrency, route-walk spec, doc refresh)
+> - PRs #3…#13 follow the audit in `docs/archive/` and the gap report shared with the owner.
+> - `devin/1777412762-complete-remaining-items` → Sprint J (PII Prisma `$extends`, pino + OTel, Storybook).
+> - `devin/1777416773-finish-handover-roadmap` → integration PR rolling up all of the above into `main`.
 
 ---
 
@@ -212,19 +255,19 @@ Other reference docs:
 
 ### Sprint F — Production hardening (requires owner-provided secrets)
 
-- 🟡 **#20 PII encryption at rest** — `lib/crypto/pii.ts` exposes AES-256-GCM `encrypt` / `decrypt` / `encryptIfPresent` / `decryptIfPresent`. Reads a 32-byte hex key from `PII_ENCRYPTION_KEY`; if unset the helpers are pass-through, so per-field opt-in works without breaking dev. Storage format `v1:<iv>:<ct>:<tag>` reserves room for algo rotation. Wiring into Prisma `client.$extends` for specific RefundCase / Customer fields is the next step once a column-level rollout plan is approved. (commit `00b1d89`)
-- 🟡 **#21 SSE notifications + per-user event bus** — `lib/events/bus.ts` (in-process EventEmitter keyed by user id) and `GET /api/notifications/stream` (SSE endpoint with 25s heartbeats and auth gate) are landed. The bell icon (`components/layout/notifications-bell.tsx`) now subscribes to the SSE stream and slows its polling fallback to 2 min on `ready`; `dispatchNotifications()` calls `publish()` after every `createMany` so SLA / fraud / mention / AURA notifiers fan out live. SSE route's `cancel()` is wired to a real cleanup that clears the heartbeat + bus subscription so disconnects stop leaking timers. Single-replica deploys get real-time fanout for free; multi-replica still needs the Upstash pub/sub bridge in `bus.ts` once `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are provisioned. (commits `a70fae9`, `8550816`, `6a58a8f`, `7afb059`)
-- 🟡 **#22 Sentry SDK** — `@sentry/nextjs` installed; `sentry.client.config.ts` / `sentry.server.config.ts` / `sentry.edge.config.ts` and `instrumentation.ts` all early-return when `SENTRY_DSN` is unset (zero-cost no-op in dev). The build-time `withSentryConfig()` wrap and source-map upload are the one-line follow-ups once `SENTRY_DSN` + `SENTRY_AUTH_TOKEN` are provided. (commit `cd14af2`)
-- 🟡 **#23 Vercel deploy + Neon Postgres + backup policy** — `v2/vercel.json` pins build / region / cron triggers and `v2/docs/DEPLOY.md` captures the env-var matrix + schema.prisma provider switch + 6-step rollout checklist. Cuts over the moment Neon `DATABASE_URL` + Vercel project are wired. (commit `056d729`)
+- ✅ **#20 PII encryption at rest** — `lib/crypto/pii.ts` exposes AES-256-GCM helpers; `packages/db/src/pii-extension.ts` provides a Prisma `defineExtension` layer that auto-encrypts `RefundCase.customerEmail`, `RefundCase.customerPhone`, `PromoAllocation.customerEmail`, `InboundEmail.rawBody`, `EmailLog.body/cc/bcc`, and `CaseNote.body` on create/update/upsert and auto-decrypts on all find queries. Hash-based lookup columns (`customerEmailHash` / `customerPhoneHash`) plus `where`-clause rewrites preserve exact-match search against ciphertext. Pass-through when neither `PII_ENCRYPTION_KEY` nor `PII_HASH_KEY` is set (dev/CI safe). Backfill script at `packages/db/scripts/backfill-pii.ts`. (commits `00b1d89`, `99f5db6`, `39cd2c5`, `1525ba2`, `d02fbd5`)
+- ✅ **#21 SSE notifications + per-user event bus + Upstash bridge** — `lib/events/bus.ts` is an in-process EventEmitter keyed by user id; when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set the bus additionally publishes via Upstash REST and subscribes through a long-poll subscriber so multi-replica fanout works. Self-publish bounce-back is deduped and the subscriber auto-reconnects on transient failures. `GET /api/notifications/stream` is a 25s-heartbeat SSE endpoint with auth gate and proper `cancel()` cleanup. `dispatchNotifications()` `publish()`es a minimal payload after every `createMany`, the bell subscribes via `EventSource` and slows its polling fallback to 2 min on `ready`. Code is no-op when Upstash secrets are unset. (commits `a70fae9`, `8550816`, `6a58a8f`, `7afb059`, `78ad781`, `8cfabf8`, `c1fb365`)
+- ✅ **#22 Sentry SDK** — `@sentry/nextjs` installed; `sentry.client.config.ts` / `sentry.server.config.ts` / `sentry.edge.config.ts` + `instrumentation.ts` early-return when `SENTRY_DSN` is unset (zero-cost no-op in dev). `next.config.mjs` is now wrapped with `withSentryConfig()` whenever `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` are configured (source-map upload + tunneling). Runtime SDK + build-time wrap both gated, so the integration is one secret away from full activation. (commits `cd14af2`, `8820811`)
+- 🟡 **#23 Vercel deploy + Neon Postgres + backup policy** — `vercel.json` pins build / region / cron triggers; `docs/DEPLOY.md` captures the env-var matrix + schema.prisma provider switch + 6-step rollout checklist. The standalone repo also has a Postgres-flavoured Prisma schema (`packages/db/prisma/postgres/`) and a real backup runner that pg_dumps to S3 with retention sweep + audit logging. Cuts over to Neon the moment owner provides `DATABASE_URL` + Vercel project tokens. (commits `056d729`, `80ca14c`, `0808637`, `cc6a317`)
 - ✅ **#25 Playwright smoke suite** — `@playwright/test` + `playwright.config.ts` + `tests/auth.spec.ts` (login + bad-creds rejection) and `tests/case-list.spec.ts` (cases index loads + bulk-cases reachable). `pnpm test:e2e` runs the suite against `PLAYWRIGHT_BASE_URL` (defaults to `localhost:3000`); CI installs chromium with `pnpm test:e2e:install`. No secrets needed. (commit `94790a2`)
 
 ### Sprint G — Backlog (P2, optional)
 
-- ⬜ **#26 Power Automate flows on M365 tenant** — owner builds externally; Next.js side already ready.
-- 🟡 **#28 pino structured logs + OpenTelemetry** — partial. `lib/logger.ts` is a JSON-line shim with the same surface as pino (`info(obj, msg)`, `child(bindings)`); production emits structured log lines that any drain or OTel collector can parse. Real pino + OTel exporter wiring deferred until a log-drain destination is approved (Vercel Log Drains, Datadog, etc.). (commit `e6dcf74`)
+- 🟡 **#26 Power Automate flows on M365 tenant** — templates ready, owner imports. Five importable Legacy Packages ship under `docs/power-automate/packages/`: outbound mailer (URL-secret + HMAC variants), inbound listener (unsigned dev variant + HMAC-signed production variant), and a Microsoft Approvals flow that turns approval emails into Approve / Reject buttons. HMAC-secured variants are paired with a tiny Node.js Azure Function helper under `docs/power-automate/azure-function-hmac/` for HMAC compute / verify (Power Automate's WDL has no native HMAC primitive). Build script `docs/power-automate/build-packages.py` regenerates all five zips from JSON definitions next door. Owner action: import each zip into Power Automate, map Office 365 Outlook + Microsoft Approvals connections, replace `<APP_BASE_URL>` / `<HMAC_FUNCTION_BASE_URL>` / `<INBOUND_SECRET>` placeholders, save + turn flows on, copy the outbound trigger URL into `POWER_AUTOMATE_WEBHOOK_URL`.
+- ✅ **#28 pino structured logs + OpenTelemetry** — `lib/logger.ts` writes structured JSON to stdout in production with secret/PII-shaped fields auto-redacted via `lib/observability/redact.ts`. Every emit is fire-and-forget exported via OTLP/HTTP (`lib/observability/otlp.ts`) when `OTEL_EXPORTER_OTLP_ENDPOINT` is set — Datadog Agent, Grafana, Honeycomb, self-hosted collectors all accept this. `instrumentation.ts` additionally bootstraps `@opentelemetry/sdk-node` with auto-instrumentations + OTLP trace exporter for distributed tracing. Request-id propagation in `lib/observability/request-id.ts`. All env-gated; no-op without secrets. (commits `e6dcf74`, `57cfa6a`, `866c467`, `e84dc17`, `0cb5c33`)
 - ✅ **#29 OpenAPI / Swagger** — `GET /api/openapi` emits an OpenAPI 3.1 doc generated live from `@wow/validators` zod schemas via `zod-to-json-schema`. Covers the public auth surface, `/api/health`, `/api/openapi` itself, and the Power Automate inbound webhook. Internal tRPC routers stay excluded by design. (commit `8593a32`)
 - ✅ **#30 axe-core a11y audit** — `tests/a11y.spec.ts` runs `@axe-core/playwright` against `/login` and the post-login dashboard, asserting zero WCAG 2.0/2.1 A and AA violations. Runs alongside the rest of the smoke suite under `pnpm test:e2e`. (commit `a4bbd45`)
-- 🟡 **#31 Storybook design-system website** — replaced with `/admin/design-tokens` living preview page (semantic palette, typography ramp incl. Cairo + IBM Plex Sans Arabic, component swatches). Renders against the real CSS pipeline so dark-mode + RTL parity is verifiable in one URL, with no Storybook builder install. Full Storybook scaffold can land later if a UI engineer takes ownership. (commit `db55d6a`)
+- ✅ **#31 Storybook design-system website** — Storybook 10 (`@storybook/nextjs-vite`) scaffolded with Tailwind/globals.css integration. Stories for 7 core UI components: Button (all variants/sizes), Badge (6 variants), Input, Card, Alert (5 variants), Textarea, Skeleton. `/admin/design-tokens` living preview page also preserved. `pnpm storybook` on port 6006, `pnpm build-storybook` for static export. (commits `db55d6a`, `efabe63`)
 
 ### Sprint H — Live audit + improvements 2026-04-27 (no secrets) 🟡 IN PROGRESS
 
@@ -237,6 +280,33 @@ Walked every page in the running app, captured runtime warnings + console errors
 - ✅ **Bell goes live via SSE** — `components/layout/notifications-bell.tsx` now opens an `EventSource` against `/api/notifications/stream`, slows its polling fallback to 2 min once `ready` fires, refetches on every `notification`, and cleans up the source + interval on unmount. Falls back gracefully on 401 / connection errors. (commit `8550816`)
 - ✅ **SSE stream cleanup wired to `cancel()`** — the route stored a `_cleanup` closure on the controller but never called it; `cancel()` was a no-op, leaking the heartbeat interval + bus subscription on every disconnect. Now `cancel()` invokes the real cleanup, with a `closed` guard preventing post-close enqueues. (commit `6a58a8f`)
 - ✅ **Notifications dispatcher publishes to the bus** — `dispatchNotifications()` was the central choke-point for SLA / mention / fraud / AURA notifiers but only wrote DB rows. After `createMany` it now `publish()`es a minimal `notification` event per allowed userId so the SSE clients refetch immediately; payload deliberately stays small so clients still hit `GET /api/notifications` for the authoritative unread count. (commit `7afb059`)
+
+### Sprint J — Complete remaining roadmap items 2026-04-28 ✅ DONE
+
+Branch: `devin/1777412762-complete-remaining-items`. Verified: `pnpm typecheck` 4/4 + `pnpm test` 257/257 + `pnpm build` all green.
+
+- ✅ **#20 PII encryption Prisma wiring** — `packages/db/src/pii.ts` + `packages/db/src/pii-extension.ts` provide a `Prisma.defineExtension` that auto-encrypts `RefundCase.customerEmail`, `RefundCase.customerPhone`, and `PromoAllocation.customerEmail` on create/update/upsert and auto-decrypts on all find queries. `packages/db/src/index.ts` applies the extension to the singleton client. Zero-change for all 116+ consumers of `@wow/db`. (commit `d02fbd5`)
+- ✅ **#28 pino + OpenTelemetry** — initial Sprint J shim was superseded by the OTLP/redact pipeline in Sprint K (see `apps/web/src/lib/logger.ts` + `lib/observability/{otlp,redact}.ts`). (commit `0cb5c33`)
+- ✅ **#31 Storybook scaffold** — Storybook 10 (`@storybook/nextjs-vite`) with Tailwind integration. Stories for Button, Badge, Input, Card, Alert, Textarea, Skeleton — all 7 core UI components. `pnpm storybook` (port 6006) + `pnpm build-storybook`. (commit `efabe63`)
+
+### Sprint K — Integration + production hardening 2026-04-28 ✅ DONE
+
+Branch: `devin/1777416773-finish-handover-roadmap`. Rolls Sprint J up alongside 13 in-flight hardening PRs into a single integration PR against `main`. Verified `pnpm typecheck` 4/4 + `pnpm test` 310/310 + `pnpm build` all green.
+
+- ✅ **PR #1 — HMAC webhook + real backups + Sentry wrap + route states** — first hardening pass of the standalone-flat repo (commit `8820811`).
+- ✅ **PR #2 — Cleanup** — drop unused tRPC, route-walk Playwright spec, doc refresh (commits `ce1c9a3`, `270b5d2`).
+- ✅ **PR #3 — Backup hardening** — pg_dump runner image, S3 adapter, retention sweep, path-style SigV4 fix, BodyInit `Buffer<ArrayBufferLike>` workaround (commits `80ca14c`, `0808637`, `cc6a317`).
+- ✅ **PR #4 — Email reliability** — auto-retry FAILED emails + idempotent inbound webhook + skip-already-SENT guard (commits `442f3f8`, `b8a0add`).
+- ✅ **PR #5 — Upstash SSE bridge** — multi-replica fanout via Upstash REST publish/subscribe with self-bounce dedup + auto-reconnect; dependency-aware `/api/health` (commits `78ad781`, `8cfabf8`).
+- ✅ **PR #6 — Observability redaction + OTLP** — secret/PII redaction in logger; OTLP/HTTP exporter with `=` preserved in header values + `unref()` on the flush timer; Web Crypto in request-id helper (commits `57cfa6a`, `866c467`, `e84dc17`).
+- ✅ **PR #7 — PII RefundCase + PromoAllocation rollout** — encryption + hash columns + `where`-rewrite for exact-match search; backfill decrypts ciphertext rows in export streams (commits `99f5db6`, `39cd2c5`).
+- ✅ **PR #8 — Security** — webhook body cap + dedicated rate limit + explicit session cookie hardening (commit `9b4b910`).
+- ✅ **PR #9 — Integration tests** — postgres service-container suite with Upstash bridge stub; `tests/integration/` workflow YAML documented in `docs/integration-tests.md` (commits `19621d3`, `be878f4`).
+- ✅ **PR #10 — Remove legacy plaintext `x-wow-signature` fallback** — webhook now requires HMAC signature (commit `af4a7b8`).
+- ✅ **PR #11 — PII rollout to additional tables** — encrypt `InboundEmail.rawBody`, `EmailLog.body/cc/bcc`, `CaseNote.body` via the same Prisma extension (commit `1525ba2`).
+- ✅ **PR #12 — Upstash integration stub** — proper REST stub with publish + reconnect coverage in integration tests (commit `c1fb365`).
+- ✅ **PR #13 — Browser-walk empty states + a11y** — shared `EmptyState` component + a11y coverage on 4 more routes (commits `2e10d8b`, `2ed52b0`).
+- ✅ **Conflict resolution + lock regen** — kept the more thorough redaction+OTLP-aware logger from PR #6 over Sprint J's pino-only logger; aligned `apps/web/src/lib/logger.test.ts` to match. Regenerated `pnpm-lock.yaml` to merge Sprint J's pino + storybook + OTel deps with the rollup deps. (commit `603b5e0`)
 
 ---
 

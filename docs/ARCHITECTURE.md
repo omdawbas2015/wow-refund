@@ -33,14 +33,17 @@ This document is the living architectural reference. Keep it current as the syst
 
 ### Boundaries
 - **Browser** never talks to Power Automate directly. All outbound mail flows through the dispatcher (`src/lib/email/dispatcher.ts`) which either POSTs to the Power Automate webhook (when configured) or logs to console (in dev).
-- **Inbound emails** from Power Automate are authenticated via a shared secret header (`x-wow-signature` vs `POWER_AUTOMATE_INBOUND_SECRET`).
+- **Inbound emails** from Power Automate are authenticated via an HMAC-SHA256 signature of the raw body in `x-wow-signature` (secret: `POWER_AUTOMATE_INBOUND_SECRET`). Only HMAC signatures are accepted — the legacy plaintext-secret-as-header fallback was removed in Sprint K (PR #10). Operators must use the HMAC-signing variant of the inbound Flow (`docs/power-automate/packages/wow-inbound-listener-hmac.zip`) when this secret is set; the unsigned variant is for development only with the secret left empty.
 
 ---
 
 ## 2. Monorepo layout
 
+> Layout flattened (2026-04-28): the old `v2/` root was dropped when the
+> repo was made standalone. All paths below are repo-root-relative.
+
 ```
-v2/
+.
 ├── apps/
 │   └── web/                     # Next.js 15 app
 │       ├── src/

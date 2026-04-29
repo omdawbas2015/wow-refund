@@ -5,6 +5,12 @@
 # APP_URL (default: http://localhost:3000) and the inbound secret to
 # match POWER_AUTOMATE_INBOUND_SECRET (default: empty = no auth).
 #
+# The script signs each request body with HMAC-SHA256(body, secret) and
+# sends the hex digest in the `x-wow-signature` header — that's the
+# only contract the route accepts when the secret is set. (The legacy
+# plaintext-secret-as-header fallback was removed; upgrade old Flows
+# to use HMAC.)
+#
 # The test prints the classified `intent` for each payload. On a fresh
 # database the approval / KNET / Aura payloads will report `IGNORED`
 # (with reason "unknown ... batch") — that's correct behavior, not a
@@ -12,7 +18,7 @@
 # batches via the operations desk and update the sample subjects.
 #
 # Usage:
-#   ./test-webhook.sh                               # localhost, no secret
+#   ./test-webhook.sh                                # localhost, no secret
 #   APP_URL=https://staging.example.com ./test-webhook.sh
 #   INBOUND_SECRET=$(cat .secret) ./test-webhook.sh
 
@@ -25,30 +31,40 @@ ENDPOINT="$APP_URL/api/webhooks/power-automate"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SAMPLES="$SCRIPT_DIR/sample-payloads"
 
+hmac_hex() {
+  # $1 = body, $2 = secret → lowercase hex digest of HMAC-SHA256.
+  printf '%s' "$1" | openssl dgst -sha256 -hmac "$2" | awk '{print $NF}'
+}
+
 post_one() {
   local label="$1"
   local file="$2"
 
+  local body
+  body=$(cat "$file")
+
   local headers=(-H "Content-Type: application/json")
   if [[ -n "$INBOUND_SECRET" ]]; then
-    headers+=(-H "x-wow-signature: $INBOUND_SECRET")
+    local sig_value
+    sig_value=$(hmac_hex "$body" "$INBOUND_SECRET")
+    headers+=(-H "x-wow-signature: $sig_value")
   fi
 
   local http_code
-  local body
+  local resp_body
   local resp
   resp=$(curl -sS -X POST "$ENDPOINT" \
     -w '\n%{http_code}' \
     "${headers[@]}" \
-    --data-binary "@$file" || true)
+    --data-binary "$body" || true)
 
   http_code=$(printf '%s' "$resp" | tail -n1)
-  body=$(printf '%s' "$resp" | sed '$d')
+  resp_body=$(printf '%s' "$resp" | sed '$d')
 
   local intent ok reason
-  intent=$(printf '%s' "$body" | jq -r '.intent // "—"' 2>/dev/null || echo "—")
-  ok=$(printf '%s' "$body" | jq -r '.ok // "—"' 2>/dev/null || echo "—")
-  reason=$(printf '%s' "$body" | jq -r '.payload.reason // empty' 2>/dev/null || true)
+  intent=$(printf '%s' "$resp_body" | jq -r '.intent // "—"' 2>/dev/null || echo "—")
+  ok=$(printf '%s' "$resp_body" | jq -r '.ok // "—"' 2>/dev/null || echo "—")
+  reason=$(printf '%s' "$resp_body" | jq -r '.payload.reason // empty' 2>/dev/null || true)
 
   printf '→ %-22s  status=%s  ok=%-5s  intent=%-20s' \
     "$label" "$http_code" "$ok" "$intent"
@@ -60,7 +76,7 @@ post_one() {
 
 echo "POSTing sample payloads to $ENDPOINT"
 if [[ -n "$INBOUND_SECRET" ]]; then
-  echo "(signing with INBOUND_SECRET)"
+  echo "(signing with HMAC-SHA256 using INBOUND_SECRET)"
 else
   echo "(no INBOUND_SECRET — webhook will accept unsigned, only OK in dev)"
 fi

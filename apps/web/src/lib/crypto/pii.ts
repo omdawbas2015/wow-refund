@@ -10,8 +10,9 @@
  * Storage format: `v1:<iv-hex>:<ciphertext-hex>:<authTag-hex>`. The `v1:`
  * prefix lets us rotate algorithms later without reading every column.
  *
- * Sprint F #20. Wire into Prisma via $extends (or middleware in
- * Prisma 6's classic API) once the DSN-gated rollout plan is approved.
+ * The Prisma-layer auto-encryption is handled by @wow/db's pii-extension
+ * (packages/db/src/pii-extension.ts). This module is kept for any call
+ * sites that need direct encrypt/decrypt outside the ORM layer.
  */
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
@@ -22,7 +23,7 @@ const TAG_LEN = 16;
 const PREFIX = 'v1:';
 
 function getKey(): Buffer | null {
-  const raw = process.env.PII_ENCRYPTION_KEY;
+  const raw = process.env['PII_ENCRYPTION_KEY'];
   if (!raw) return null;
   const buf = Buffer.from(raw, 'hex');
   if (buf.length !== KEY_LEN) {
@@ -34,7 +35,7 @@ function getKey(): Buffer | null {
 }
 
 export function isEnabled(): boolean {
-  return !!process.env.PII_ENCRYPTION_KEY;
+  return !!process.env['PII_ENCRYPTION_KEY'];
 }
 
 export function encrypt(plaintext: string | null | undefined): string | null {

@@ -1,15 +1,49 @@
 /**
  * Next.js 15 instrumentation hook.
  *
- * Loads Sentry's Node or edge SDK depending on the runtime, but only
- * when SENTRY_DSN is set. Without a DSN nothing is imported and the
- * function returns immediately.
+ * Initialises:
+ *   1. OpenTelemetry SDK (when OTEL_EXPORTER_OTLP_ENDPOINT is set)
+ *   2. Sentry Node/Edge SDK (when SENTRY_DSN is set)
+ *
+ * Both are no-ops when their respective env vars are absent.
  */
 export async function register() {
-  if (!process.env.SENTRY_DSN) return;
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('./sentry.server.config');
+    // OpenTelemetry — Node.js only
+    if (process.env['OTEL_EXPORTER_OTLP_ENDPOINT']) {
+      const { NodeSDK } = await import('@opentelemetry/sdk-node');
+      const { getNodeAutoInstrumentations } = await import(
+        '@opentelemetry/auto-instrumentations-node'
+      );
+      const { OTLPTraceExporter } = await import(
+        '@opentelemetry/exporter-trace-otlp-http'
+      );
+      const { resourceFromAttributes } = await import('@opentelemetry/resources');
+
+      const sdk = new NodeSDK({
+        resource: resourceFromAttributes({
+          'service.name': 'wow-refund-web',
+          'service.version': process.env['npm_package_version'] ?? '0.0.0',
+        }),
+        traceExporter: new OTLPTraceExporter(),
+        instrumentations: [
+          getNodeAutoInstrumentations({
+            '@opentelemetry/instrumentation-fs': { enabled: false },
+          }),
+        ],
+      });
+
+      sdk.start();
+    }
+
+    // Sentry — Node.js
+    if (process.env['SENTRY_DSN']) {
+      await import('./sentry.server.config');
+    }
   } else if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('./sentry.edge.config');
+    // Sentry — Edge
+    if (process.env['SENTRY_DSN']) {
+      await import('./sentry.edge.config');
+    }
   }
 }

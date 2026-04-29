@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { validateCron } from '@/lib/scheduled-reports/cron';
+import { runBackup } from '@/lib/backups/run-backup';
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -93,33 +94,22 @@ export async function saveBackupSettingsAction(input: unknown): Promise<ActionRe
 export async function triggerManualBackupAction(): Promise<ActionResult> {
   try {
     const me = await requireAdmin();
-    const settings = await prisma.backupSettings.findUnique({ where: { id: 'singleton' } });
-    const destination = settings?.destinationPath ?? 'local:./backups';
-    const log = await prisma.backupLog.create({
-      data: {
-        trigger: 'MANUAL',
-        status: 'RUNNING',
-        destination,
-        triggeredById: me.id,
-      },
-    });
-    // The real backup runner is wired separately; we mark the log SUCCESS
-    // immediately so the UI reflects the audit trail. Future runners should
-    // update this row with size/finishedAt/failureReason.
-    await prisma.backupLog.update({
-      where: { id: log.id },
-      data: { status: 'SUCCESS', finishedAt: new Date() },
-    });
+    // Delegate to the shared runner so manual and scheduled backups produce
+    // identical BackupLog rows (status transitions, sizeBytes, failureReason).
+    const result = await runBackup({ trigger: 'MANUAL', triggeredById: me.id });
     await prisma.auditLog.create({
       data: {
         actorId: me.id,
         actorEmail: me.email,
         action: 'backup.triggered_manual',
         entityType: 'BACKUP',
-        entityId: log.id,
+        entityId: result.logId,
       },
     });
     revalidatePath('/admin/backup');
+    if (result.status === 'FAILED') {
+      return { ok: false, error: result.failureReason ?? 'Backup failed' };
+    }
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    },
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    }
+  },
+  "triggers": {
+    "manual": {
+      "type": "Request",
+      "kind": "Http",
+      "inputs": {
+        "method": "POST",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "templateKey": { "type": "string" },
+            "to": { "type": "string", "description": "Approver email — the manager who can approve / reject the batch." },
+            "cc": { "type": ["string", "null"] },
+            "subject": { "type": "string" },
+            "body": { "type": "string" },
+            "logId": { "type": "string" },
+            "contextType": { "type": ["string", "null"] },
+            "contextId": { "type": ["string", "null"], "description": "ApprovalBatch.id — required so the platform knows which batch this approval is for." },
+            "variables": {
+              "type": "object",
+              "properties": {
+                "batchNumber": { "type": "string" },
+                "caseCount": { "type": ["string", "number"] },
+                "totalAmount": { "type": ["string", "number"] }
+              }
+            }
+          },
+          "required": ["to", "subject", "body", "contextId"]
+        }
+      },
+      "description": "Higher-level alternative to the plain outbound mailer. Use this URL as POWER_AUTOMATE_WEBHOOK_URL ONLY when templateKey == 'approval_batch_request'. Sends a real Microsoft Approvals card (Approve / Reject buttons) instead of a plain email, and POSTs the manager's response back to the platform webhook so the batch state advances automatically."
+    }
+  },
+  "actions": {
+    "Start_and_wait_for_an_approval": {
+      "runAfter": {},
+      "type": "OpenApiConnectionWebhook",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_approvals",
+          "operationId": "StartAndWaitForAnApproval",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
+        },
+        "parameters": {
+          "approvalType": "Approve/Reject - First to respond",
+          "WebhookApprovalCreationInput/title": "@triggerBody()?['subject']",
+          "WebhookApprovalCreationInput/assignedTo": "@triggerBody()?['to']",
+          "WebhookApprovalCreationInput/details": "@{triggerBody()?['body']}\n\n--\nBatch: @{triggerBody()?['variables']?['batchNumber']}\nCases: @{triggerBody()?['variables']?['caseCount']}\nTotal: @{triggerBody()?['variables']?['totalAmount']}\nLog ID: @{triggerBody()?['logId']}",
+          "WebhookApprovalCreationInput/itemLink": "<APP_BASE_URL>/cases?batchId=@{triggerBody()?['contextId']}",
+          "WebhookApprovalCreationInput/itemLinkDescription": "Open batch in WOW Refund"
+        }
+      },
+      "description": "Sends an Approvals card to the manager via Outlook + Teams + Power Automate mobile. Waits indefinitely for Approve / Reject."
+    },
+    "Compose_response_body": {
+      "runAfter": {
+        "Start_and_wait_for_an_approval": ["Succeeded"]
+      },
+      "type": "Compose",
+      "inputs": {
+        "fromEmail": "@{outputs('Start_and_wait_for_an_approval')?['body/responses'][0]?['responder']?['email']}",
+        "toEmail": "@{triggerBody()?['to']}",
+        "subject": "Re: @{triggerBody()?['subject']}",
+        "rawBody": "@{outputs('Start_and_wait_for_an_approval')?['body/outcome']}\n@{outputs('Start_and_wait_for_an_approval')?['body/responses'][0]?['comments']}",
+        "powerAutomateRunId": "@{workflow().run.name}"
+      },
+      "description": "Re-shape the approval response into the inbound webhook payload shape so the platform's APPROVAL_RESPONSE classifier can pick it up. The rawBody is `Approve\\n<comment>` or `Reject\\n<comment>` — exactly what the human reply parser expects."
+    },
+    "POST_response_to_webhook": {
+      "runAfter": {
+        "Compose_response_body": ["Succeeded"]
+      },
+      "type": "Http",
+      "inputs": {
+        "method": "POST",
+        "uri": "<APP_BASE_URL>/api/webhooks/power-automate",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "@outputs('Compose_response_body')"
+      },
+      "description": "POST the structured response back to the platform. If your deployment uses HMAC-secured inbound, replace this action with the Sign-via-Azure-Function pattern from inbound-flow-definition.hmac.json before the POST."
+    },
+    "Return_200": {
+      "runAfter": {
+        "POST_response_to_webhook": ["Succeeded", "Failed", "TimedOut"]
+      },
+      "type": "Response",
+      "kind": "Http",
+      "inputs": {
+        "statusCode": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "runId": "@{workflow().run.name}",
+          "logId": "@{triggerBody()?['logId']}",
+          "outcome": "@{outputs('Start_and_wait_for_an_approval')?['body/outcome']}",
+          "delivered": true
+        }
+      }
+    }
+  },
+  "outputs": {}
+}

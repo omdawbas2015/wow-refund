@@ -1,0 +1,124 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    },
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    }
+  },
+  "triggers": {
+    "When_a_new_email_arrives_(V3)": {
+      "type": "OpenApiConnectionNotification",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_office365",
+          "operationId": "OnNewEmailV3",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+        },
+        "parameters": {
+          "folderPath": "Inbox",
+          "importance": "Any",
+          "fetchOnlyWithAttachment": false,
+          "includeAttachments": false
+        },
+        "subscribe": {
+          "method": "post",
+          "uri": "@listCallbackUrl()"
+        }
+      }
+    }
+  },
+  "actions": {
+    "Subject_lower": {
+      "runAfter": {},
+      "type": "Compose",
+      "inputs": "@toLower(triggerOutputs()?['body/subject'])"
+    },
+    "Has_batch_id": {
+      "runAfter": {
+        "Subject_lower": ["Succeeded"]
+      },
+      "type": "If",
+      "expression": {
+        "or": [
+          { "contains": ["@outputs('Subject_lower')", "apb-"] },
+          { "contains": ["@outputs('Subject_lower')", "knet-"] },
+          { "contains": ["@outputs('Subject_lower')", "aura-"] }
+        ]
+      },
+      "actions": {
+        "Compose_request_body": {
+          "runAfter": {},
+          "type": "Compose",
+          "inputs": {
+            "fromEmail": "@{triggerOutputs()?['body/from']}",
+            "toEmail": "@{triggerOutputs()?['body/to']}",
+            "subject": "@{triggerOutputs()?['body/subject']}",
+            "rawBody": "@{coalesce(triggerOutputs()?['body/body'], triggerOutputs()?['body/bodyPreview'], '')}",
+            "powerAutomateRunId": "@{workflow().run.name}"
+          },
+          "description": "Materialise the JSON body once. The HMAC step signs the SAME serialised string we POST so the receiver verifies against identical bytes."
+        },
+        "Compose_body_string": {
+          "runAfter": {
+            "Compose_request_body": ["Succeeded"]
+          },
+          "type": "Compose",
+          "inputs": "@{string(outputs('Compose_request_body'))}"
+        },
+        "Sign_via_azure_function": {
+          "runAfter": {
+            "Compose_body_string": ["Succeeded"]
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "POST",
+            "uri": "<HMAC_FUNCTION_BASE_URL>/api/sign",
+            "headers": {
+              "Content-Type": "application/json",
+              "x-functions-key": "<HMAC_FUNCTION_KEY>"
+            },
+            "body": {
+              "body": "@{outputs('Compose_body_string')}",
+              "secret": "<INBOUND_SECRET>"
+            }
+          },
+          "description": "Calls the Azure Function HMAC helper to compute HMAC-SHA256(body, INBOUND_SECRET). Replace <HMAC_FUNCTION_BASE_URL>, <HMAC_FUNCTION_KEY>, <INBOUND_SECRET> with the function URL, function key, and POWER_AUTOMATE_INBOUND_SECRET respectively."
+        },
+        "POST_to_webhook": {
+          "runAfter": {
+            "Sign_via_azure_function": ["Succeeded"]
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "POST",
+            "uri": "<APP_BASE_URL>/api/webhooks/power-automate",
+            "headers": {
+              "Content-Type": "application/json",
+              "x-wow-signature": "@{body('Sign_via_azure_function')?['signature']}"
+            },
+            "body": "@outputs('Compose_body_string')"
+          },
+          "description": "POSTs the same canonical body string we signed to the platform webhook. The platform recomputes HMAC server-side and rejects mismatched signatures with 401."
+        }
+      },
+      "else": {
+        "actions": {
+          "Terminate_skipped": {
+            "runAfter": {},
+            "type": "Terminate",
+            "inputs": {
+              "runStatus": "Succeeded"
+            }
+          }
+        }
+      }
+    }
+  },
+  "outputs": {}
+}

@@ -52,7 +52,11 @@ RUN pnpm --filter @wow/web build
 
 # ── 4. runner ────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS runner
-RUN apk add --no-cache libc6-compat openssl curl \
+# postgresql-client ships pg_dump, which the app-level backup runner
+# (`apps/web/src/lib/backups/run-backup.ts`) shells out to when DATABASE_URL
+# points at Postgres. Without it the backup cron fails with a clear
+# "pg_dump not found on PATH" message, but the happy path requires this bin.
+RUN apk add --no-cache libc6-compat openssl curl postgresql-client \
  && addgroup -S -g 1001 nodejs \
  && adduser -S -u 1001 -G nodejs nextjs
 WORKDIR /app

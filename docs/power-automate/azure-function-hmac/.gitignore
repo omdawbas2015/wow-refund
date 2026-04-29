@@ -1,0 +1,7 @@
+node_modules/
+local.settings.json
+.func/
+bin/
+obj/
+.python_packages/
+*.log

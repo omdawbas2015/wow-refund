@@ -14,12 +14,23 @@ build/
 .env.local
 .env.*.local
 
-# Prisma / SQLite
-prisma/dev.db
-prisma/dev.db-journal
-prisma/*.db-journal
-**/dev.db
+# Prisma / SQLite — never commit a database file or its WAL sidecar.
+# Migration .sql files under packages/db/**/migrations/ are intentionally
+# whitelisted below because they're text, not database snapshots.
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+**/*.db
 **/*.db-journal
+**/dev.db
+**/main.db
+!packages/db/**/migrations/**/*.sql
+
+# Backup artifacts produced by lib/backups/run-backup.ts
+# Scoped to the repo root so source files under apps/web/src/lib/backups/
+# (runner + storage code) are still tracked.
+/backups/
 
 # Next.js / TS build info
 next-env.d.ts
@@ -48,3 +59,6 @@ coverage/
 # Temp
 tmp/
 temp/
+
+*storybook.log
+storybook-static

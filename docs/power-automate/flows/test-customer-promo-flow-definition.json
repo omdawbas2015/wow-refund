@@ -1,0 +1,111 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    },
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    }
+  },
+  "triggers": {
+    "Manually_trigger_a_flow": {
+      "type": "Request",
+      "kind": "Button",
+      "inputs": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "Customer_email": {
+              "title": "Customer email",
+              "description": "Where should the test promo code be delivered? Use your own mailbox first.",
+              "type": "string",
+              "x-ms-content-hint": "EMAIL"
+            },
+            "Customer_name": {
+              "title": "Customer name",
+              "description": "Will appear in the email greeting.",
+              "type": "string",
+              "default": "Test Customer"
+            },
+            "Brand_name": {
+              "title": "Brand name",
+              "description": "Will appear as the sender brand in the body.",
+              "type": "string",
+              "default": "WOW Burger"
+            },
+            "Promo_code": {
+              "title": "Promo code",
+              "description": "The code that will be shown in the test email.",
+              "type": "string",
+              "default": "TEST-PROMO-2026"
+            },
+            "Value": {
+              "title": "Value",
+              "description": "Discount amount.",
+              "type": "string",
+              "default": "5"
+            },
+            "Currency": {
+              "title": "Currency",
+              "description": "ISO currency code (KWD / AED / SAR / QAR / BHD / OMR).",
+              "type": "string",
+              "default": "KWD"
+            },
+            "Expires_at": {
+              "title": "Expires at",
+              "description": "Code expiry date (YYYY-MM-DD).",
+              "type": "string",
+              "default": "2026-12-31"
+            }
+          },
+          "required": ["Customer_email"]
+        }
+      },
+      "description": "Manual button trigger — fill in the fields, click Run, you receive a real promo-code email in the customer mailbox you specified. Use this BEFORE wiring up the live outbound flow to confirm Power Automate + Office 365 + your mailbox are working end to end."
+    }
+  },
+  "actions": {
+    "Send_an_email_(V2)": {
+      "runAfter": {},
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_office365",
+          "operationId": "SendEmailV2",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+        },
+        "parameters": {
+          "emailMessage/To": "@triggerBody()?['Customer_email']",
+          "emailMessage/Subject": "A little something from @{triggerBody()?['Brand_name']}",
+          "emailMessage/Body": "<p>Dear @{triggerBody()?['Customer_name']},</p><p>We apologize for the inconvenience you experienced.</p><p>As a goodwill gesture, please use the following code on your next order at <strong>@{triggerBody()?['Brand_name']}</strong>:</p><table style=\"border-collapse:collapse;font-family:ui-monospace,SFMono-Regular,Menlo,monospace\"><tr><td style=\"padding:8px 16px;border:1px solid #ddd\">Code</td><td style=\"padding:8px 16px;border:1px solid #ddd\"><strong>@{triggerBody()?['Promo_code']}</strong></td></tr><tr><td style=\"padding:8px 16px;border:1px solid #ddd\">Value</td><td style=\"padding:8px 16px;border:1px solid #ddd\">@{triggerBody()?['Value']} @{triggerBody()?['Currency']}</td></tr><tr><td style=\"padding:8px 16px;border:1px solid #ddd\">Expires</td><td style=\"padding:8px 16px;border:1px solid #ddd\">@{triggerBody()?['Expires_at']}</td></tr></table><p>We hope to serve you better next time.</p><p>— The @{triggerBody()?['Brand_name']} Team</p><hr/><p style=\"color:#888;font-size:12px\">This is a test email sent from the WOW Refund Power Automate diagnostic flow. The promo code above is not a live code unless you happened to type a real one. Template: <code>CUSTOMER_PROMO_COMPENSATION</code>.</p>",
+          "emailMessage/Importance": "Normal"
+        }
+      },
+      "description": "Sends the same shape of email that the live CUSTOMER_PROMO_COMPENSATION template produces, so when the live outbound flow goes online you already know your Outlook connection + mailbox + sender identity all work."
+    },
+    "Return_200": {
+      "runAfter": {
+        "Send_an_email_(V2)": ["Succeeded"]
+      },
+      "type": "Response",
+      "kind": "Http",
+      "inputs": {
+        "statusCode": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "ok": true,
+          "deliveredTo": "@{triggerBody()?['Customer_email']}",
+          "promoCode": "@{triggerBody()?['Promo_code']}",
+          "runId": "@{workflow().run.name}"
+        }
+      }
+    }
+  },
+  "outputs": {}
+}

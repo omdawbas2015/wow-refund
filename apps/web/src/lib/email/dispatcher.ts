@@ -11,6 +11,7 @@
 
 import { prisma } from '@wow/db';
 import { renderTemplate } from './render';
+import { signBody } from '@/lib/security/signature';
 
 export interface EmailPayload {
   templateKey: string;
@@ -40,6 +41,11 @@ export interface EmailDispatchResult {
 }
 
 const WEBHOOK_URL = process.env['POWER_AUTOMATE_WEBHOOK_URL'] ?? '';
+// Optional dedicated channel for CUSTOMER_PROMO_COMPENSATION emails.
+// When set, customer-promo dispatches POST here instead of WEBHOOK_URL
+// so operators can wire flow #7 (auto-send promo) and keep the unified
+// router #1 / #3 for everything else. Falls back to WEBHOOK_URL when blank.
+const PROMO_WEBHOOK_URL = process.env['POWER_AUTOMATE_PROMO_WEBHOOK_URL'] ?? '';
 const SIGNING_SECRET = process.env['POWER_AUTOMATE_SIGNING_SECRET'] ?? '';
 
 export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatchResult> {
@@ -85,8 +91,15 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
     },
   });
 
+  // Pick the webhook: customer-promo emails go to the dedicated channel
+  // when one is configured.
+  const targetWebhook =
+    payload.templateKey === 'CUSTOMER_PROMO_COMPENSATION' && PROMO_WEBHOOK_URL
+      ? PROMO_WEBHOOK_URL
+      : WEBHOOK_URL;
+
   // If no webhook configured (dev), log to console and mark SENT
-  if (!WEBHOOK_URL) {
+  if (!targetWebhook) {
     console.log('\n══════════════════════════════════════════════════════════════');
     console.log('📧 EMAIL (dev mode — no Power Automate webhook configured)');
     console.log('──────────────────────────────────────────────────────────────');
@@ -105,26 +118,42 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
     return { logId: log.id, delivered: true, runId: 'dev-stub' };
   }
 
-  // Production: POST to Power Automate
+  // Production: POST to Power Automate.
+  // The outbound body is HMAC-SHA256-signed with POWER_AUTOMATE_SIGNING_SECRET
+  // and placed in `X-Wow-Signature`. If the secret is missing in production we
+  // fail loudly so an un-authenticated webhook doesn't silently get a raw
+  // payload — use the dev console fallback (blank WEBHOOK_URL) for local dev.
+  if (!SIGNING_SECRET && process.env.NODE_ENV === 'production') {
+    const message = 'POWER_AUTOMATE_SIGNING_SECRET is required when POWER_AUTOMATE_WEBHOOK_URL is configured';
+    await prisma.emailLog.update({
+      where: { id: log.id },
+      data: { status: 'FAILED', failureReason: message },
+    });
+    return { logId: log.id, delivered: false, error: message };
+  }
+
+  const outboundBody = JSON.stringify({
+    templateKey: payload.templateKey,
+    to: payload.to,
+    cc: payload.cc,
+    bcc: payload.bcc,
+    subject,
+    body,
+    logId: log.id,
+    contextType: payload.context?.type,
+    contextId: payload.context?.id,
+    variables: payload.variables,
+  });
+  const signature = SIGNING_SECRET ? signBody(outboundBody, SIGNING_SECRET) : '';
+
   try {
-    const res = await fetch(WEBHOOK_URL, {
+    const res = await fetch(targetWebhook, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Wow-Signature': SIGNING_SECRET,
+        'X-Wow-Signature': signature,
       },
-      body: JSON.stringify({
-        templateKey: payload.templateKey,
-        to: payload.to,
-        cc: payload.cc,
-        bcc: payload.bcc,
-        subject,
-        body,
-        logId: log.id,
-        contextType: payload.context?.type,
-        contextId: payload.context?.id,
-        variables: payload.variables,
-      }),
+      body: outboundBody,
     });
 
     if (!res.ok) {

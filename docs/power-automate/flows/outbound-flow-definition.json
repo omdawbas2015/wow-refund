@@ -33,94 +33,65 @@
           },
           "required": ["to", "subject", "body"]
         }
-      }
+      },
+      "description": "WOW Refund app POSTs here to send an email through the operator's Outlook mailbox. Trigger URL contains a SAS token — keep it secret. Optional X-Wow-Signature HMAC header is logged for forensics; verification requires the optional Azure Function (see docs/power-automate/azure-function-hmac/)."
     }
   },
   "actions": {
-    "Initialize_expected_signature": {
+    "Send_an_email_(V2)": {
       "runAfter": {},
-      "type": "InitializeVariable",
+      "type": "OpenApiConnection",
       "inputs": {
-        "variables": [
-          {
-            "name": "ExpectedSignature",
-            "type": "string",
-            "value": "<OUTBOUND_SIGNING_SECRET>"
-          }
-        ]
-      },
-      "description": "Replace <OUTBOUND_SIGNING_SECRET> with the same value set in the platform's POWER_AUTOMATE_SIGNING_SECRET env var. Prefer wiring this to a Power Automate environment variable for production."
-    },
-    "Verify_signature": {
-      "runAfter": {
-        "Initialize_expected_signature": ["Succeeded"]
-      },
-      "type": "If",
-      "expression": {
-        "and": [
-          {
-            "equals": [
-              "@{coalesce(triggerOutputs()?['headers']?['X-Wow-Signature'], triggerOutputs()?['headers']?['x-wow-signature'], '')}",
-              "@variables('ExpectedSignature')"
-            ]
-          }
-        ]
-      },
-      "actions": {
-        "Send_an_email_(V2)": {
-          "runAfter": {},
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "shared_office365",
-              "operationId": "SendEmailV2",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-            },
-            "parameters": {
-              "emailMessage/To": "@triggerBody()?['to']",
-              "emailMessage/Subject": "@triggerBody()?['subject']",
-              "emailMessage/Body": "<pre style=\"font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;\">@{triggerBody()?['body']}</pre>",
-              "emailMessage/Importance": "Normal",
-              "emailMessage/Cc": "@triggerBody()?['cc']",
-              "emailMessage/Bcc": "@triggerBody()?['bcc']"
-            }
-          }
+        "host": {
+          "connectionName": "shared_office365",
+          "operationId": "SendEmailV2",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
         },
-        "Return_200": {
-          "runAfter": {
-            "Send_an_email_(V2)": ["Succeeded"]
-          },
-          "type": "Response",
-          "kind": "Http",
-          "inputs": {
-            "statusCode": 200,
-            "headers": {
-              "Content-Type": "application/json"
-            },
-            "body": {
-              "runId": "@{workflow().run.name}",
-              "logId": "@{triggerBody()?['logId']}",
-              "delivered": true
-            }
-          }
+        "parameters": {
+          "emailMessage/To": "@triggerBody()?['to']",
+          "emailMessage/Subject": "@triggerBody()?['subject']",
+          "emailMessage/Body": "<pre style=\"font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;\">@{triggerBody()?['body']}</pre>",
+          "emailMessage/Importance": "Normal",
+          "emailMessage/Cc": "@triggerBody()?['cc']",
+          "emailMessage/Bcc": "@triggerBody()?['bcc']"
         }
       },
-      "else": {
-        "actions": {
-          "Return_401": {
-            "runAfter": {},
-            "type": "Response",
-            "kind": "Http",
-            "inputs": {
-              "statusCode": 401,
-              "headers": {
-                "Content-Type": "application/json"
-              },
-              "body": {
-                "error": "Invalid X-Wow-Signature"
-              }
-            }
-          }
+      "description": "Sends the email through the connected operator mailbox. Body is wrapped in <pre> so the plain-text alignment of cases / batches survives Outlook rendering."
+    },
+    "Return_200": {
+      "runAfter": {
+        "Send_an_email_(V2)": ["Succeeded"]
+      },
+      "type": "Response",
+      "kind": "Http",
+      "inputs": {
+        "statusCode": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "runId": "@{workflow().run.name}",
+          "logId": "@{triggerBody()?['logId']}",
+          "delivered": true
+        }
+      }
+    },
+    "Return_500_on_failure": {
+      "runAfter": {
+        "Send_an_email_(V2)": ["Failed", "TimedOut"]
+      },
+      "type": "Response",
+      "kind": "Http",
+      "inputs": {
+        "statusCode": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "runId": "@{workflow().run.name}",
+          "logId": "@{triggerBody()?['logId']}",
+          "delivered": false,
+          "error": "Outlook send failed — check Power Automate run history."
         }
       }
     }

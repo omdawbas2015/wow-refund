@@ -31,14 +31,15 @@
           "uri": "@listCallbackUrl()"
         }
       },
-      "description": "Trigger fires for every new mail in the refund-ops mailbox Inbox."
+      "description": "Trigger fires for every new mail in the refund-ops mailbox Inbox. Filters in the next steps drop emails that are not refund replies."
     }
   },
   "actions": {
     "Subject_lower": {
       "runAfter": {},
       "type": "Compose",
-      "inputs": "@toLower(triggerOutputs()?['body/subject'])"
+      "inputs": "@toLower(triggerOutputs()?['body/subject'])",
+      "description": "Lowercase the subject so the substring match in Has_batch_id is case-insensitive."
     },
     "Has_batch_id": {
       "runAfter": {
@@ -53,25 +54,32 @@
         ]
       },
       "actions": {
-        "POST_to_webhook": {
+        "Compose_request_body": {
           "runAfter": {},
+          "type": "Compose",
+          "inputs": {
+            "fromEmail": "@{triggerOutputs()?['body/from']}",
+            "toEmail": "@{triggerOutputs()?['body/to']}",
+            "subject": "@{triggerOutputs()?['body/subject']}",
+            "rawBody": "@{coalesce(triggerOutputs()?['body/body'], triggerOutputs()?['body/bodyPreview'], '')}",
+            "powerAutomateRunId": "@{workflow().run.name}"
+          },
+          "description": "Materialise the exact JSON body to POST. Composing it once means the optional HMAC step (see Azure Function variant) signs the same bytes the webhook will verify."
+        },
+        "POST_to_webhook": {
+          "runAfter": {
+            "Compose_request_body": ["Succeeded"]
+          },
           "type": "Http",
           "inputs": {
             "method": "POST",
             "uri": "<APP_BASE_URL>/api/webhooks/power-automate",
             "headers": {
-              "Content-Type": "application/json",
-              "x-wow-signature": "<INBOUND_SECRET>"
+              "Content-Type": "application/json"
             },
-            "body": {
-              "fromEmail": "@{triggerOutputs()?['body/from']}",
-              "toEmail": "@{triggerOutputs()?['body/to']}",
-              "subject": "@{triggerOutputs()?['body/subject']}",
-              "rawBody": "@{coalesce(triggerOutputs()?['body/body'], triggerOutputs()?['body/bodyPreview'], '')}",
-              "powerAutomateRunId": "@{workflow().run.name}"
-            }
+            "body": "@outputs('Compose_request_body')"
           },
-          "description": "Replace <APP_BASE_URL> with your platform URL (e.g. https://refund.example.com) and <INBOUND_SECRET> with POWER_AUTOMATE_INBOUND_SECRET."
+          "description": "Replace <APP_BASE_URL> with your platform URL (e.g. https://refund.example.com). NOTE: this default flow does not sign the body. The app must therefore have POWER_AUTOMATE_INBOUND_SECRET unset (or empty). For HMAC-secured production deployments, replace this action with the HTTP-call-to-Azure-Function pattern from docs/power-automate/azure-function-hmac/."
         }
       },
       "else": {

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma, Prisma } from '@wow/db';
+import { prisma, Prisma, hashEmailDb } from '@wow/db';
 import type { CaseStatus } from '@wow/db';
 import { auth } from '@/auth';
 import { buildSingleSheetXlsx, attachmentDisposition, XLSX_MIME } from '@/lib/exports/xlsx';
 import { buildSlaConditions, parseSlaParam } from '@/lib/cases/sla';
+import { looksLikeEmail } from '@/lib/crypto/pii-hash';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,14 +55,34 @@ export async function GET(req: NextRequest) {
     });
   }
   if (q) {
-    andConditions.push({
-      OR: [
-        { caseNumber: { contains: q } },
-        { orderNumber: { contains: q } },
-        { customerEmail: { contains: q } },
-        { customerName: { contains: q } },
-      ],
-    });
+    // When PII encryption is on, `customerEmail: { contains: q }` can't
+    // substring-search the ciphertext. Route full-email queries through
+    // the deterministic hash column for exact matches. For everything
+    // else (partial queries, name fragments, on-by-default plaintext
+    // deployments), keep `contains` on customerEmail so admins still
+    // get the pre-PII search ergonomics.
+    const piiHashConfigured = hashEmailDb('probe@probe.test') !== null;
+    const orBranches: Prisma.RefundCaseWhereInput[] = [
+      { caseNumber: { contains: q } },
+      { orderNumber: { contains: q } },
+      { customerName: { contains: q } },
+    ];
+    if (looksLikeEmail(q) && piiHashConfigured) {
+      // Encrypted deployment + full email query -> exact hash lookup.
+      const hash = hashEmailDb(q);
+      if (hash) orBranches.push({ customerEmailHash: hash });
+    } else if (!piiHashConfigured) {
+      // Plaintext deployment (no PII_HASH_KEY) -> legacy substring
+      // behaviour for ALL queries, including non-email-shaped ones
+      // ('alice', '@example.com', etc.). SQLite's `contains` is
+      // implicitly case-insensitive for ASCII, which matches the
+      // pre-PII export search exactly.
+      orBranches.push({ customerEmail: { contains: q } });
+    }
+    // (PII on + non-email query) -> intentionally no customerEmail
+    // branch: we can't substring-search ciphertext and can't hash a
+    // fragment. Use the customerName / orderNumber branches instead.
+    andConditions.push({ OR: orBranches });
   }
 
   const where: Prisma.RefundCaseWhereInput = {
