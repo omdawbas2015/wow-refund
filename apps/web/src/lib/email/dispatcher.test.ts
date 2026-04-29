@@ -135,6 +135,48 @@ describe('lib/email/dispatcher', () => {
     });
   });
 
+  it('routes CUSTOMER_PROMO_COMPENSATION to POWER_AUTOMATE_PROMO_WEBHOOK_URL when set', async () => {
+    vi.stubEnv('POWER_AUTOMATE_WEBHOOK_URL', 'https://main.example/webhook');
+    vi.stubEnv('POWER_AUTOMATE_PROMO_WEBHOOK_URL', 'https://promo.example/webhook');
+    vi.resetModules();
+    const mod = await import('./dispatcher');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ runId: 'run-promo' }),
+    });
+
+    await mod.dispatchEmail({
+      templateKey: 'CUSTOMER_PROMO_COMPENSATION',
+      to: 'a@example.com',
+      variables: {},
+      override: { subject: 'S', body: 'B' },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://promo.example/webhook');
+  });
+
+  it('routes non-promo templates to the main webhook even when promo URL is set', async () => {
+    vi.stubEnv('POWER_AUTOMATE_WEBHOOK_URL', 'https://main.example/webhook');
+    vi.stubEnv('POWER_AUTOMATE_PROMO_WEBHOOK_URL', 'https://promo.example/webhook');
+    vi.resetModules();
+    const mod = await import('./dispatcher');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ runId: 'run-main' }),
+    });
+
+    await mod.dispatchEmail({
+      templateKey: 'CUSTOMER_REFUND_COMPLETED',
+      to: 'a@example.com',
+      variables: {},
+      override: { subject: 'S', body: 'B' },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://main.example/webhook');
+  });
+
   it('defaults locale to "en" when omitted', async () => {
     findUnique.mockResolvedValue({ id: 'tpl-1', subject: 'S', body: 'B' });
     await dispatchEmail({

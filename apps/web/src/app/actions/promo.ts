@@ -11,6 +11,7 @@ import {
 } from '@wow/validators';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { dispatchEmail } from '@/lib/email/dispatcher';
 
 type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -87,7 +88,7 @@ export async function allocatePromoAction(input: unknown): Promise<
     // stuck as ALLOCATED without a matching allocation row. Matches the
     // pattern used by cases.ts / batches.ts for multi-step mutations.
     type TxResult =
-      | { kind: 'ok'; code: string; allocationId: string }
+      | { kind: 'ok'; code: string; allocationId: string; expiresAt: Date | null }
       | { kind: 'out_of_stock' }
       | { kind: 'race' };
     const outcome = await prisma.$transaction(async (tx): Promise<TxResult> => {
@@ -99,7 +100,7 @@ export async function allocatePromoAction(input: unknown): Promise<
           OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         },
         orderBy: { uploadedAt: 'asc' },
-        select: { id: true, code: true },
+        select: { id: true, code: true, expiresAt: true },
       });
       if (!candidate) return { kind: 'out_of_stock' };
 
@@ -122,7 +123,12 @@ export async function allocatePromoAction(input: unknown): Promise<
         },
       });
 
-      return { kind: 'ok', code: candidate.code, allocationId: allocation.id };
+      return {
+        kind: 'ok',
+        code: candidate.code,
+        allocationId: allocation.id,
+        expiresAt: candidate.expiresAt,
+      };
     });
 
     if (outcome.kind === 'out_of_stock') {
@@ -132,9 +138,40 @@ export async function allocatePromoAction(input: unknown): Promise<
       return { ok: false, error: 'Another allocation just claimed that code. Please retry.' };
     }
 
-    // TODO(phase-4.2): dispatch real email via Power Automate for
-    // CUSTOMER_COMPENSATION pools. For now the `emailedAt` timestamp doubles
-    // as a demo marker so the UI can surface "emailed" state.
+    // Dispatch the customer-compensation email outside the transaction so a
+    // webhook hiccup never rolls back the allocation. Service-recovery codes
+    // are kept internal and never emailed.
+    if (pool.type === 'CUSTOMER_COMPENSATION') {
+      try {
+        const year = new Date().getFullYear();
+        const websiteUrl = 'https://chipotle.com';
+        await dispatchEmail({
+          templateKey: 'CUSTOMER_PROMO_COMPENSATION',
+          locale: 'en',
+          to: data.customerEmail,
+          variables: {
+            customerName: data.customerName ?? 'Customer',
+            brandName: pool.brand.name,
+            brandAddress: '1401 Wynkoop St, Denver, CO 80202',
+            brandCopyright: `© ${year} ${pool.brand.name}. All rights reserved.`,
+            promoCode: outcome.code,
+            value: String(pool.value),
+            currency: pool.currency,
+            expiresAt: outcome.expiresAt
+              ? outcome.expiresAt.toISOString().slice(0, 10)
+              : 'NO EXPIRY',
+            orderUrl: websiteUrl,
+            websiteUrl,
+          },
+          context: { type: 'PROMO', id: outcome.allocationId },
+        });
+      } catch (mailErr) {
+        // Don't fail the allocation just because the mailer hiccuped — the
+        // EmailLog row (or its absence) is the source of truth and the
+        // dispatcher already logs failures.
+        console.error('[allocatePromoAction] dispatchEmail failed', mailErr);
+      }
+    }
 
     revalidatePath('/promo');
     revalidatePath('/promo/allocate');

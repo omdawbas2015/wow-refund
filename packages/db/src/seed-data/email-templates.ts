@@ -3,6 +3,8 @@
  * Placeholders use {{variable}} syntax.
  */
 
+import { CUSTOMER_PROMO_COMPENSATION_HTML_EN } from './promo-compensation-html';
+
 export interface EmailTemplateSeed {
   key: string;
   category: string;
@@ -117,10 +119,21 @@ export const emailTemplates: readonly EmailTemplateSeed[] = [
     key: 'CUSTOMER_PROMO_COMPENSATION',
     category: 'Customer',
     locale: 'en',
-    subject: 'A little something from {{brandName}}',
-    body:
-      'Dear {{customerName}},\n\nWe apologize for the inconvenience you experienced.\n\nAs a goodwill gesture, please use the following code on your next order at {{brandName}}:\n\nCode: {{promoCode}}\nValue: {{value}} {{currency}}\nExpires: {{expiresAt}}\n\nWe hope to serve you better next time.\n\n— The {{brandName}} Team',
-    placeholders: ['customerName', 'brandName', 'promoCode', 'value', 'currency', 'expiresAt'],
-    description: 'Sent with a customer compensation promo code.',
+    subject: '{{value}} {{currency}} OFF — exclusively for you from {{brandName}}',
+    body: CUSTOMER_PROMO_COMPENSATION_HTML_EN,
+    placeholders: [
+      'customerName',
+      'brandName',
+      'brandAddress',
+      'brandCopyright',
+      'promoCode',
+      'value',
+      'currency',
+      'expiresAt',
+      'orderUrl',
+      'websiteUrl',
+    ],
+    description:
+      'Sent with a customer compensation promo code. HTML body modeled on the Chipotle "$X OFF EXCLUSIVELY FOR YOU" promo email.',
   },
 ];
