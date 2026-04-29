@@ -155,6 +155,7 @@ export default async function CaseDetailsPage({
               }
             : null,
           approvedAt: refundCase.approvedAt?.toISOString() ?? null,
+          cancelledReason: refundCase.cancelledReason,
         }}
         components={refundCase.components.map((c) => ({
           id: c.id,
