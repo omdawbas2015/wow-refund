@@ -74,14 +74,31 @@ export async function createCaseAction(
       include: { registry: true },
     });
     if (!country) return { ok: false, error: 'Invalid country.' };
+    if (!country.isActive) {
+      return {
+        ok: false,
+        error: `${country.registry.nameEn} is not active. Activate it from Admin → Countries first.`,
+      };
+    }
 
-    // Verify brand is active for this country
-    const brandCountry = await prisma.brandCountry.findFirst({
-      where: { brandId: data.brandId, countryId: data.countryId, isActive: true },
-    });
-    if (!brandCountry) {
-      // Non-blocking — some brands may operate across countries without a per-country row;
-      // just warn via audit later. Allow creation to proceed.
+    // Brand must be wired up for this country via BrandCountry. Admins do this
+    // on /admin/countries when activating; without an active link the brand is
+    // not allowed to operate in this country and case creation must reject.
+    const [brand, brandCountry] = await Promise.all([
+      prisma.brand.findUnique({ where: { id: data.brandId }, select: { name: true, isActive: true } }),
+      prisma.brandCountry.findUnique({
+        where: { brandId_countryId: { brandId: data.brandId, countryId: data.countryId } },
+        select: { isActive: true },
+      }),
+    ]);
+    if (!brand || !brand.isActive) {
+      return { ok: false, error: 'Brand not found or inactive.' };
+    }
+    if (!brandCountry || !brandCountry.isActive) {
+      return {
+        ok: false,
+        error: `${brand.name} is not enabled for ${country.registry.nameEn}. Enable it from Admin → Countries → Edit.`,
+      };
     }
 
     const paymentMethods = await prisma.paymentMethod.findMany({

@@ -6,16 +6,15 @@
   "nav": {
     "dashboard": "Dashboard",
     "cases": "Cases",
-    "operations": "Refund Operations",
+    "operations": "Refund Pool",
     "promo": "Promo Codes",
     "helpDesk": "Help Desk",
     "storesCommunication": "Stores Communication",
     "reports": "Reports",
     "admin": "Admin",
     "users": "Users",
-    "pendingApprovals": "Pending Approvals",
+    "pendingApprovals": "User Requests",
     "countries": "Countries",
-    "currencies": "Currencies",
     "brands": "Brands",
     "branches": "Branches",
     "paymentMethods": "Payment Methods",
@@ -88,8 +87,8 @@
   },
   "admin": {
     "pendingApprovals": {
-      "title": "Pending approvals",
-      "subtitle": "Review and approve new signup requests.",
+      "title": "User requests",
+      "subtitle": "New signup requests waiting for an admin to assign a role and primary country before they can sign in.",
       "empty": "No pending requests.",
       "approve": "Approve",
       "reject": "Reject",
@@ -98,19 +97,6 @@
       "reason": "Reason for rejection",
       "approveSuccess": "User approved.",
       "rejectSuccess": "User rejected."
-    },
-    "currencies": {
-      "title": "Currencies",
-      "subtitle": "Read-only ISO 4217 reference directory.",
-      "code": "Code",
-      "name": "Name",
-      "symbol": "Symbol",
-      "decimals": "Decimals",
-      "countries": "Countries",
-      "openCases": "Open cases",
-      "status": "Status",
-      "filterAll": "All",
-      "filterInUse": "In use"
     },
     "branches": {
       "title": "Branches",

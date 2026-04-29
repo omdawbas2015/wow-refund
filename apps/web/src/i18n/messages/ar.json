@@ -6,16 +6,15 @@
   "nav": {
     "dashboard": "لوحة البيانات",
     "cases": "الحالات",
-    "operations": "عمليات الاسترداد",
+    "operations": "حوض المرتجعات",
     "promo": "رموز البرومو",
     "helpDesk": "مكتب المساعدة",
     "storesCommunication": "التواصل مع المتاجر",
     "reports": "التقارير",
     "admin": "لوحة الإدارة",
     "users": "المستخدمون",
-    "pendingApprovals": "الموافقات المعلقة",
+    "pendingApprovals": "طلبات المستخدمين",
     "countries": "الدول",
-    "currencies": "العملات",
     "brands": "العلامات التجارية",
     "branches": "الفروع",
     "paymentMethods": "طرق الدفع",
@@ -88,8 +87,8 @@
   },
   "admin": {
     "pendingApprovals": {
-      "title": "الموافقات المعلقة",
-      "subtitle": "راجع واعتمد طلبات التسجيل الجديدة.",
+      "title": "طلبات المستخدمين",
+      "subtitle": "طلبات تسجيل جديدة تنتظر من المدير تعيين الدور والدولة الأساسية قبل أن يتمكن المستخدم من تسجيل الدخول.",
       "empty": "لا توجد طلبات معلقة.",
       "approve": "موافقة",
       "reject": "رفض",
@@ -98,19 +97,6 @@
       "reason": "سبب الرفض",
       "approveSuccess": "تمت الموافقة.",
       "rejectSuccess": "تم الرفض."
-    },
-    "currencies": {
-      "title": "العملات",
-      "subtitle": "دليل عملات ISO 4217 المرجعي. للقراءة فقط.",
-      "code": "الرمز",
-      "name": "الاسم",
-      "symbol": "العلامة",
-      "decimals": "الخانات العشرية",
-      "countries": "الدول",
-      "openCases": "حالات مفتوحة",
-      "status": "الحالة",
-      "filterAll": "الكل",
-      "filterInUse": "قيد الاستخدام"
     },
     "branches": {
       "title": "الفروع",
