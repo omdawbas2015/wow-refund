@@ -143,12 +143,8 @@ export async function allocatePromoAction(input: unknown): Promise<
     // are kept internal and never emailed.
     if (pool.type === 'CUSTOMER_COMPENSATION') {
       try {
-        // Branding inputs for the HTML promo email. We default to the
-        // Chipotle-style warm brown so the layout always renders looking
-        // intentional even when a brand has no logoUrl/colour set.
-        const brandLogoUrl = pool.brand.logoUrl ?? '';
-        const brandColor = '#451407';
         const year = new Date().getFullYear();
+        const websiteUrl = 'https://chipotle.com';
         await dispatchEmail({
           templateKey: 'CUSTOMER_PROMO_COMPENSATION',
           locale: 'en',
@@ -156,18 +152,16 @@ export async function allocatePromoAction(input: unknown): Promise<
           variables: {
             customerName: data.customerName ?? 'Customer',
             brandName: pool.brand.name,
-            brandLogoUrl,
-            brandColor,
-            brandAddress: '',
+            brandAddress: '1401 Wynkoop St, Denver, CO 80202',
             brandCopyright: `© ${year} ${pool.brand.name}. All rights reserved.`,
             promoCode: outcome.code,
             value: String(pool.value),
             currency: pool.currency,
             expiresAt: outcome.expiresAt
               ? outcome.expiresAt.toISOString().slice(0, 10)
-              : 'no expiry',
-            orderUrl: '#',
-            websiteUrl: '#',
+              : 'NO EXPIRY',
+            orderUrl: websiteUrl,
+            websiteUrl,
           },
           context: { type: 'PROMO', id: outcome.allocationId },
         });

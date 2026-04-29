@@ -124,8 +124,6 @@ export const emailTemplates: readonly EmailTemplateSeed[] = [
     placeholders: [
       'customerName',
       'brandName',
-      'brandLogoUrl',
-      'brandColor',
       'brandAddress',
       'brandCopyright',
       'promoCode',
