@@ -226,6 +226,24 @@ Other reference docs:
 - ✅ **#30 axe-core a11y audit** — `tests/a11y.spec.ts` runs `@axe-core/playwright` against `/login` and the post-login dashboard, asserting zero WCAG 2.0/2.1 A and AA violations. Runs alongside the rest of the smoke suite under `pnpm test:e2e`. (commit `a4bbd45`)
 - 🟡 **#31 Storybook design-system website** — replaced with `/admin/design-tokens` living preview page (semantic palette, typography ramp incl. Cairo + IBM Plex Sans Arabic, component swatches). Renders against the real CSS pipeline so dark-mode + RTL parity is verifiable in one URL, with no Storybook builder install. Full Storybook scaffold can land later if a UI engineer takes ownership. (commit `db55d6a`)
 
+### Sprint I — Refund-case ARN workflow + UX polish 2026-04-29 (no secrets) 🟢 SHIPPED
+
+Branch: `devin/1777486095-refund-case-enhancements` (HEAD = `70cb90d`, 9 commits ahead of `main`). All `pnpm typecheck` 4/4 green. Owner request (translated from Arabic): cancel button + remove people avatars, real Customer History, polished case-creation/Aura cards, ARN entry after approval, customer-call follow-up, redesigned case detail page.
+
+- ✅ **Agent-initiated cancel from case detail** — Ban-icon button in the action bar; prompts for reason ≥3 chars; transitions the case to CANCELLED via the existing state machine; renders a "Case cancelled" banner with the reason. Avatars next to Created by / Assigned to / Approved by are now plain names. (`5ddaea1`)
+- ✅ **Refreshed Aura brand mark** — `components/ui/aura-logo.tsx` redrawn as a magenta-coral squircle with a radial highlight glow and a hand-lettered "A" wordmark. `payment-method-icons.tsx` AuraGlyph now matches. (`50ffccf`)
+- ✅ **Customer-call follow-up schema** — `CustomerCallStatus` enum (NOT_APPLICABLE / PENDING / ANSWERED / NO_ANSWER / NOT_NEEDED) plus `customerCall{Status,UpdatedAt,ById,FollowUpAt}` on `RefundCase`; mirrored across SQLite (`schema.prisma`) and Postgres (`postgres/schema.prisma`). (`029bdf5`)
+- ✅ **No-answer follow-up email template** — `CUSTOMER_REFUND_FOLLOWUP_NO_ANSWER` seeded for EN + AR in `packages/db/src/seed-data/email-templates.ts`. (`5a0f70b`)
+- ✅ **ARN + completion + customer-call server actions** — `setComponentArnAction(caseId, componentId, arn)`, `completeRefundAction(caseId)` (gates on every component having an ARN, dispatches CUSTOMER_REFUND_COMPLETED, sets customerCallStatus=PENDING), `markCustomerCallAction(caseId, outcome)` (NO_ANSWER triggers the new follow-up email). Both gated to ADMIN/OPERATIONS via `EXECUTE_ROLES`. (`46e4bb0`)
+- ✅ **Case detail UI for the workflow** — inline ARN form on each Payment row when status is APPROVED/IN_EXECUTION/PARTIALLY_REFUNDED and viewer is ADMIN/OPERATIONS; first ARN auto-lifts case to IN_EXECUTION. Action bar replaces "Start execution" + "Mark refunded" with a single "Send ARN email & complete" button (enables once every component has an ARN). New "Customer call follow-up" section with three outcomes once the case is REFUNDED. (`0516fad`)
+- ✅ **Polished Customer History card** — skeleton loading state, real error surface, section icons + summary header, per-row dates, badged promo type chips, empty-state framed hints. (`50c5b51`)
+- ✅ **Polished Aura Points sidecar in /cases/new** — gradient card, Aura glow, `Loyalty` pill, larger AuraLogo, dedicated points input card with suffix. (`8a5ac5d`)
+- ✅ **Cleaner Overview layout + entry animations** — Summary cards always show three useful metrics (Order amount / Refund amount / % of order) instead of swapping in Order # or Aura points; Customer section is hidden when there are no agent-only fields and now leads with the phone. Sections fade-and-slide in via `tailwindcss-animate` gated on `motion-safe:`. (`70cb90d`)
+
+The new workflow end-to-end: Agent submits → Manager APPROVED → Operations records ARN per component (case auto-lifts to IN_EXECUTION) → "Send ARN email & complete" emails the customer and marks the case REFUNDED with `customerCallStatus=PENDING` → Operations calls the customer; ANSWERED closes the loop, NO_ANSWER fires the `CUSTOMER_REFUND_FOLLOWUP_NO_ANSWER` reply, NOT_NEEDED suppresses without sending.
+
+Permissions: `canApprove = ADMIN/MANAGER`, `canExecute = ADMIN/OPERATIONS`, cancel is allowed from any non-terminal status. Email dispatch goes through `dispatchEmail()` with the existing Power Automate webhook + console fallback.
+
 ### Sprint H — Live audit + improvements 2026-04-27 (no secrets) 🟡 IN PROGRESS
 
 Walked every page in the running app, captured runtime warnings + console errors, and shipped fixes one logical unit per commit. All commits below are on `devin/1777249813-continue-roadmap` and verified `pnpm typecheck` 4/4 + `pnpm test` 22/22 green.
