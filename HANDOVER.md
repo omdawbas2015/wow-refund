@@ -1,8 +1,8 @@
 # WOW Refund Platform — HANDOVER for the next Devin session
 
-> **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-29 13:30 UTC.
+> **Read this file first.** It is self-contained: state of the system, what is done, what is missing, how to resume. Last updated 2026-04-29 19:05 UTC.
 >
-> **Active branch:** `devin/1777249813-continue-roadmap` (HEAD = `8fadbb0`, ~166 commits ahead of `main`).
+> **Active branch:** `devin/1777488929-feedback-on-pool` (HEAD = `f2629c8`, based on `devin/1777476899-refund-pool-redesign` + Sprint I cherry-picks). Latest follow-up sprint (Aura wordmark + persistent customer-call panel) is on this branch.
 > **Source of truth:** v2/ directory only. The Vite/Express code at the repo root is **legacy and frozen** — do not touch it.
 
 ---
