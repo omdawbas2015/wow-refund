@@ -101,4 +101,21 @@ describe('redact', () => {
     const date = new Date('2026-04-28T12:34:56Z');
     expect(redact(date)).toBe(date);
   });
+
+  it('does not redact KNET authCode (payment authorization, not a credential)', () => {
+    const r = redact({
+      authCode: '123456',
+      authToken: 'should-redact',
+      auth: 'should-redact',
+      authorization: 'should-redact',
+      authorName: 'Alice',
+    });
+    expect(r).toEqual({
+      authCode: '123456',
+      authToken: '[REDACTED]',
+      auth: '[REDACTED]',
+      authorization: '[REDACTED]',
+      authorName: 'Alice',
+    });
+  });
 });

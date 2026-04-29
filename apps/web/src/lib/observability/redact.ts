@@ -17,7 +17,12 @@
  * The function is pure and does not mutate its input.
  */
 
-const SECRET_KEY_RX = /(password|passwd|secret|token|api[_-]?key|authorization|auth(?!or)|cookie|session|signing)/i;
+// `auth(?!or|Code)` excludes both `author...` (legit text) and `authCode`
+// (KNET payment authorization code stored on RefundComponent and surfaced
+// in case detail views + KNET / refund Excel exports). `auth` on its own,
+// `auth_token`, `authToken`, `authHeader`, `authorization` etc. all still
+// match correctly.
+const SECRET_KEY_RX = /(password|passwd|secret|token|api[_-]?key|authorization|auth(?!or|Code)|cookie|session|signing)/i;
 const EMAIL_KEY_RX = /(email|emailAddress|to|from|cc|bcc|customerEmail)$/i;
 const PHONE_KEY_RX = /(phone|customerPhone|mobile|tel)$/i;
 
