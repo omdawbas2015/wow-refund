@@ -3,157 +3,111 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════
-   Design tokens — three-layer system.
-
-   Layer 1 (reference / primitives): raw HSL values with no meaning.
-     Prefixed --ref-*. These are the shared palette.
-
-   Layer 2 (semantic): meaning-bearing tokens like --background, --primary.
-     Theme-aware (light + dark variants). Reference primitives where
-     useful, but kept as literal values where the override semantics
-     differ between themes.
-
-   Layer 3 (component): purpose-built tokens for specific UI primitives.
-     Prefixed --c-*. They reference semantic tokens, never primitives.
-     Use these in component CSS / Tailwind utilities so future themes can
-     re-skin a component without rewriting the semantic layer.
-
-   All tokens are HSL so Tailwind's opacity modifiers work.
+   Design tokens — Clean modern SaaS palette
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    /* Layer 1 — reference primitives (Stripe blurple + neutrals) */
-    --ref-blurple-50:   246 95% 96%;
-    --ref-blurple-100:  240 90% 90%;
-    --ref-blurple-200:  240 90% 85%;
-    --ref-blurple-400:  246 95% 71%;
-    --ref-blurple-500:  246 95% 61%;
-    --ref-blurple-600:  246 66% 52%;
-    --ref-blurple-700:  242 52% 36%;
-    --ref-navy-50:      210 40% 98%;
-    --ref-navy-100:     210 40% 96%;
-    --ref-navy-200:     214 32% 91%;
-    --ref-navy-400:     217 19% 48%;
-    --ref-navy-700:     215 33% 24%;
-    --ref-navy-900:     216 74% 11%;
-    --ref-navy-950:     216 74% 8%;
-    --ref-white:        0 0% 100%;
-    --ref-rose-500:     340 84% 53%;
-    --ref-rose-600:     340 84% 63%;
-    --ref-emerald-500:  145 79% 41%;
-    --ref-emerald-400:  145 60% 51%;
-    --ref-amber-500:    38 92% 50%;
-    --ref-amber-400:    38 92% 60%;
+    --background:          0 0% 98%;
+    --surface:             0 0% 100%;
+    --surface-subtle:      220 14% 96%;
+    --surface-muted:       220 14% 94%;
 
-    /* Semantic surfaces */
-    --background:          220 20% 97%;       /* #f4f6f8 — warm off-white canvas */
-    --surface:             0 0% 100%;         /* pure white cards */
-    --surface-subtle:      220 20% 98%;       /* #f8f9fb */
-    --surface-muted:       220 14% 96%;       /* #f1f3f5 */
-
-    --foreground:          220 30% 14%;       /* #1a2332 — softer deep navy */
-    --heading:             220 30% 14%;
-    --label:               220 20% 30%;       /* #3d4654 */
-    --body:                220 12% 50%;       /* #6b7280 */
+    --foreground:          222 47% 11%;
+    --heading:             222 47% 11%;
+    --label:               215 20% 30%;
+    --body:                215 16% 47%;
     --muted:               220 14% 96%;
-    --muted-foreground:    220 10% 52%;
+    --muted-foreground:    215 16% 47%;
 
-    --border:              220 16% 90%;       /* #e2e5ea — softer border */
-    --input:               220 16% 90%;
-    --ring:                246 95% 61%;       /* primary blurple */
+    --border:              220 13% 91%;
+    --input:               220 13% 91%;
+    --ring:                243 75% 59%;
 
-    /* Brand — refined blurple gradient palette */
-    --primary:             246 80% 60%;       /* #635bff — stripe blurple */
+    --primary:             243 75% 59%;
     --primary-foreground:  0 0% 100%;
-    --primary-hover:       246 72% 54%;
-    --primary-deep:        246 60% 44%;       /* deeper press state */
-    --primary-subtle:      246 80% 95%;       /* #eeedff — ultra soft bg */
+    --primary-hover:       243 70% 53%;
+    --primary-deep:        243 60% 44%;
+    --primary-subtle:      243 75% 96%;
 
-    /* Surface backgrounds */
     --card:                0 0% 100%;
-    --card-foreground:     216 74% 11%;
+    --card-foreground:     222 47% 11%;
     --popover:             0 0% 100%;
-    --popover-foreground:  216 74% 11%;
+    --popover-foreground:  222 47% 11%;
 
     --secondary:           220 14% 96%;
-    --secondary-foreground:220 30% 14%;
+    --secondary-foreground:222 47% 11%;
 
-    --accent:              246 80% 60%;
+    --accent:              243 75% 59%;
     --accent-foreground:   0 0% 100%;
 
-    /* Status — modern muted tones */
-    --destructive:         0 72% 51%;         /* #d93025 — google-style red */
+    --destructive:         0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --success:             152 69% 40%;       /* #1e8e3e — google-style green */
+    --success:             142 71% 45%;
     --success-foreground:  0 0% 100%;
-    --warning:             36 100% 50%;       /* #f9a825 */
+    --warning:             38 92% 50%;
     --warning-foreground:  0 0% 100%;
-    --info:                213 94% 54%;        /* #1a73e8 — blue info */
+    --info:                217 91% 60%;
     --info-foreground:     0 0% 100%;
 
-    --radius: 0.75rem;     /* 12px — modern SaaS feel */
+    --radius: 0.625rem;
 
-    /* Layer 3 — component tokens. Reference semantic vars only. */
-    --c-button-primary-bg:     var(--primary);
-    --c-button-primary-fg:     var(--primary-foreground);
-    --c-button-primary-hover:  var(--primary-hover);
-    --c-badge-success-bg:      var(--success);
-    --c-badge-success-fg:      var(--success-foreground);
-    --c-badge-warning-bg:      var(--warning);
-    --c-badge-warning-fg:      var(--warning-foreground);
-    --c-badge-destructive-bg:  var(--destructive);
-    --c-badge-destructive-fg:  var(--destructive-foreground);
-    --c-card-bg:               var(--card);
-    --c-card-border:           var(--border);
-    --c-input-bg:              var(--background);
-    --c-input-border:          var(--input);
-    --c-input-ring:            var(--ring);
+    --sidebar-bg:          224 71% 4%;
+    --sidebar-fg:          213 31% 91%;
+    --sidebar-muted:       215 20% 20%;
+    --sidebar-active:      243 75% 59%;
+    --sidebar-hover:       215 20% 12%;
   }
 
   [data-theme='dark'],
   .dark {
-    --background:          216 74% 8%;
-    --surface:             216 40% 12%;
-    --surface-subtle:      216 40% 14%;
-    --surface-muted:       216 40% 16%;
+    --background:          222 47% 6%;
+    --surface:             222 40% 10%;
+    --surface-subtle:      222 40% 12%;
+    --surface-muted:       222 40% 14%;
 
-    --foreground:          0 0% 98%;
-    --heading:             0 0% 98%;
+    --foreground:          0 0% 95%;
+    --heading:             0 0% 95%;
     --label:               215 25% 80%;
-    --body:                215 20% 70%;
-    --muted:               216 30% 18%;
-    --muted-foreground:    215 20% 65%;
+    --body:                215 20% 65%;
+    --muted:               222 30% 18%;
+    --muted-foreground:    215 20% 60%;
 
-    --border:              216 30% 22%;
-    --input:               216 30% 22%;
-    --ring:                246 95% 71%;
+    --border:              222 20% 20%;
+    --input:               222 20% 20%;
+    --ring:                243 75% 65%;
 
-    --primary:             246 95% 71%;
-    --primary-foreground:  216 74% 8%;
-    --primary-hover:       246 66% 62%;
-    --primary-deep:        242 52% 46%;
-    --primary-subtle:      240 60% 25%;
+    --primary:             243 75% 65%;
+    --primary-foreground:  222 47% 6%;
+    --primary-hover:       243 66% 58%;
+    --primary-deep:        243 52% 46%;
+    --primary-subtle:      243 50% 20%;
 
-    --card:                216 40% 12%;
-    --card-foreground:     0 0% 98%;
-    --popover:             216 40% 12%;
-    --popover-foreground:  0 0% 98%;
+    --card:                222 40% 10%;
+    --card-foreground:     0 0% 95%;
+    --popover:             222 40% 10%;
+    --popover-foreground:  0 0% 95%;
 
-    --secondary:           216 30% 18%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary:           222 30% 18%;
+    --secondary-foreground: 0 0% 95%;
 
-    --accent:              246 95% 71%;
-    --accent-foreground:   216 74% 8%;
+    --accent:              243 75% 65%;
+    --accent-foreground:   222 47% 6%;
 
-    --destructive:         340 84% 63%;
-    --destructive-foreground: 0 0% 98%;
-    --success:             145 60% 51%;
-    --success-foreground:  216 74% 8%;
-    --warning:             38 92% 60%;
-    --warning-foreground:  216 74% 8%;
-    --info:                246 95% 71%;
-    --info-foreground:     216 74% 8%;
+    --destructive:         0 63% 55%;
+    --destructive-foreground: 0 0% 95%;
+    --success:             142 60% 50%;
+    --success-foreground:  222 47% 6%;
+    --warning:             38 92% 55%;
+    --warning-foreground:  222 47% 6%;
+    --info:                243 75% 65%;
+    --info-foreground:     222 47% 6%;
+
+    --sidebar-bg:          222 47% 5%;
+    --sidebar-fg:          213 31% 91%;
+    --sidebar-muted:       215 20% 20%;
+    --sidebar-active:      243 75% 65%;
+    --sidebar-hover:       215 20% 10%;
   }
 }
 
@@ -168,56 +122,42 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    scroll-behavior: smooth;
   }
 
   body {
     @apply bg-background text-foreground;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6;
   }
 
-  /* Modern SaaS headline feel — semibold weight */
   h1, h2, h3 {
     @apply text-heading;
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
   }
   h4, h5, h6 {
     @apply text-heading;
     font-weight: 600;
   }
 
-  /* Tabular nums for money values */
   .tabular, [data-tabular='true'] {
     font-variant-numeric: tabular-nums;
   }
 
-  /* RTL spacing fixups — Arabic uses IBM Plex Sans Arabic for body text and
-     Cairo for displays (h1/h2). Both fall back to system Arabic stacks. */
-  [dir='rtl'] {
-    font-family: var(--font-arabic-text), 'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Cairo', var(--font-sans), 'Inter', sans-serif;
-  }
-  [dir='rtl'] h1,
-  [dir='rtl'] h2,
-  [dir='rtl'] h3 {
-    font-family: var(--font-arabic-display), 'Cairo', 'IBM Plex Sans Arabic', 'Noto Sans Arabic', sans-serif;
-  }
-
-  /* Selection */
   ::selection {
-    background-color: hsl(var(--primary) / 0.2);
+    background-color: hsl(var(--primary) / 0.15);
     color: hsl(var(--foreground));
   }
 
-  /* Focus ring default */
   :focus-visible {
-    outline: none;
+    outline: 2px solid hsl(var(--ring) / 0.5);
+    outline-offset: 2px;
+    border-radius: var(--radius);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Scrollbar (subtle, Stripe-like)
+   Scrollbar
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
@@ -227,8 +167,8 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
@@ -241,18 +181,48 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
-  /* Gradient underline for primary text links (Stripe motif) */
-  .link-underline {
-    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary)));
-    background-size: 0 1px;
-    background-position: 0 100%;
-    background-repeat: no-repeat;
-    transition: background-size 200ms ease-out;
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  .link-underline:hover {
-    background-size: 100% 1px;
+
+  @keyframes slide-in-left {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes count-up {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out both;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.4s ease-out both;
+  }
+
+  .animate-slide-in-left {
+    animation: slide-in-left 0.3s ease-out both;
+  }
+
+  .animate-count-up {
+    animation: count-up 0.5s ease-out both;
   }
 }

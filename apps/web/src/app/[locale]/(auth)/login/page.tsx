@@ -1,6 +1,4 @@
-import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoginForm } from './login-form';
 
 export default async function LoginPage({
@@ -8,25 +6,28 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }) {
-  const t = await getTranslations('auth.login');
   const params = await searchParams;
   const callbackUrl = params.callbackUrl ?? '/';
 
   return (
-    <Card className="shadow-lg border-border/50">
-      <CardHeader className="space-y-2 pb-6">
-        <CardTitle className="text-2xl font-semibold tracking-tight">{t('title')}</CardTitle>
-        <CardDescription className="text-[13px]">{t('subtitle')}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div>
+      <h2 className="text-2xl font-bold tracking-tight text-foreground">
+        Sign in to your account
+      </h2>
+      <p className="mt-1.5 text-sm text-muted-foreground">
+        Enter your credentials to access the platform
+      </p>
+
+      <div className="mt-8">
         <LoginForm callbackUrl={callbackUrl} error={params.error} />
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          {t('noAccount')}{' '}
-          <Link href="/signup" className="font-medium text-primary hover:underline">
-            {t('signupLink')}
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <div className="mt-6 text-center text-sm text-muted-foreground">
+        Don&apos;t have an account?{' '}
+        <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+          Request access
+        </Link>
+      </div>
+    </div>
   );
 }

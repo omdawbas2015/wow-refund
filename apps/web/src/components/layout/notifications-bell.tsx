@@ -145,7 +145,7 @@ export function NotificationsBell({ locale }: { locale: string }) {
                 <ul>
                   {items.map((n) => {
                     const unreadItem = !n.readAt;
-                    const link = n.href ? (n.href.startsWith('http') ? n.href : `/${locale}${n.href}`) : null;
+                    const link = n.href ?? null;
                     const Inner = (
                       <div
                         className={cn(

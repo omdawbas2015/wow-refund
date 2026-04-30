@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,6 @@ import { CheckCircle2 } from 'lucide-react';
 import { forgotPasswordRequestAction, forgotPasswordVerifyAction } from '@/app/actions/auth';
 
 export function ForgotPasswordForm({ defaultEmail }: { defaultEmail: string }) {
-  const t = useTranslations('auth.forgot');
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [stage, setStage] = useState<'request' | 'verify'>('request');
@@ -26,7 +24,7 @@ export function ForgotPasswordForm({ defaultEmail }: { defaultEmail: string }) {
       if (result.ok) {
         setEmail(String(fd.get('email')));
         setStage('verify');
-        toast.success(t('codeSent'));
+        toast.success('A reset code has been sent to your email.');
       } else {
         toast.error(result.error);
       }
@@ -40,7 +38,7 @@ export function ForgotPasswordForm({ defaultEmail }: { defaultEmail: string }) {
     startTransition(async () => {
       const result = await forgotPasswordVerifyAction(fd);
       if (result.ok) {
-        toast.success(t('resetSuccess'));
+        toast.success('Password reset successfully.');
         router.push('/login');
       } else {
         toast.error(result.error);
@@ -50,8 +48,8 @@ export function ForgotPasswordForm({ defaultEmail }: { defaultEmail: string }) {
 
   if (stage === 'request') {
     return (
-      <form onSubmit={requestCode} className="space-y-4">
-        <FormField label={t('emailLabel')} id="email" required>
+      <form onSubmit={requestCode} className="space-y-5">
+        <FormField label="Email address" id="email" required>
           <Input
             id="email"
             name="email"
@@ -64,20 +62,20 @@ export function ForgotPasswordForm({ defaultEmail }: { defaultEmail: string }) {
         </FormField>
 
         <Button type="submit" className="w-full" size="lg" disabled={pending}>
-          {pending ? '…' : t('submit')}
+          {pending ? 'Sending...' : 'Send reset code'}
         </Button>
       </form>
     );
   }
 
   return (
-    <form onSubmit={verifyCode} className="space-y-4">
+    <form onSubmit={verifyCode} className="space-y-5">
       <Alert variant="info">
         <CheckCircle2 className="h-4 w-4" />
-        <AlertDescription>{t('codeSent')}</AlertDescription>
+        <AlertDescription>A reset code has been sent to your email.</AlertDescription>
       </Alert>
 
-      <FormField label={t('codeLabel')} id="code" required>
+      <FormField label="Reset code" id="code" required>
         <Input
           id="code"
           name="code"
@@ -92,7 +90,7 @@ export function ForgotPasswordForm({ defaultEmail }: { defaultEmail: string }) {
         />
       </FormField>
 
-      <FormField label={t('newPasswordLabel')} id="newPassword" required>
+      <FormField label="New password" id="newPassword" required>
         <Input
           id="newPassword"
           name="newPassword"
@@ -104,7 +102,7 @@ export function ForgotPasswordForm({ defaultEmail }: { defaultEmail: string }) {
       </FormField>
 
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? '…' : t('submitReset')}
+        {pending ? 'Resetting...' : 'Reset password'}
       </Button>
     </form>
   );

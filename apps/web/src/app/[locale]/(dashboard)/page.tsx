@@ -1,6 +1,5 @@
 import { auth } from '@/auth';
 import { prisma } from '@wow/db';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from '@/i18n/routing';
 import {
@@ -8,15 +7,14 @@ import {
   ArrowUpRight,
   Clock,
   FileCheck2,
-  Filter,
-  Maximize2,
-  Search as SearchIcon,
+  FileText,
+  TrendingUp,
   UserPlus,
 } from 'lucide-react';
 import { type SparkPoint } from './kpi-sparkline';
 import { RefundVolumeChart } from './refund-volume-chart';
 
-const RECENT_LIMIT = 6;
+const RECENT_LIMIT = 8;
 
 const statusTone: Record<
   string,
@@ -76,10 +74,6 @@ export default async function DashboardHome() {
   const since = new Date(`${days[0]!}T00:00:00.000Z`);
   const prevSince = new Date(since.getTime() - SPARK_DAYS * 86400_000);
 
-  // Gather everything we need in one round-trip. Counts cover the
-  // *current* and *previous* SPARK_DAYS windows so we can show a
-  // period-over-period delta on each KPI card (matches the Elegance
-  // reference's "▲ 25%" / "▼ 1.2%" deltas).
   const [
     totalCases,
     pendingCases,
@@ -96,9 +90,6 @@ export default async function DashboardHome() {
     prisma.refundCase.count({ where: { deletedAt: null } }),
     prisma.refundCase.count({ where: { deletedAt: null, status: 'PENDING_APPROVAL' } }),
     prisma.refundCase.count({ where: { deletedAt: null, status: 'REFUNDED' } }),
-    // "Awaiting payment" → cases approved by an admin but not yet executed
-    // (still in APPROVED or IN_EXECUTION). These are the rows the Refund
-    // Pool needs to pay out next.
     prisma.refundCase.count({
       where: { deletedAt: null, status: { in: ['APPROVED', 'IN_EXECUTION'] } },
     }),
@@ -148,283 +139,250 @@ export default async function DashboardHome() {
     },
   });
 
-  // Daily trend feeds the big Refund Volume area chart. KPI cards
-  // intentionally don't carry sparklines so they read like the
-  // reference (clean number + delta + date range).
   const trendCreated = bucketByDay(
     casesCreatedRecent.map((r) => ({ date: r.createdAt })),
     days,
   );
 
-  // Date formatting — short range label + full long date for the
-  // greeting line.
   const now = new Date();
   const start = new Date(since);
   const dateRangeFmt = new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
   });
-  const fullDateFmt = new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const dateRange = `${dateRangeFmt.format(start)} \u2014 ${dateRangeFmt.format(now)}, ${now.getFullYear()}`;
+  const dateRange = `${dateRangeFmt.format(start)} \u2014 ${dateRangeFmt.format(now)}`;
 
-  // KPI cards mirror the reference: a soft pastel surface, a faint
-  // off-card radial 'glow' that hints at brand color, no sparkline
-  // inside the card. The sparkline lives only inside the big Refund
-  // Volume card below.
-  const stats: {
-    label: string;
-    valueDisplay: string;
-    delta: number;
-    surface: string;
-    glow: string;
-  }[] = [
+  const stats = [
     {
-      label: 'Total cases',
-      valueDisplay: totalCases.toLocaleString(),
+      label: 'Total Cases',
+      value: totalCases,
       delta: deltaPct(casesCreatedRecent.length, casesCreatedPrev),
-      surface: 'bg-[hsl(248,92%,97%)] dark:bg-primary/8',
-      glow: 'before:bg-[radial-gradient(circle_at_0%_0%,rgba(99,91,255,0.22),transparent_55%)]',
+      icon: FileText,
+      color: 'text-indigo-600',
+      bg: 'bg-indigo-50',
     },
     {
-      label: 'Pending approval',
-      valueDisplay: pendingCases.toLocaleString(),
+      label: 'Pending Approval',
+      value: pendingCases,
       delta: deltaPct(casesPendingTrans.length, casesPendingTransPrev),
-      surface: 'bg-[hsl(28,100%,97%)] dark:bg-amber-500/8',
-      glow: 'before:bg-[radial-gradient(circle_at_100%_0%,rgba(251,146,60,0.25),transparent_55%)]',
+      icon: Clock,
+      color: 'text-amber-600',
+      bg: 'bg-amber-50',
     },
     {
       label: 'Completed',
-      valueDisplay: completedCases.toLocaleString(),
+      value: completedCases,
       delta: deltaPct(casesRefundedTrans.length, casesRefundedTransPrev),
-      surface: 'bg-surface',
-      glow: '',
+      icon: FileCheck2,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+    },
+    {
+      label: 'Awaiting Payment',
+      value: awaitingPaymentCases,
+      delta: 0,
+      icon: TrendingUp,
+      color: 'text-violet-600',
+      bg: 'bg-violet-50',
     },
   ];
 
   const greeting = `${greetingFor(now)}, ${session?.user.name ?? ''}`.trim();
 
   return (
-    <div className="mx-auto max-w-7xl px-8 py-10">
-      <div className="mb-8">
-        <h1 className="text-display-lg font-semibold tracking-tight text-heading">
+    <div className="px-6 py-6">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           {greeting}
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">{fullDateFmt.format(now)}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Here&apos;s what&apos;s happening with your refund operations.
+        </p>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {/* KPI Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => {
           const positive = stat.delta >= 0;
           const DeltaIcon = positive ? ArrowUpRight : ArrowDownRight;
+          const Icon = stat.icon;
           return (
-            <Card
+            <div
               key={stat.label}
-              className={`relative isolate overflow-hidden border-0 ${stat.surface} before:pointer-events-none before:absolute before:inset-0 before:-z-10 ${stat.glow} animate-fade-in-up`}
-              style={{ animationDelay: `${idx * 80}ms`, animationFillMode: 'both' }}
+              className="group rounded-xl border border-border/50 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-border hover:shadow-md animate-fade-in-up"
+              style={{ animationDelay: `${idx * 60}ms`, animationFillMode: 'both' }}
             >
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                <CardTitle className="text-[13px] font-medium text-body">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   {stat.label}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-[38px] font-bold tabular leading-none tracking-tight text-foreground animate-count-up">
-                  {stat.valueDisplay}
+                </span>
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stat.bg}`}>
+                  <Icon className={`h-4 w-4 ${stat.color}`} />
                 </div>
-                <div className="mt-5 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground/80">{dateRange}</span>
-                  <span
-                    className={
-                      positive
-                        ? 'inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-600'
-                        : 'inline-flex items-center gap-0.5 rounded-full bg-rose-50 px-2 py-0.5 font-semibold text-rose-600'
-                    }
-                  >
-                    <DeltaIcon className="h-3.5 w-3.5" />
-                    {Math.abs(stat.delta)}%
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="mt-3 text-3xl font-bold tabular tracking-tight text-foreground">
+                {stat.value.toLocaleString()}
+              </div>
+              <div className="mt-2 flex items-center gap-1.5 text-xs">
+                <span
+                  className={
+                    positive
+                      ? 'inline-flex items-center gap-0.5 font-medium text-emerald-600'
+                      : 'inline-flex items-center gap-0.5 font-medium text-rose-600'
+                  }
+                >
+                  <DeltaIcon className="h-3 w-3" />
+                  {Math.abs(stat.delta)}%
+                </span>
+                <span className="text-muted-foreground">{dateRange}</span>
+              </div>
+            </div>
           );
         })}
       </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+      {/* Chart + Pending */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-5">
+        {/* Refund Volume Chart */}
+        <div className="rounded-xl border border-border/50 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] lg:col-span-3">
+          <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-base font-semibold">Refund volume</CardTitle>
-              <p className="mt-1 text-[13px] text-muted-foreground">
-                Daily case volume across all brands and countries.
+              <h2 className="text-sm font-semibold text-foreground">Refund Volume</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Daily cases over the last {SPARK_DAYS} days
               </p>
             </div>
-            <span className="rounded-lg border border-border/60 bg-surface-subtle px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              Last {SPARK_DAYS} days
+            <span className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+              {dateRange}
             </span>
-          </CardHeader>
-          <CardContent>
-            <div className="mt-2 flex items-baseline gap-3">
-              <div className="text-3xl font-bold tabular tracking-tight">
-                {casesCreatedRecent.length.toLocaleString()}
-              </div>
-              <span className="text-xs text-muted-foreground">cases · {dateRange}</span>
-            </div>
-            <div className="mt-4 h-60 w-full">
-              <RefundVolumeChart data={trendCreated} />
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-4 h-56 w-full">
+            <RefundVolumeChart data={trendCreated} />
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Pending tasks</CardTitle>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              Things waiting on you across the workspace.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              <PendingTask
-                icon={FileCheck2}
-                label="Cases pending approval"
-                description="Awaiting an admin sign-off"
-                count={pendingCases}
-                href="/cases?status=PENDING_APPROVAL"
-                tone="amber"
-              />
-              <PendingTask
-                icon={UserPlus}
-                label="User access requests"
-                description="New sign-ups waiting for access"
-                count={pendingApprovals}
-                href="/admin/pending-approvals"
-                tone="rose"
-              />
-              <PendingTask
-                icon={Clock}
-                label="Cases awaiting payment"
-                description="Approved, queued for the next batch"
-                count={awaitingPaymentCases}
-                href="/operations"
-                tone="primary"
-              />
-            </ul>
-          </CardContent>
-        </Card>
+        {/* Quick Actions */}
+        <div className="rounded-xl border border-border/50 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] lg:col-span-2">
+          <h2 className="text-sm font-semibold text-foreground">Pending Tasks</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">Items needing your attention</p>
+          <div className="mt-4 space-y-2.5">
+            <PendingTask
+              icon={FileCheck2}
+              label="Cases pending approval"
+              count={pendingCases}
+              href="/cases?status=PENDING_APPROVAL"
+              color="text-amber-600"
+              bg="bg-amber-50"
+            />
+            <PendingTask
+              icon={UserPlus}
+              label="User access requests"
+              count={pendingApprovals}
+              href="/admin/pending-approvals"
+              color="text-rose-600"
+              bg="bg-rose-50"
+            />
+            <PendingTask
+              icon={Clock}
+              label="Awaiting payment"
+              count={awaitingPaymentCases}
+              href="/operations"
+              color="text-indigo-600"
+              bg="bg-indigo-50"
+            />
+          </div>
+        </div>
       </div>
 
-      <Card className="mt-6">
-        <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
+      {/* Recent Cases */}
+      <div className="mt-6 rounded-xl border border-border/50 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between px-5 py-4">
           <div>
-            <CardTitle className="text-base font-semibold">Recent cases</CardTitle>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              Latest activity across all countries.
-            </p>
+            <h2 className="text-sm font-semibold text-foreground">Recent Cases</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Latest refund activity</p>
           </div>
-          {/* Search + Filter mirror the reference. The input is
-              read-only and links to /cases when clicked, where the
-              real search lives. The filter button is a static
-              affordance (links to the same place). */}
-          <div className="flex items-center gap-2">
-            <Link
-              href="/cases"
-              className="flex h-9 w-56 items-center gap-2 rounded-lg border border-border bg-surface-subtle px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-            >
-              <SearchIcon className="h-3.5 w-3.5" />
-              <span className="flex-1">Search cases</span>
-            </Link>
-            <Link
-              href="/cases"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface-subtle px-3 text-sm font-medium text-body transition-colors hover:bg-surface hover:text-foreground"
-            >
-              <Filter className="h-3.5 w-3.5" />
-              <span>Filter</span>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {recentCases.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No cases yet. Create your first case from Refund Cases.
-            </p>
-          ) : (
-            <div className="-mx-6 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/60 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    <th className="px-6 py-3 text-start">Case</th>
-                    <th className="px-6 py-3 text-start">Customer</th>
-                    <th className="px-6 py-3 text-start">Brand</th>
-                    <th className="px-6 py-3 text-start">Country</th>
-                    <th className="px-6 py-3 text-end">Refund</th>
-                    <th className="px-6 py-3 text-end">Updated</th>
-                    <th className="px-6 py-3 text-end">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentCases.map((c) => (
-                    <tr
-                      key={c.id}
-                      className="border-b border-border/40 last:border-b-0 transition-colors hover:bg-surface-subtle/50"
-                    >
-                      <td className="px-6 py-3 align-middle">
-                        <Link
-                          href={`/cases/${c.id}`}
-                          className="font-medium tracking-tight text-foreground hover:underline"
-                        >
-                          {c.externalCaseNumber || c.caseNumber}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-3 align-middle">
-                        <div className="font-medium text-foreground">
-                          {c.customerName || '—'}
+          <Link
+            href="/cases"
+            className="rounded-lg border border-border/60 bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            View all
+          </Link>
+        </div>
+        {recentCases.length === 0 ? (
+          <p className="px-5 pb-6 text-sm text-muted-foreground">
+            No cases yet.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-t border-border/40 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-5 py-2.5 text-left">Case</th>
+                  <th className="px-5 py-2.5 text-left">Customer</th>
+                  <th className="px-5 py-2.5 text-left">Brand</th>
+                  <th className="px-5 py-2.5 text-left">Country</th>
+                  <th className="px-5 py-2.5 text-right">Amount</th>
+                  <th className="px-5 py-2.5 text-right">Updated</th>
+                  <th className="px-5 py-2.5 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentCases.map((c) => (
+                  <tr
+                    key={c.id}
+                    className="border-t border-border/30 transition-colors hover:bg-muted/30"
+                  >
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/cases/${c.id}`}
+                        className="font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
+                      >
+                        {c.externalCaseNumber || c.caseNumber}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="font-medium text-foreground">
+                        {c.customerName || '\u2014'}
+                      </div>
+                      {c.customerEmail ? (
+                        <div className="text-xs text-muted-foreground">
+                          {c.customerEmail}
                         </div>
-                        {c.customerEmail ? (
-                          <div className="text-xs text-muted-foreground">
-                            {c.customerEmail}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="px-6 py-3 align-middle text-muted-foreground">
-                        {c.brand?.name ?? '—'}
-                      </td>
-                      <td className="px-6 py-3 align-middle text-muted-foreground">
-                        {c.country?.registry?.flag ? `${c.country.registry.flag} ` : ''}{c.country?.registry?.nameEn ?? c.country?.registryCode ?? '—'}
-                      </td>
-
-                      <td className="px-6 py-3 text-end font-mono tabular">
-                        {c.totalRefundAmount.toFixed(2)} {c.orderCurrency}
-                      </td>
-                      <td className="px-6 py-3 text-end text-xs text-muted-foreground">
-                        {new Intl.DateTimeFormat('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        }).format(c.updatedAt)}
-                      </td>
-                      <td className="px-6 py-3 text-end">
-                        <Badge
-                          variant={statusTone[c.status] ?? 'default'}
-                          className="font-mono text-[10px] uppercase tracking-wide"
-                        >
-                          {c.status.replace(/_/g, ' ')}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      ) : null}
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {c.brand?.name ?? '\u2014'}
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {c.country?.registry?.flag ? `${c.country.registry.flag} ` : ''}{c.country?.registry?.nameEn ?? c.country?.registryCode ?? '\u2014'}
+                    </td>
+                    <td className="px-5 py-3 text-right font-mono tabular text-foreground">
+                      {c.totalRefundAmount.toFixed(2)} {c.orderCurrency}
+                    </td>
+                    <td className="px-5 py-3 text-right text-xs text-muted-foreground">
+                      {new Intl.DateTimeFormat('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }).format(c.updatedAt)}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <Badge
+                        variant={statusTone[c.status] ?? 'default'}
+                        className="text-[10px] uppercase tracking-wide"
+                      >
+                        {c.status.replace(/_/g, ' ')}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -432,49 +390,32 @@ export default async function DashboardHome() {
 function PendingTask({
   icon: Icon,
   label,
-  description,
   count,
   href,
-  tone,
+  color,
+  bg,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  description: string;
   count: number;
   href: string;
-  tone: 'primary' | 'amber' | 'rose';
+  color: string;
+  bg: string;
 }) {
-  const toneClass =
-    tone === 'amber'
-      ? 'bg-amber-50 text-amber-600'
-      : tone === 'rose'
-        ? 'bg-rose-50 text-rose-600'
-        : 'bg-primary/8 text-primary';
   return (
-    <li>
-      <Link
-        href={href}
-        className="flex items-start justify-between gap-3 rounded-xl border border-border/40 bg-surface px-4 py-3 transition-all duration-200 hover:border-primary/30 hover:shadow-xs"
-      >
-        <span className="flex items-start gap-3">
-          <span
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${toneClass}`}
-          >
-            <Icon className="h-4 w-4" />
-          </span>
-          <span className="flex flex-col">
-            <span className="text-[13px] font-medium leading-tight text-foreground">
-              {label}
-            </span>
-            <span className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
-              {description}
-            </span>
-          </span>
-        </span>
-        <span className="font-mono text-base font-semibold tabular text-foreground">
-          {count}
-        </span>
-      </Link>
-    </li>
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-lg border border-border/30 bg-muted/20 p-3 transition-all duration-150 hover:border-border/60 hover:bg-muted/40"
+    >
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${bg}`}>
+        <Icon className={`h-4 w-4 ${color}`} />
+      </div>
+      <span className="flex-1 text-[13px] font-medium text-foreground">
+        {label}
+      </span>
+      <span className="font-mono text-lg font-bold tabular text-foreground">
+        {count}
+      </span>
+    </Link>
   );
 }

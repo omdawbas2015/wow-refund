@@ -1,6 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { Link } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
@@ -15,10 +14,10 @@ import {
   Settings,
   Bell,
   User as UserIcon,
-  ChevronDown,
   Search as SearchIcon,
   LogOut,
   Send,
+  Zap,
 } from 'lucide-react';
 
 interface NavItem {
@@ -45,7 +44,6 @@ export function Sidebar({
   pendingAccessRequestCount?: number;
 }) {
   const pathname = usePathname();
-  const t = useTranslations('nav');
   const disabled = new Set(disabledModules);
 
   const opsRole =
@@ -55,18 +53,18 @@ export function Sidebar({
     role === 'OPERATIONS';
 
   const dashboardItem: NavItem = {
-    label: t('dashboard'),
+    label: 'Dashboard',
     href: '/',
     icon: LayoutDashboard,
   };
 
   const sections: NavSection[] = [
     {
-      label: t('refund'),
+      label: 'Refund',
       items: [
-        { label: t('refundCases'), href: '/cases', icon: FileText },
+        { label: 'Refund Cases', href: '/cases', icon: FileText },
         ...(opsRole
-          ? [{ label: t('operations'), href: '/operations', icon: ShieldCheck }]
+          ? [{ label: 'Refund Pool', href: '/operations', icon: ShieldCheck }]
           : []),
       ],
     },
@@ -78,10 +76,10 @@ export function Sidebar({
       ],
     },
     {
-      label: t('helpDesk'),
+      label: 'Help Desk',
       items: [
         {
-          label: t('storesCommunication'),
+          label: 'Stores',
           href: '/help-desk/stores',
           icon: Store,
           module: 'stores',
@@ -89,17 +87,17 @@ export function Sidebar({
       ],
     },
     {
-      label: t('reports'),
+      label: 'Reports',
       items: [
-        { label: t('reports'), href: '/reports', icon: BarChart3, module: 'reports' },
-        { label: t('notifications'), href: '/notifications', icon: Bell },
+        { label: 'Reports', href: '/reports', icon: BarChart3, module: 'reports' },
+        { label: 'Notifications', href: '/notifications', icon: Bell },
       ],
     },
     {
-      label: t('admin'),
+      label: 'Admin',
       items: [
         {
-          label: t('pendingApprovals'),
+          label: 'User Requests',
           href: '/admin/pending-approvals',
           icon: ClipboardList,
           adminOnly: true,
@@ -110,12 +108,12 @@ export function Sidebar({
   ];
 
   const footerItems: NavItem[] = [
-    { label: t('profile'), href: '/profile', icon: UserIcon },
-    { label: t('settings'), href: '/admin/settings', icon: Settings, adminOnly: true },
+    { label: 'Profile', href: '/profile', icon: UserIcon },
+    { label: 'Settings', href: '/admin/settings', icon: Settings, adminOnly: true },
   ];
 
   function isActiveHref(href: string) {
-    if (href === '/') return pathname === '/' || /^\/(en|ar)$/.test(pathname);
+    if (href === '/') return pathname === '/' || /^\/(en)$/.test(pathname);
     return pathname.endsWith(href) || pathname.includes(`${href}/`);
   }
 
@@ -126,52 +124,43 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-[272px] shrink-0 flex-col bg-surface border-e border-border/50">
-      {/* Brand header */}
-      <div className="px-5 pt-6 pb-2">
-        <button
-          type="button"
-          className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-start transition-all duration-200 hover:bg-surface-subtle"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 ring-1 ring-inset ring-primary/10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/alshaya-mark.png"
-              alt="Alshaya"
-              className="h-6 w-6 object-contain"
-            />
+    <aside className="flex h-full w-[240px] shrink-0 flex-col bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))]">
+      {/* Brand */}
+      <div className="px-4 pt-5 pb-1">
+        <div className="flex items-center gap-2.5 px-2 py-1">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
+            <Zap className="h-4 w-4 text-white" />
           </div>
-          <div className="flex-1 min-w-0">
-            <span className="block truncate text-sm font-semibold tracking-tight text-foreground">
-              Alshaya Portal
+          <div className="min-w-0">
+            <span className="block truncate text-[13px] font-semibold text-white">
+              WOW Refund
             </span>
-            <span className="block truncate text-[11px] text-muted-foreground">
+            <span className="block truncate text-[10px] text-[hsl(var(--sidebar-fg))]/50">
               Refund Operations
             </span>
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground/60" />
-        </button>
+        </div>
       </div>
 
       {/* Search */}
-      <div className="px-5 py-2">
+      <div className="px-4 py-2">
         <button
           type="button"
           onClick={openSearch}
-          className="flex h-10 w-full items-center gap-2.5 rounded-xl border border-border/60 bg-surface-subtle/80 px-3.5 text-sm text-muted-foreground transition-all duration-200 hover:bg-surface hover:border-border hover:shadow-xs"
-          aria-label={t('search')}
+          className="flex h-8 w-full items-center gap-2 rounded-md bg-white/[0.06] px-2.5 text-[12px] text-[hsl(var(--sidebar-fg))]/50 transition-colors hover:bg-white/[0.1] hover:text-[hsl(var(--sidebar-fg))]/80"
+          aria-label="Search"
         >
-          <SearchIcon className="h-4 w-4 shrink-0 text-muted-foreground/60" />
-          <span className="flex-1 text-start text-[13px]">Search...</span>
-          <kbd className="rounded-md border border-border/60 bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground/70">
-            ⌘K
+          <SearchIcon className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1 text-left">Search...</span>
+          <kbd className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[10px] font-medium">
+            Ctrl K
           </kbd>
         </button>
       </div>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-4 pt-4 pb-2">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-2 pb-2">
         {/* Dashboard */}
-        <ul className="mb-2">
+        <ul className="mb-1">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
         </ul>
 
@@ -183,8 +172,8 @@ export function Sidebar({
           );
           if (items.length === 0) return null;
           return (
-            <div key={i} className="mb-1">
-              <div className="mb-1.5 mt-5 px-3 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">
+            <div key={i} className="mb-0.5">
+              <div className="mb-1 mt-4 px-2 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--sidebar-fg))]/30">
                 {section.label}
               </div>
               <ul className="space-y-0.5">
@@ -201,7 +190,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-border/40 px-4 py-3">
+      <div className="border-t border-white/[0.06] px-3 py-2.5">
         <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
@@ -213,12 +202,13 @@ export function Sidebar({
               />
             ))}
           <li>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium text-muted-foreground transition-all duration-200 hover:bg-destructive/5 hover:text-destructive"
+              className="flex h-8 items-center gap-2.5 rounded-md px-2 text-[12px] font-medium text-[hsl(var(--sidebar-fg))]/40 transition-colors hover:bg-red-500/10 hover:text-red-400"
             >
-              <LogOut className="h-4 w-4 shrink-0" />
-              <span className="flex-1 truncate">{t('logout')}</span>
+              <LogOut className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1 truncate">Sign out</span>
             </a>
           </li>
         </ul>
@@ -235,20 +225,17 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group relative flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition-all duration-200',
+          'group flex h-8 items-center gap-2.5 rounded-md px-2 text-[12px] font-medium transition-all duration-150',
           isActive
-            ? 'bg-primary/8 text-primary shadow-xs'
-            : 'text-body hover:bg-surface-subtle hover:text-foreground',
+            ? 'bg-white/[0.1] text-white'
+            : 'text-[hsl(var(--sidebar-fg))]/60 hover:bg-white/[0.06] hover:text-white',
         )}
       >
-        {isActive && (
-          <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary" />
-        )}
-        <Icon className={cn('h-[18px] w-[18px] shrink-0 transition-colors', isActive ? 'text-primary' : 'text-muted-foreground/70 group-hover:text-foreground')} />
+        <Icon className={cn('h-3.5 w-3.5 shrink-0', isActive ? 'text-indigo-400' : 'opacity-50 group-hover:opacity-80')} />
         <span className="flex-1 truncate">{item.label}</span>
         {showBadge && (
           <span
-            className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold leading-none text-white"
+            className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
             aria-label={`${item.badge} pending`}
           >
             {item.badge}

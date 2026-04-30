@@ -25,7 +25,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <div lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+    <div lang="en" dir="ltr">
       <NextIntlClientProvider locale={locale} messages={messages}>
         {children}
       </NextIntlClientProvider>
