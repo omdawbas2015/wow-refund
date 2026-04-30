@@ -30,11 +30,12 @@ export function RefundVolumeChart({ data }: { data: SparkPoint[] }) {
       <AreaChart data={data} margin={{ top: 8, right: 4, left: -16, bottom: 0 }}>
         <defs>
           <linearGradient id="refundVolFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#635bff" stopOpacity={0.28} />
+            <stop offset="0%" stopColor="#635bff" stopOpacity={0.2} />
+            <stop offset="50%" stopColor="#635bff" stopOpacity={0.06} />
             <stop offset="100%" stopColor="#635bff" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid stroke="currentColor" strokeOpacity={0.08} vertical={false} />
+        <CartesianGrid stroke="currentColor" strokeOpacity={0.05} vertical={false} strokeDasharray="4 4" />
         <XAxis
           dataKey="date"
           axisLine={false}
@@ -53,10 +54,12 @@ export function RefundVolumeChart({ data }: { data: SparkPoint[] }) {
         <Tooltip
           cursor={{ stroke: '#635bff', strokeOpacity: 0.4, strokeDasharray: '3 3' }}
           contentStyle={{
-            borderRadius: 8,
-            border: '1px solid rgba(0,0,0,0.08)',
+            borderRadius: 12,
+            border: '1px solid rgba(0,0,0,0.06)',
             fontSize: 12,
-            padding: '6px 10px',
+            padding: '8px 14px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+            background: 'white',
           }}
           formatter={(value: number) => [`${value} cases`, 'Created']}
           labelFormatter={(label) => `Day ${label}`}
@@ -65,10 +68,10 @@ export function RefundVolumeChart({ data }: { data: SparkPoint[] }) {
           type="monotone"
           dataKey="value"
           stroke="#635bff"
-          strokeWidth={2}
+          strokeWidth={2.5}
           fill="url(#refundVolFill)"
           dot={false}
-          activeDot={{ r: 4, fill: '#635bff' }}
+          activeDot={{ r: 5, fill: '#635bff', stroke: 'white', strokeWidth: 2 }}
         />
       </AreaChart>
     </ResponsiveContainer>
