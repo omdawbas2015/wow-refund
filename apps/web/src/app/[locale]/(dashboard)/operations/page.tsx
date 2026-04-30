@@ -198,18 +198,24 @@ export default async function OperationsPage({
   const totalKnetReady = pendingKnetComponents.length;
   const totalPendingAura = pendingAuraCases.length;
 
-  // Fetch the pool: every case that is APPROVED / IN_EXECUTION /
-  // PARTIALLY_REFUNDED so the refund agent has a single canvas to work
-  // through. Includes components, the approval batch that signed it off,
-  // contact-attempt activity logs, and recent timeline events.
+  // Fetch the pool: every case that still has an operator action to
+  // take — the three active statuses plus REFUNDED cases whose customer
+  // call is still PENDING (surface CALL_CUSTOMER cases). REFUNDED cases
+  // whose call is already resolved (ANSWERED / NO_ANSWER / NOT_NEEDED /
+  // NOT_APPLICABLE) are DONE and would otherwise accumulate unboundedly,
+  // eventually starving the take: 80 limit of active work.
   const poolCases = await prisma.refundCase.findMany({
     where: {
       deletedAt: null,
-      status: { in: ['APPROVED', 'IN_EXECUTION', 'PARTIALLY_REFUNDED', 'REFUNDED'] },
+      OR: [
+        { status: { in: ['APPROVED', 'IN_EXECUTION', 'PARTIALLY_REFUNDED'] } },
+        { status: 'REFUNDED', customerCallStatus: 'PENDING' },
+      ],
     },
     include: {
       country: { include: { registry: true } },
       brand: true,
+      branch: { select: { name: true, code: true } },
       approvedBy: { select: { name: true, email: true } },
       approvalBatch: {
         select: { batchNumber: true, recipientEmails: true, responseRawBody: true },
@@ -276,9 +282,14 @@ export default async function OperationsPage({
       customerName: c.customerName,
       customerEmail: c.customerEmail,
       customerPhone: c.customerPhone,
+      branchName: c.branch?.name ?? null,
+      branchCode: c.branch?.code ?? null,
       orderNumber: c.orderNumber,
       orderAmount: c.orderAmount,
       refundAmount: c.totalRefundAmount,
+      // A refund is 'partial' when the refund is strictly less than the
+      // order total (with a small epsilon to tolerate float rounding).
+      isPartialRefund: c.totalRefundAmount + 0.01 < c.orderAmount,
       currency: c.orderCurrency,
       approvedAt: c.approvedAt ? formatRelative(c.approvedAt) : null,
       approvedAtIso: c.approvedAt ? c.approvedAt.toISOString() : null,

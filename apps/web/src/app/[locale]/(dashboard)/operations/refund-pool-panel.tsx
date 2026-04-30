@@ -67,9 +67,12 @@ export interface PoolCase {
   customerName: string;
   customerEmail: string;
   customerPhone: string | null;
+  branchName: string | null;
+  branchCode: string | null;
   orderNumber: string;
   orderAmount: number;
   refundAmount: number;
+  isPartialRefund: boolean;
   currency: string;
   approvedAt: string | null;
   approvedAtIso: string | null;
@@ -150,7 +153,10 @@ function ageBadge(hours: number) {
   return { label: `${days}d`, tone: 'text-muted-foreground' };
 }
 
-type QuickFilter = 'all' | 'ENTER_ARN' | 'CALL_CUSTOMER' | 'COMPLETE' | 'AWAIT_BATCH' | 'DONE';
+// The pool only loads cases that still have an operator action. DONE
+// cases are filtered out by the server query, so a 'Done' chip here
+// would always show zero — use the Cases tab to browse completed work.
+type QuickFilter = 'all' | 'ENTER_ARN' | 'CALL_CUSTOMER' | 'COMPLETE' | 'AWAIT_BATCH';
 
 const QUICK_FILTERS: { key: QuickFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -158,7 +164,6 @@ const QUICK_FILTERS: { key: QuickFilter; label: string }[] = [
   { key: 'COMPLETE', label: 'Ready to complete' },
   { key: 'CALL_CUSTOMER', label: 'Awaiting call' },
   { key: 'AWAIT_BATCH', label: 'In batch' },
-  { key: 'DONE', label: 'Done' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -232,6 +237,9 @@ export function RefundPoolPanel({ cases, canExecute }: RefundPoolPanelProps) {
   // Counters on the quick-filter chips so the operator immediately sees
   // how many tickets each action has.
   const counts = useMemo(() => {
+    // DONE cases are filtered out server-side but the type still includes
+    // them; track the bucket so the counter stays type-safe even though
+    // no chip surfaces it.
     const c = { ENTER_ARN: 0, AWAIT_BATCH: 0, COMPLETE: 0, CALL_CUSTOMER: 0, DONE: 0 };
     cases.forEach((x) => {
       c[x.nextAction] += 1;
@@ -459,6 +467,13 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
   const inExecutionStage =
     c.status === 'APPROVED' || c.status === 'IN_EXECUTION' || c.status === 'PARTIALLY_REFUNDED';
   const arnsDone = c.components.length - c.pendingArns;
+  const branchLabel = c.branchName
+    ? c.branchCode
+      ? `${c.branchName} (${c.branchCode})`
+      : c.branchName
+    : null;
+  const orderTotal = money(c.orderAmount, c.currency);
+  const refundTotal = money(c.refundAmount, c.currency);
 
   return (
     <aside className="max-h-[calc(100vh-220px)] overflow-y-auto">
@@ -469,6 +484,12 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
           <span>{c.countryName}</span>
           <span>·</span>
           <span>{c.brandName}</span>
+          {branchLabel && (
+            <>
+              <span>·</span>
+              <span className="truncate">{branchLabel}</span>
+            </>
+          )}
           <span>·</span>
           <span>Order {c.orderNumber}</span>
           <Link
@@ -479,7 +500,7 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
           </Link>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <h2 className="truncate font-mono text-xl font-semibold text-heading">
               {c.externalCaseNumber || c.caseNumber}
             </h2>
@@ -496,51 +517,91 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
             >
               {next.label}
             </span>
+            {/* Partial vs Full refund badge — one of the first things an
+                operator needs to confirm when they talk to the customer. */}
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                c.isPartialRefund
+                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700',
+              )}
+            >
+              {c.isPartialRefund ? 'Partial refund' : 'Full refund'}
+            </span>
           </div>
           <div className="text-end">
             <div className="font-mono text-lg font-semibold tabular-nums text-heading">
-              {money(c.refundAmount, c.currency)}
+              {refundTotal}
             </div>
-            <div
-              className={cn(
-                'mt-0.5 flex items-center justify-end gap-1 text-[11px]',
-                age.tone,
-              )}
-            >
-              <Clock className="h-3 w-3" />
-              approved {c.approvedAt ?? '—'}
-              {c.approvedByLabel ? ` · by ${c.approvedByLabel}` : ''}
+            <div className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
+              of {orderTotal} order
             </div>
           </div>
         </div>
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]',
+            age.tone,
+          )}
+        >
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3" /> approved {c.approvedAt ?? '—'}
+          </span>
+          {c.approvedByLabel && <span className="text-muted-foreground">· by {c.approvedByLabel}</span>}
+        </div>
+        {c.rootCauseSummary && (
+          <div className="rounded-md border border-dashed border-border bg-surface-subtle/40 px-3 py-2 text-xs">
+            <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Refund reason
+            </div>
+            <p className="text-foreground">{c.rootCauseSummary}</p>
+          </div>
+        )}
       </header>
 
       {/* ── Customer ───────────────────────────────────────────── */}
       <Section title="Customer">
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-heading">{c.customerName}</div>
-            <div className="truncate text-xs text-muted-foreground">{c.customerEmail}</div>
+        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Name
+            </dt>
+            <dd className="font-medium text-heading">{c.customerName}</dd>
           </div>
-          {c.customerPhone && (
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono text-sm text-heading">{c.customerPhone}</span>
-              <CopyButton value={c.customerPhone} size="xs" label="Copy phone" />
+          <div className="min-w-0">
+            <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Email
+            </dt>
+            <dd className="flex items-center gap-1.5 truncate">
+              <span className="truncate text-foreground">{c.customerEmail}</span>
+              <CopyButton value={c.customerEmail} size="xs" label="Copy email" />
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Phone
+            </dt>
+            <dd className="flex items-center gap-1.5">
+              {c.customerPhone ? (
+                <>
+                  <span className="font-mono text-heading">{c.customerPhone}</span>
+                  <CopyButton value={c.customerPhone} size="xs" label="Copy phone" />
+                </>
+              ) : (
+                <span className="text-muted-foreground">No phone on file</span>
+              )}
+            </dd>
+          </div>
+          {branchLabel && (
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Branch
+              </dt>
+              <dd className="text-foreground">{branchLabel}</dd>
             </div>
           )}
-          <div className="ms-auto">
-            {c.customerPhone ? (
-              <a
-                href={`tel:${c.customerPhone}`}
-                className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-              >
-                <PhoneCall className="h-3.5 w-3.5" /> Call customer
-              </a>
-            ) : (
-              <span className="text-xs text-muted-foreground">No phone on file</span>
-            )}
-          </div>
-        </div>
+        </dl>
       </Section>
 
       {/* ── Refund rails ──────────────────────────────────────── */}
@@ -589,10 +650,13 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
         )}
       </Section>
 
-      {/* ── Customer call follow-up ───────────────────────────── */}
+      {/* ── Call the customer ─────────────────────────────────────
+          Operators call externally, then record the outcome here.
+          • Answered → closes the case.
+          • No answer → dispatches the follow-up email automatically. */}
       {(c.status === 'REFUNDED' || c.status === 'PARTIALLY_REFUNDED') &&
         c.customerCallStatus !== 'NOT_APPLICABLE' && (
-          <Section title="Customer call">
+          <Section title="Call the customer">
             <CallFollowUp
               caseId={c.id}
               status={c.customerCallStatus}
@@ -631,16 +695,12 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
       </Section>
 
       {/* ── Context ───────────────────────────────────────────── */}
-      {(c.approvalBatchNumber ||
-        c.rootCauseSummary ||
-        c.timeline[0] ||
-        c.contactLog[0]) && (
+      {(c.approvalBatchNumber || c.timeline[0] || c.contactLog[0]) && (
         <Section title="Context" last>
           <dl className="grid gap-y-2 text-xs sm:grid-cols-2 sm:gap-x-6">
             {c.approvalBatchNumber && (
               <Fact label="Approval batch" value={c.approvalBatchNumber} mono />
             )}
-            {c.rootCauseSummary && <Fact label="Root cause" value={c.rootCauseSummary} />}
             {c.timeline[0] && (
               <Fact
                 label="Last activity"
