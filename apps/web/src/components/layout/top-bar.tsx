@@ -24,7 +24,7 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
 
   return (
     <header className="sticky top-0 z-30 bg-background">
-      <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-3 px-6">
+      <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center gap-3 px-6">
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[12.5px]">
         {crumbs.map((c, i) => {
           const isLast = i === crumbs.length - 1;
@@ -51,10 +51,10 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
         <button
           type="button"
           onClick={openSearch}
-          className="hidden h-10 items-center gap-2 rounded-pill border border-border bg-surface px-3.5 text-[13px] text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground md:inline-flex"
+          className="hidden h-9 items-center gap-2 rounded-pill border border-border bg-surface px-3 text-[12px] text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground md:inline-flex"
           aria-label="Search"
         >
-          <Search className="h-4 w-4" />
+          <Search className="h-3.5 w-3.5" />
           <span>Search</span>
           <kbd className="kbd ml-1">⌘K</kbd>
         </button>
@@ -69,11 +69,11 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
         >
           <span
             aria-hidden
-            className="flex h-8 w-8 items-center justify-center rounded-pill surface-butter text-[12px] font-semibold"
+            className="flex h-7 w-7 items-center justify-center rounded-pill surface-butter text-[11px] font-semibold"
           >
             {initial}
           </span>
-          <span className="hidden text-[13px] font-medium text-foreground sm:inline">
+          <span className="hidden text-[12.5px] font-medium text-foreground sm:inline">
             {userName || userEmail}
           </span>
         </button>

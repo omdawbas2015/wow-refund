@@ -190,7 +190,7 @@ export default async function DashboardHome() {
   const taskTones = ['mint', 'lavender', 'peach'] as const;
 
   return (
-    <div className="px-6 py-8">
+    <div className="px-6 py-6">
       {/* Page header */}
       <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
@@ -207,19 +207,19 @@ export default async function DashboardHome() {
 
       {/* KPI row — yellow hero card + soft white side cards. */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="surface-butter rounded-3xl p-6">
-          <div className="flex items-center gap-2.5 text-[13px] font-medium text-primary-foreground/80">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/30">
-              <heroStat.icon className="h-5 w-5" />
+        <div className="surface-butter rounded-3xl p-5">
+          <div className="flex items-center gap-2 text-[12px] font-medium text-primary-foreground/70">
+            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/40">
+              <heroStat.icon className="h-3.5 w-3.5" />
             </span>
             <span>{heroStat.label}</span>
           </div>
-          <div className="mt-5 text-[40px] font-semibold tabular leading-none text-primary-foreground">
+          <div className="mt-4 text-[34px] font-semibold tabular leading-none text-primary-foreground">
             {heroStat.value.toLocaleString()}
           </div>
           {heroStat.delta !== 0 && (
-            <div className="mt-3 inline-flex items-center gap-1 rounded-pill bg-white/30 px-2.5 py-1 text-[12px] font-medium text-primary-foreground">
-              <HeroDeltaIcon className="h-3.5 w-3.5" />
+            <div className="mt-2 inline-flex items-center gap-1 rounded-pill bg-white/40 px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+              <HeroDeltaIcon className="h-3 w-3" />
               {Math.abs(heroStat.delta)}% vs previous {SPARK_DAYS}d
             </div>
           )}
@@ -233,24 +233,24 @@ export default async function DashboardHome() {
           return (
             <div
               key={stat.label}
-              className="rounded-3xl border border-border bg-surface p-6"
+              className="rounded-3xl border border-border bg-surface p-5"
             >
-              <div className="flex items-center gap-2.5 text-[13px] text-muted-foreground">
+              <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
                 <span
                   className={cn(
-                    'flex h-10 w-10 items-center justify-center rounded-2xl',
+                    'flex h-7 w-7 items-center justify-center rounded-xl',
                     `chip-${tone}`,
                   )}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-3.5 w-3.5" />
                 </span>
                 <span>{stat.label}</span>
               </div>
-              <div className="mt-5 text-[36px] font-semibold tabular leading-none text-heading">
+              <div className="mt-4 text-[28px] font-semibold tabular leading-none text-heading">
                 {stat.value.toLocaleString()}
               </div>
               {stat.delta !== 0 && (
-                <div className="mt-3 flex items-center gap-1 text-[12px]">
+                <div className="mt-2 flex items-center gap-1 text-[11.5px]">
                   <span
                     className={
                       positive
@@ -270,25 +270,25 @@ export default async function DashboardHome() {
       </div>
 
       {/* Chart + Pending */}
-      <div className="mt-6 grid gap-5 lg:grid-cols-5">
+      <div className="mt-5 grid gap-5 lg:grid-cols-5">
         <div className="rounded-3xl border border-border bg-surface lg:col-span-3">
-          <div className="flex items-center justify-between px-6 pt-5 pb-2">
+          <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <div>
-              <h2 className="text-heading-lg text-heading">Refund volume</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">
+              <h2 className="text-heading-md text-heading">Refund volume</h2>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
                 Daily cases over the last {SPARK_DAYS} days
               </p>
             </div>
           </div>
-          <div className="h-64 w-full px-4 pb-5">
+          <div className="h-56 w-full px-3 pb-4">
             <RefundVolumeChart data={trendCreated} />
           </div>
         </div>
 
         <div className="rounded-3xl border border-border bg-surface lg:col-span-2">
-          <div className="px-6 pt-5">
-            <h2 className="text-heading-lg text-heading">Pending tasks</h2>
-            <p className="mt-1 text-[13px] text-muted-foreground">Items needing your attention</p>
+          <div className="px-5 pt-4">
+            <h2 className="text-heading-md text-heading">Pending tasks</h2>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">Items needing your attention</p>
           </div>
           <ul className="px-3 py-3 space-y-1">
             <PendingTask
@@ -418,18 +418,18 @@ function PendingTask({
     <li>
       <Link
         href={href}
-        className="flex items-center gap-3 rounded-2xl px-3 py-3 text-[14px] transition-colors hover:bg-surface-subtle"
+        className="flex items-center gap-3 rounded-2xl px-2 py-2 text-[13px] transition-colors hover:bg-surface-subtle"
       >
         <span
           className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-2xl',
+            'flex h-8 w-8 items-center justify-center rounded-xl',
             `chip-${tone}`,
           )}
         >
-          <Icon className="h-5 w-5" />
+          <Icon className="h-3.5 w-3.5" />
         </span>
         <span className="flex-1 text-foreground">{label}</span>
-        <span className="tabular text-[16px] font-semibold text-heading">{count}</span>
+        <span className="tabular text-[14px] font-semibold text-heading">{count}</span>
       </Link>
     </li>
   );
