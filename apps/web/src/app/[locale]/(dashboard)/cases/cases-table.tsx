@@ -62,7 +62,7 @@ export function CasesTable({
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[920px] text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface-subtle/40">
+            <tr className="border-b border-border/50">
               <Th>Case</Th>
               <Th>Customer</Th>
               <Th>Country</Th>
@@ -74,13 +74,13 @@ export function CasesTable({
               <th className="w-8 px-2 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/60">
+          <tbody className="divide-y divide-border/40">
             {cases.map((c) => (
               <tr
                 key={c.id}
                 onClick={() => openCase(c.id)}
                 className={cn(
-                  'group cursor-pointer transition-colors hover:bg-primary/[0.03]',
+                  'group cursor-pointer transition-all duration-150 hover:bg-surface-subtle/60',
                   c.isDeleted && 'opacity-50',
                 )}
               >
@@ -151,7 +151,7 @@ export function CasesTable({
                 </td>
                 <td className="whitespace-nowrap px-4 py-3.5">
                   {c.isDeleted ? (
-                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
                       <Trash2 className="h-3 w-3" />
                       Deleted
                     </span>
@@ -189,7 +189,7 @@ export function CasesTable({
                   {c.caseNumber}
                 </span>
                 {c.isDeleted ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 px-2 py-0.5 text-[10px] font-medium text-zinc-700 dark:text-zinc-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
                     <Trash2 className="h-3 w-3" />
                     Deleted
                   </span>
@@ -230,7 +230,7 @@ function Th({
   return (
     <th
       className={cn(
-        'whitespace-nowrap px-4 py-2.5 text-xs font-medium text-muted-foreground',
+        'whitespace-nowrap px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60',
         align === 'end' ? 'text-end' : 'text-start',
       )}
     >

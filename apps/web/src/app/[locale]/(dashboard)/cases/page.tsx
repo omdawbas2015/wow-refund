@@ -162,12 +162,17 @@ export default async function CasesPage({
   const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <h1 className="text-display-md font-normal tracking-tight text-heading">
-          Refund cases
-        </h1>
-        <Button asChild>
+    <div className="mx-auto max-w-7xl px-8 py-10">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-display-md font-semibold tracking-tight text-heading">
+            Refund cases
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage and track all refund requests across brands.
+          </p>
+        </div>
+        <Button asChild size="lg">
           <Link href={`/${locale}/cases/new`}>
             <Plus className="h-4 w-4" />
             New case
@@ -190,10 +195,10 @@ export default async function CasesPage({
         <Card>
           <CardContent className="py-16">
             <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-subtle">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-subtle">
                 <FileText className="h-7 w-7 text-muted-foreground" />
               </div>
-              <h3 className="text-heading-sm text-heading">No cases found</h3>
+              <h3 className="text-lg font-semibold text-heading">No cases found</h3>
               <p className="max-w-md text-sm text-muted-foreground">
                 Try adjusting your filters, or create a new refund case to get started.
               </p>
@@ -212,7 +217,7 @@ export default async function CasesPage({
             <CasesTable locale={locale} cases={rows} />
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-border px-4 py-3">
+              <div className="flex items-center justify-between border-t border-border/50 px-6 py-4">
                 <div className="text-xs text-muted-foreground">
                   Page {filters.page} of {totalPages} · {total} cases
                 </div>
