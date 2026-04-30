@@ -177,24 +177,17 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
-      {/* Brand — Alshaya logo mark. */}
-      <div className="flex h-12 items-center gap-2 px-4">
+      {/* Brand — centered Alshaya logo, links to dashboard. */}
+      <Link href="/" className="flex h-14 items-center justify-center border-b border-sidebar-border transition-opacity hover:opacity-80">
         <Image
-          src="/brand/alshaya-mark.png"
-          alt="Alshaya"
-          width={26}
-          height={26}
-          className="h-[26px] w-[26px] shrink-0 object-contain"
+          src="/brand/alshaya-group.png"
+          alt="Alshaya Group"
+          width={120}
+          height={60}
+          className="h-9 w-auto object-contain"
+          priority
         />
-        <div className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-[11.5px] font-semibold tracking-tight text-heading">
-            Alshaya Refund
-          </span>
-          <span className="truncate text-[9px] text-muted-foreground">
-            Operations
-          </span>
-        </div>
-      </div>
+      </Link>
 
       {/* Search */}
       <div className="px-3 pt-0.5">
