@@ -17,7 +17,7 @@ export default async function UsersPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <div className="mb-6">
         <h1 className="text-display-md font-normal tracking-tight text-heading">Users</h1>
         <p className="mt-2 text-body">All registered users in the system.</p>
@@ -30,7 +30,7 @@ export default async function UsersPage() {
         </CardHeader>
         <CardContent className="p-0">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-surface-subtle text-left text-caption uppercase text-muted-foreground">
+            <thead className="border-b border-border/50 text-left text-caption uppercase text-muted-foreground">
               <tr>
                 <th className="p-3">Name</th>
                 <th className="p-3">Email</th>

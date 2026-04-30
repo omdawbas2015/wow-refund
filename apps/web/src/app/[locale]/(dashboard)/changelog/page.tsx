@@ -14,9 +14,9 @@ export default async function ChangelogPage() {
     t === 'feature' ? 'success' : t === 'fix' ? 'warning' : 'default';
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-3xl space-y-6 px-8 py-10">
       <div>
-        <h1 className="text-heading-lg text-heading">Changelog</h1>
+        <h1 className="text-display-md font-semibold tracking-tight text-heading">Changelog</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Recent changes to the WOW Refund platform.
         </p>

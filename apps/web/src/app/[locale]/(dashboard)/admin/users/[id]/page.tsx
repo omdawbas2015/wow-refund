@@ -113,7 +113,7 @@ export default async function UserDetailPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="mx-auto max-w-5xl px-8 py-10">
       <div className="mb-4">
         <Link
           href="/admin/users"

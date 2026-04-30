@@ -50,9 +50,9 @@ export default async function EmailLogPage({ searchParams }: PageProps) {
     s === 'SENT' ? 'success' : s === 'BOUNCED' || s === 'FAILED' ? 'destructive' : 'secondary';
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-8 py-10">
       <div>
-        <h1 className="text-heading-lg text-heading">Email Log</h1>
+        <h1 className="text-display-md font-semibold tracking-tight text-heading">Email Log</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Outbound emails dispatched by the system, with delivery status from the Power Automate webhook.
         </p>
@@ -102,7 +102,7 @@ export default async function EmailLogPage({ searchParams }: PageProps) {
         </CardHeader>
         <CardContent className="p-0">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-surface-subtle text-left text-caption uppercase text-muted-foreground">
+            <thead className="border-b border-border/50 text-left text-caption uppercase text-muted-foreground">
               <tr>
                 <th className="p-3">When</th>
                 <th className="p-3">Status</th>

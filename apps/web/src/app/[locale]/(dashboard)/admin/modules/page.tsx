@@ -16,10 +16,10 @@ export default async function ModulesAdminPage() {
   const enabledCount = modules.filter((m) => m.isEnabled).length;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-3xl space-y-6 px-8 py-10">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-heading-lg text-heading">Modules</h1>
+          <h1 className="text-display-md font-semibold tracking-tight text-heading">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Globally enable or disable optional modules. Disabled modules are
             hidden from the sidebar; their routes return a redirect home.

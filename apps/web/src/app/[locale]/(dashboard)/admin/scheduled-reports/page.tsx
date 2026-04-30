@@ -32,10 +32,10 @@ export default async function ScheduledReportsPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-8 py-10">
       <div>
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-heading-lg text-heading">Scheduled Reports</h1>
+          <h1 className="text-display-md font-semibold tracking-tight text-heading">Scheduled Reports</h1>
           <Badge variant="outline" className="text-xs">
             {rows.filter((r) => r.isActive).length} active · {rows.length} total
           </Badge>

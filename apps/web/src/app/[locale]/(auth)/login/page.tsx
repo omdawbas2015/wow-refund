@@ -13,10 +13,10 @@ export default async function LoginPage({
   const callbackUrl = params.callbackUrl ?? '/';
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="space-y-1.5">
-        <CardTitle className="text-heading-lg">{t('title')}</CardTitle>
-        <CardDescription>{t('subtitle')}</CardDescription>
+    <Card className="shadow-lg border-border/50">
+      <CardHeader className="space-y-2 pb-6">
+        <CardTitle className="text-2xl font-semibold tracking-tight">{t('title')}</CardTitle>
+        <CardDescription className="text-[13px]">{t('subtitle')}</CardDescription>
       </CardHeader>
       <CardContent>
         <LoginForm callbackUrl={callbackUrl} error={params.error} />

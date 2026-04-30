@@ -47,28 +47,28 @@
     --ref-amber-400:    38 92% 60%;
 
     /* Semantic surfaces */
-    --background:          0 0% 100%;         /* #ffffff */
-    --surface:             0 0% 100%;
-    --surface-subtle:      210 40% 98%;       /* #f6f9fc */
-    --surface-muted:       210 36% 96%;
+    --background:          220 20% 97%;       /* #f4f6f8 — warm off-white canvas */
+    --surface:             0 0% 100%;         /* pure white cards */
+    --surface-subtle:      220 20% 98%;       /* #f8f9fb */
+    --surface-muted:       220 14% 96%;       /* #f1f3f5 */
 
-    --foreground:          216 74% 11%;       /* #061b31 — deep navy */
-    --heading:             216 74% 11%;
-    --label:               215 33% 24%;       /* #273951 */
-    --body:                217 19% 48%;       /* #64748d */
-    --muted:               210 40% 96%;
-    --muted-foreground:    215 16% 47%;
+    --foreground:          220 30% 14%;       /* #1a2332 — softer deep navy */
+    --heading:             220 30% 14%;
+    --label:               220 20% 30%;       /* #3d4654 */
+    --body:                220 12% 50%;       /* #6b7280 */
+    --muted:               220 14% 96%;
+    --muted-foreground:    220 10% 52%;
 
-    --border:              214 32% 91%;       /* #e3e8ee */
-    --input:               214 32% 91%;
+    --border:              220 16% 90%;       /* #e2e5ea — softer border */
+    --input:               220 16% 90%;
     --ring:                246 95% 61%;       /* primary blurple */
 
-    /* Brand (Stripe-inspired blurple) */
-    --primary:             246 95% 61%;       /* #533afd */
+    /* Brand — refined blurple gradient palette */
+    --primary:             246 80% 60%;       /* #635bff — stripe blurple */
     --primary-foreground:  0 0% 100%;
-    --primary-hover:       246 66% 52%;
-    --primary-deep:        242 52% 36%;       /* #2e2b8c */
-    --primary-subtle:      240 90% 85%;       /* #b9b9f9 */
+    --primary-hover:       246 72% 54%;
+    --primary-deep:        246 60% 44%;       /* deeper press state */
+    --primary-subtle:      246 80% 95%;       /* #eeedff — ultra soft bg */
 
     /* Surface backgrounds */
     --card:                0 0% 100%;
@@ -76,23 +76,23 @@
     --popover:             0 0% 100%;
     --popover-foreground:  216 74% 11%;
 
-    --secondary:           210 40% 96%;
-    --secondary-foreground:216 74% 11%;
+    --secondary:           220 14% 96%;
+    --secondary-foreground:220 30% 14%;
 
-    --accent:              246 95% 61%;
+    --accent:              246 80% 60%;
     --accent-foreground:   0 0% 100%;
 
-    /* Status */
-    --destructive:         340 84% 53%;       /* #ea2261 */
+    /* Status — modern muted tones */
+    --destructive:         0 72% 51%;         /* #d93025 — google-style red */
     --destructive-foreground: 0 0% 100%;
-    --success:             145 79% 41%;       /* #15be53 */
+    --success:             152 69% 40%;       /* #1e8e3e — google-style green */
     --success-foreground:  0 0% 100%;
-    --warning:             38 92% 50%;        /* #f59e0b */
+    --warning:             36 100% 50%;       /* #f9a825 */
     --warning-foreground:  0 0% 100%;
-    --info:                246 95% 61%;
+    --info:                213 94% 54%;        /* #1a73e8 — blue info */
     --info-foreground:     0 0% 100%;
 
-    --radius: 0.375rem;    /* 6px — conservative */
+    --radius: 0.75rem;     /* 12px — modern SaaS feel */
 
     /* Layer 3 — component tokens. Reference semantic vars only. */
     --c-button-primary-bg:     var(--primary);
@@ -168,6 +168,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -176,15 +177,15 @@
     line-height: 1.5;
   }
 
-  /* Stripe-esque headline feel — thin weight */
+  /* Modern SaaS headline feel — semibold weight */
   h1, h2, h3 {
     @apply text-heading;
-    font-weight: 400;
-    letter-spacing: -0.01em;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
   h4, h5, h6 {
     @apply text-heading;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   /* Tabular nums for money values */

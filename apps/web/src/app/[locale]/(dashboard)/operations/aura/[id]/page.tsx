@@ -38,7 +38,7 @@ export default async function AuraBatchDetailPage({ params }: PageProps) {
   const totalPoints = snapshot.reduce((s, c) => s + c.auraPoints, 0);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <div className="mb-6 flex items-start justify-between">
         <div>
           <Link href="/operations" className="text-xs uppercase text-muted-foreground hover:text-primary">

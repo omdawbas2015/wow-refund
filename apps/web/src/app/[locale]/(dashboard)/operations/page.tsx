@@ -360,7 +360,7 @@ export default async function OperationsPage({
   });
 
   return (
-    <div className={isPoolTab ? 'px-4 py-4' : 'mx-auto max-w-7xl px-6 py-8'}>
+    <div className={isPoolTab ? 'px-4 py-4' : 'mx-auto max-w-7xl px-8 py-10'}>
       <div className={isPoolTab ? 'mb-3' : 'mb-6'}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">

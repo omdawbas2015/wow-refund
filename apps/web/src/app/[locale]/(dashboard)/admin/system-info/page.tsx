@@ -83,7 +83,7 @@ export default async function SystemInfoPage() {
   const deployEnv = process.env['VERCEL_ENV'] ?? process.env['NODE_ENV'] ?? 'unknown';
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="mx-auto max-w-5xl px-8 py-10">
       <div className="mb-6">
         <h1 className="text-display-md font-normal tracking-tight text-heading">
           System info

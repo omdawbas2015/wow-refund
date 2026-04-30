@@ -16,9 +16,9 @@ import {
   Bell,
   User as UserIcon,
   ChevronDown,
-  ChevronRight,
   Search as SearchIcon,
   LogOut,
+  Send,
 } from 'lucide-react';
 
 interface NavItem {
@@ -27,27 +27,14 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
   module?: string;
-  /** Numeric badge shown on the right of the row (e.g. pending count). */
   badge?: number;
 }
 
 interface NavSection {
-  /** UPPERCASE caption shown above the section, like the Elegance ref. */
   label: string;
   items: NavItem[];
 }
 
-/**
- * Primary navigation rail. Layout follows the Elegance reference the
- * owner shared:
- *
- *   - workspace block at the top (logo + name + chevron)
- *   - search input that opens the global command palette
- *   - top-level "Dashboard" row
- *   - section captions ("REFUND", "ANALYTICS", "ADMIN") with their
- *     items underneath
- *   - footer block at the bottom for Settings + Sign out
- */
 export function Sidebar({
   role,
   disabledModules = [],
@@ -55,17 +42,12 @@ export function Sidebar({
 }: {
   role: string | null;
   disabledModules?: string[];
-  /** Number of users awaiting access approval. Drives the dot/badge on
-   *  the User Access Requests row so admins know there's work waiting. */
   pendingAccessRequestCount?: number;
 }) {
   const pathname = usePathname();
   const t = useTranslations('nav');
   const disabled = new Set(disabledModules);
 
-  // Refund Pool is for whoever actually executes refunds. The seeded role
-  // for that work is REFUND_AGENT (DB) — the older 'OPERATIONS' string is
-  // kept as a legacy alias because some env data may still hold it.
   const opsRole =
     role === 'ADMIN' ||
     role === 'MANAGER' ||
@@ -86,7 +68,13 @@ export function Sidebar({
         ...(opsRole
           ? [{ label: t('operations'), href: '/operations', icon: ShieldCheck }]
           : []),
-        { label: t('promo'), href: '/promo', icon: Gift, module: 'promo' },
+      ],
+    },
+    {
+      label: 'Promo',
+      items: [
+        { label: 'Promo Admin', href: '/promo', icon: Gift, module: 'promo' },
+        { label: 'Send Promo', href: '/promo/allocate', icon: Send, module: 'promo' },
       ],
     },
     {
@@ -107,10 +95,6 @@ export function Sidebar({
         { label: t('notifications'), href: '/notifications', icon: Bell },
       ],
     },
-    // Admin sidebar is intentionally minimal: only items an admin touches
-    // every day belong here. Everything else (users, brands, branches,
-    // workflow rules, templates, cron, modules, system info, etc.) lives
-    // inside /admin/settings as a grouped hub.
     {
       label: t('admin'),
       items: [
@@ -125,8 +109,6 @@ export function Sidebar({
     },
   ];
 
-  // Footer items live in their own block below the scrollable nav, like
-  // Settings + Logout in the Elegance reference.
   const footerItems: NavItem[] = [
     { label: t('profile'), href: '/profile', icon: UserIcon },
     { label: t('settings'), href: '/admin/settings', icon: Settings, adminOnly: true },
@@ -144,46 +126,52 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-e border-border bg-surface">
-      {/* Workspace header — square brand tile + name + dropdown chevron,
-          mirrors the Elegance 'E' / Elegance Essense block. */}
-      <button
-        type="button"
-        className="mx-3 mt-3 flex items-center gap-2.5 rounded-xl px-2 py-2 text-start transition-colors hover:bg-surface-subtle"
-      >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-inset ring-border">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/alshaya-mark.png"
-            alt="Alshaya"
-            className="h-6 w-6 object-contain"
-          />
-        </div>
-        <span className="flex-1 truncate text-[13px] font-semibold tracking-tight">
-          Alshaya Portal
-        </span>
-        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-      </button>
+    <aside className="flex h-full w-[272px] shrink-0 flex-col bg-surface border-e border-border/50">
+      {/* Brand header */}
+      <div className="px-5 pt-6 pb-2">
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-start transition-all duration-200 hover:bg-surface-subtle"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 ring-1 ring-inset ring-primary/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/alshaya-mark.png"
+              alt="Alshaya"
+              className="h-6 w-6 object-contain"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="block truncate text-sm font-semibold tracking-tight text-foreground">
+              Alshaya Portal
+            </span>
+            <span className="block truncate text-[11px] text-muted-foreground">
+              Refund Operations
+            </span>
+          </div>
+          <ChevronDown className="h-4 w-4 text-muted-foreground/60" />
+        </button>
+      </div>
 
-      {/* Sidebar search — opens the global command palette. */}
-      <div className="px-3 pt-3 pb-1">
+      {/* Search */}
+      <div className="px-5 py-2">
         <button
           type="button"
           onClick={openSearch}
-          className="flex h-9 w-full items-center gap-2 rounded-full border border-border bg-surface-subtle px-3.5 text-sm text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
+          className="flex h-10 w-full items-center gap-2.5 rounded-xl border border-border/60 bg-surface-subtle/80 px-3.5 text-sm text-muted-foreground transition-all duration-200 hover:bg-surface hover:border-border hover:shadow-xs"
           aria-label={t('search')}
         >
-          <SearchIcon className="h-3.5 w-3.5 shrink-0" />
-          <span className="flex-1 text-start text-[13px]">Search</span>
-          <kbd className="rounded-md border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+          <SearchIcon className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+          <span className="flex-1 text-start text-[13px]">Search...</span>
+          <kbd className="rounded-md border border-border/60 bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground/70">
             ⌘K
           </kbd>
         </button>
       </div>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-3 pb-2">
-        {/* Dashboard row sits above the sectioned nav. */}
-        <ul className="mb-5">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-4 pt-4 pb-2">
+        {/* Dashboard */}
+        <ul className="mb-2">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
         </ul>
 
@@ -195,11 +183,11 @@ export function Sidebar({
           );
           if (items.length === 0) return null;
           return (
-            <div key={i} className="mb-5">
-              <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            <div key={i} className="mb-1">
+              <div className="mb-1.5 mt-5 px-3 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">
                 {section.label}
               </div>
-              <ul className="space-y-px">
+              <ul className="space-y-0.5">
                 {items.map((item) => (
                   <SidebarRow
                     key={item.href}
@@ -213,8 +201,8 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-border px-3 py-3">
-        <ul className="space-y-px">
+      <div className="border-t border-border/40 px-4 py-3">
+        <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
             .map((item) => (
@@ -227,7 +215,7 @@ export function Sidebar({
           <li>
             <a
               href="/api/auth/signout"
-              className="flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium text-body transition-colors hover:bg-surface-subtle hover:text-foreground"
+              className="flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium text-muted-foreground transition-all duration-200 hover:bg-destructive/5 hover:text-destructive"
             >
               <LogOut className="h-4 w-4 shrink-0" />
               <span className="flex-1 truncate">{t('logout')}</span>
@@ -247,23 +235,24 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors',
+          'group relative flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition-all duration-200',
           isActive
-            ? 'bg-primary/10 text-primary'
+            ? 'bg-primary/8 text-primary shadow-xs'
             : 'text-body hover:bg-surface-subtle hover:text-foreground',
         )}
       >
-        <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')} />
+        {isActive && (
+          <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary" />
+        )}
+        <Icon className={cn('h-[18px] w-[18px] shrink-0 transition-colors', isActive ? 'text-primary' : 'text-muted-foreground/70 group-hover:text-foreground')} />
         <span className="flex-1 truncate">{item.label}</span>
-        {showBadge ? (
+        {showBadge && (
           <span
-            className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-semibold leading-none text-white"
+            className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold leading-none text-white"
             aria-label={`${item.badge} pending`}
           >
             {item.badge}
           </span>
-        ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 opacity-0 transition-opacity group-hover:opacity-100 rtl:rotate-180" />
         )}
       </Link>
     </li>

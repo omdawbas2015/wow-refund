@@ -87,7 +87,7 @@ export default async function AuditLogPage({ searchParams }: PageProps) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <Link href="/reports" className="text-xs uppercase text-muted-foreground hover:text-primary">
         ← Reports
       </Link>
