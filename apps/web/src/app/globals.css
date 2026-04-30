@@ -14,11 +14,14 @@
 
 @layer base {
   :root {
-    /* ── Cool neutral scale (page surfaces are pure white) ────────── */
-    --neutral-0:   0 0% 100%;          /* pure white card */
-    --neutral-25:  0 0% 100%;          /* pure white wash */
+    /* ── Cool neutral scale ───────────────────────────────────────────
+       Page background + cards are pure white. The 25/100 steps stay just
+       perceptibly cool so input fills, hover wash, and muted headers are
+       still distinguishable on a white surface. */
+    --neutral-0:   0 0% 100%;          /* pure white card / surface */
+    --neutral-25:  214 14% 97.8%;      /* near-white wash (input bg, hover) */
     --neutral-50:  0 0% 100%;          /* pure white page background */
-    --neutral-100: 214 22% 96.5%;      /* very subtle hover / muted */
+    --neutral-100: 214 16% 95.5%;      /* muted (table headers, chips) */
     --neutral-150: 214 18% 92%;        /* hairline borders */
     --neutral-200: 214 16% 88%;
     --neutral-300: 214 14% 80%;
