@@ -17,6 +17,7 @@ import {
   User as UserIcon,
   LogOut,
   Send,
+  Search as SearchIcon,
 } from 'lucide-react';
 
 type ChipTone =
@@ -168,23 +169,44 @@ export function Sidebar({
     return pathname.endsWith(href) || pathname.includes(`${href}/`);
   }
 
+  function openSearch() {
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }),
+    );
+  }
+
   return (
     <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
-      {/* Brand — Alshaya mark centered, links to dashboard. */}
-      <div className="flex h-[52px] shrink-0 items-center justify-center border-b border-sidebar-border">
-        <Link href="/" className="flex items-center justify-center rounded-lg p-1.5 transition-opacity hover:opacity-75">
-          <Image
-            src="/brand/alshaya-mark.png"
-            alt="Alshaya Group"
-            width={34}
-            height={34}
-            className="h-[34px] w-[34px] object-contain"
-            priority
-          />
-        </Link>
+      {/* Brand — Alshaya mark + name, links to dashboard. */}
+      <Link href="/" className="flex h-12 items-center gap-2.5 px-4 transition-opacity hover:opacity-80">
+        <Image
+          src="/brand/alshaya-mark.png"
+          alt="Alshaya Group"
+          width={28}
+          height={28}
+          className="h-7 w-7 shrink-0 object-contain"
+          priority
+        />
+        <span className="text-[12px] font-semibold tracking-tight text-heading">
+          Alshaya Group
+        </span>
+      </Link>
+
+      {/* Search */}
+      <div className="px-3 pb-1">
+        <button
+          type="button"
+          onClick={openSearch}
+          className="flex h-8 w-full items-center gap-2 rounded-pill border border-sidebar-border bg-surface px-2.5 text-[11px] text-sidebar-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+          aria-label="Search"
+        >
+          <SearchIcon className="h-3 w-3 shrink-0" />
+          <span className="flex-1 text-left">Search</span>
+          <kbd className="kbd text-[9px]">&#8984;K</kbd>
+        </button>
       </div>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pt-2.5 pb-1.5">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pt-1.5 pb-1.5">
         {/* Dashboard */}
         <ul className="space-y-1">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
