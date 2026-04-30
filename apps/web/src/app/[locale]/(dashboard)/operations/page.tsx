@@ -287,9 +287,11 @@ export default async function OperationsPage({
       orderNumber: c.orderNumber,
       orderAmount: c.orderAmount,
       refundAmount: c.totalRefundAmount,
-      // A refund is 'partial' when the refund is strictly less than the
-      // order total (with a small epsilon to tolerate float rounding).
-      isPartialRefund: c.totalRefundAmount + 0.01 < c.orderAmount,
+      // Use the DB's persisted `isPartial` flag so this matches the case
+      // detail view exactly. It's computed by createCaseAction with a
+      // 0.001 tolerance that is correct for KWD (3-decimal fils) as well
+      // as the 2-decimal currencies used in the other countries.
+      isPartialRefund: c.isPartial,
       currency: c.orderCurrency,
       approvedAt: c.approvedAt ? formatRelative(c.approvedAt) : null,
       approvedAtIso: c.approvedAt ? c.approvedAt.toISOString() : null,
