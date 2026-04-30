@@ -113,7 +113,8 @@
     "Subject_lower": {
       "runAfter": { "Init_availableCases": ["Succeeded"] },
       "type": "Compose",
-      "inputs": "@toLower(triggerOutputs()?['body/subject'])"
+      "inputs": "@toLower(coalesce(triggerOutputs()?['body/subject'], ''))",
+      "description": "Defensive coalesce — Office 365 Outlook V3 returns null subject for some edge-case mails (calendar invites, voicemail notifications) and toLower(null) blows up the whole flow."
     },
     "Has_batch_id": {
       "runAfter": { "Subject_lower": ["Succeeded"] },
