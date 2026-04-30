@@ -17,13 +17,30 @@ import {
   Search as SearchIcon,
   LogOut,
   Send,
-  Zap,
 } from 'lucide-react';
+
+type ChipTone =
+  | 'butter'
+  | 'mint'
+  | 'lavender'
+  | 'peach'
+  | 'sky'
+  | 'rose';
+
+const CHIP_CLASS: Record<ChipTone, string> = {
+  butter: 'chip-butter',
+  mint: 'chip-mint',
+  lavender: 'chip-lavender',
+  peach: 'chip-peach',
+  sky: 'chip-sky',
+  rose: 'chip-rose',
+};
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  tone: ChipTone;
   adminOnly?: boolean;
   module?: string;
   badge?: number;
@@ -56,23 +73,43 @@ export function Sidebar({
     label: 'Dashboard',
     href: '/',
     icon: LayoutDashboard,
+    tone: 'butter',
   };
 
   const sections: NavSection[] = [
     {
       label: 'Refund',
       items: [
-        { label: 'Refund Cases', href: '/cases', icon: FileText },
+        { label: 'Refund Cases', href: '/cases', icon: FileText, tone: 'sky' },
         ...(opsRole
-          ? [{ label: 'Refund Pool', href: '/operations', icon: ShieldCheck }]
+          ? [
+              {
+                label: 'Refund Pool',
+                href: '/operations',
+                icon: ShieldCheck,
+                tone: 'mint' as ChipTone,
+              },
+            ]
           : []),
       ],
     },
     {
       label: 'Promo',
       items: [
-        { label: 'Promo Admin', href: '/promo', icon: Gift, module: 'promo' },
-        { label: 'Send Promo', href: '/promo/allocate', icon: Send, module: 'promo' },
+        {
+          label: 'Promo Admin',
+          href: '/promo',
+          icon: Gift,
+          tone: 'rose',
+          module: 'promo',
+        },
+        {
+          label: 'Send Promo',
+          href: '/promo/allocate',
+          icon: Send,
+          tone: 'lavender',
+          module: 'promo',
+        },
       ],
     },
     {
@@ -82,6 +119,7 @@ export function Sidebar({
           label: 'Stores',
           href: '/help-desk/stores',
           icon: Store,
+          tone: 'peach',
           module: 'stores',
         },
       ],
@@ -89,8 +127,14 @@ export function Sidebar({
     {
       label: 'Reports',
       items: [
-        { label: 'Reports', href: '/reports', icon: BarChart3, module: 'reports' },
-        { label: 'Notifications', href: '/notifications', icon: Bell },
+        {
+          label: 'Reports',
+          href: '/reports',
+          icon: BarChart3,
+          tone: 'mint',
+          module: 'reports',
+        },
+        { label: 'Notifications', href: '/notifications', icon: Bell, tone: 'peach' },
       ],
     },
     {
@@ -100,6 +144,7 @@ export function Sidebar({
           label: 'User Requests',
           href: '/admin/pending-approvals',
           icon: ClipboardList,
+          tone: 'lavender',
           adminOnly: true,
           badge: pendingAccessRequestCount,
         },
@@ -108,8 +153,14 @@ export function Sidebar({
   ];
 
   const footerItems: NavItem[] = [
-    { label: 'Profile', href: '/profile', icon: UserIcon },
-    { label: 'Settings', href: '/admin/settings', icon: Settings, adminOnly: true },
+    { label: 'Profile', href: '/profile', icon: UserIcon, tone: 'sky' },
+    {
+      label: 'Settings',
+      href: '/admin/settings',
+      icon: Settings,
+      tone: 'mint',
+      adminOnly: true,
+    },
   ];
 
   function isActiveHref(href: string) {
@@ -124,43 +175,39 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-[240px] shrink-0 flex-col bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))]">
-      {/* Brand */}
-      <div className="px-4 pt-5 pb-1">
-        <div className="flex items-center gap-2.5 px-2 py-1">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
-          <div className="min-w-0">
-            <span className="block truncate text-[13px] font-semibold text-white">
-              WOW Refund
-            </span>
-            <span className="block truncate text-[10px] text-[hsl(var(--sidebar-fg))]/50">
-              Refund Operations
-            </span>
-          </div>
+    <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
+      {/* Brand — navy chip with A monogram. */}
+      <div className="flex h-12 items-center gap-2 px-4">
+        <div className="flex h-7 w-7 items-center justify-center rounded-xl surface-butter text-[12px] font-semibold tracking-tight">
+          A
+        </div>
+        <div className="flex min-w-0 flex-col leading-tight">
+          <span className="truncate text-[12px] font-semibold tracking-tight text-heading">
+            Alshaya Refund
+          </span>
+          <span className="truncate text-[9.5px] text-muted-foreground">
+            Operations
+          </span>
         </div>
       </div>
 
       {/* Search */}
-      <div className="px-4 py-2">
+      <div className="px-3 pt-0.5">
         <button
           type="button"
           onClick={openSearch}
-          className="flex h-8 w-full items-center gap-2 rounded-md bg-white/[0.06] px-2.5 text-[12px] text-[hsl(var(--sidebar-fg))]/50 transition-colors hover:bg-white/[0.1] hover:text-[hsl(var(--sidebar-fg))]/80"
+          className="flex h-8 w-full items-center gap-2 rounded-pill border border-sidebar-border bg-surface px-2.5 text-[11px] text-sidebar-muted transition-colors hover:bg-surface-muted hover:text-foreground"
           aria-label="Search"
         >
-          <SearchIcon className="h-3.5 w-3.5 shrink-0" />
-          <span className="flex-1 text-left">Search...</span>
-          <kbd className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[10px] font-medium">
-            Ctrl K
-          </kbd>
+          <SearchIcon className="h-3 w-3 shrink-0" />
+          <span className="flex-1 text-left">Search</span>
+          <kbd className="kbd text-[9px]">⌘K</kbd>
         </button>
       </div>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-2 pb-2">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pt-3 pb-1.5">
         {/* Dashboard */}
-        <ul className="mb-1">
+        <ul className="space-y-1">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
         </ul>
 
@@ -172,11 +219,11 @@ export function Sidebar({
           );
           if (items.length === 0) return null;
           return (
-            <div key={i} className="mb-0.5">
-              <div className="mb-1 mt-4 px-2 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--sidebar-fg))]/30">
+            <div key={i}>
+              <div className="mt-4 mb-1 px-2.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-sidebar-muted">
                 {section.label}
               </div>
-              <ul className="space-y-0.5">
+              <ul className="space-y-1">
                 {items.map((item) => (
                   <SidebarRow
                     key={item.href}
@@ -190,7 +237,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-white/[0.06] px-3 py-2.5">
+      <div className="border-t border-sidebar-border px-2.5 py-2">
         <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
@@ -205,9 +252,11 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="flex h-8 items-center gap-2.5 rounded-md px-2 text-[12px] font-medium text-[hsl(var(--sidebar-fg))]/40 transition-colors hover:bg-red-500/10 hover:text-red-400"
+              className="flex h-8 items-center gap-2.5 rounded-xl px-1.5 text-[11px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
             >
-              <LogOut className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg chip-rose">
+                <LogOut className="h-3 w-3" />
+              </span>
               <span className="flex-1 truncate">Sign out</span>
             </a>
           </li>
@@ -225,17 +274,24 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group flex h-8 items-center gap-2.5 rounded-md px-2 text-[12px] font-medium transition-all duration-150',
+          'group flex h-8 items-center gap-2.5 rounded-xl px-1.5 text-[11px] font-medium transition-colors',
           isActive
-            ? 'bg-white/[0.1] text-white'
-            : 'text-[hsl(var(--sidebar-fg))]/60 hover:bg-white/[0.06] hover:text-white',
+            ? 'bg-surface text-heading shadow-xs'
+            : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-heading',
         )}
       >
-        <Icon className={cn('h-3.5 w-3.5 shrink-0', isActive ? 'text-indigo-400' : 'opacity-50 group-hover:opacity-80')} />
+        <span
+          className={cn(
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg',
+            isActive ? 'surface-butter' : CHIP_CLASS[item.tone],
+          )}
+        >
+          <Icon className="h-3 w-3" />
+        </span>
         <span className="flex-1 truncate">{item.label}</span>
         {showBadge && (
           <span
-            className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
+            className="inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-neutral-900 px-1 text-[9px] font-semibold leading-none text-white"
             aria-label={`${item.badge} pending`}
           >
             {item.badge}

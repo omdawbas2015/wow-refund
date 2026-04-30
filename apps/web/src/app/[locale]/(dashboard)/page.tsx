@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { prisma } from '@wow/db';
 import { Badge } from '@/components/ui/badge';
 import { Link } from '@/i18n/routing';
+import { cn } from '@/lib/utils';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -154,159 +155,180 @@ export default async function DashboardHome() {
 
   const stats = [
     {
-      label: 'Total Cases',
+      label: 'Total cases',
       value: totalCases,
       delta: deltaPct(casesCreatedRecent.length, casesCreatedPrev),
       icon: FileText,
-      color: 'text-indigo-600',
-      bg: 'bg-indigo-50',
     },
     {
-      label: 'Pending Approval',
+      label: 'Pending approval',
       value: pendingCases,
       delta: deltaPct(casesPendingTrans.length, casesPendingTransPrev),
       icon: Clock,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
     },
     {
       label: 'Completed',
       value: completedCases,
       delta: deltaPct(casesRefundedTrans.length, casesRefundedTransPrev),
       icon: FileCheck2,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50',
     },
     {
-      label: 'Awaiting Payment',
+      label: 'Awaiting payment',
       value: awaitingPaymentCases,
       delta: 0,
       icon: TrendingUp,
-      color: 'text-violet-600',
-      bg: 'bg-violet-50',
     },
   ];
 
   const greeting = `${greetingFor(now)}, ${session?.user.name ?? ''}`.trim();
 
+  const heroStat = stats[0]!;
+  const sideStats = stats.slice(1);
+  const heroPositive = heroStat.delta >= 0;
+  const HeroDeltaIcon = heroPositive ? ArrowUpRight : ArrowDownRight;
+
+  const taskTones = ['mint', 'lavender', 'peach'] as const;
+
   return (
-    <div className="px-6 py-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {greeting}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Here&apos;s what&apos;s happening with your refund operations.
-        </p>
+    <div className="px-5 py-5">
+      {/* Page header */}
+      <div className="mb-5 flex flex-col gap-1.5 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-display-sm text-heading">{greeting}</h1>
+          <p className="mt-1 text-[12px] text-body">
+            Here&apos;s what&apos;s happening with your refund operations.
+          </p>
+        </div>
+        <div className="text-[11px] text-muted-foreground">
+          <span className="text-caption uppercase tracking-wider">Period</span>
+          <span className="ml-2 font-medium text-foreground">{dateRange}</span>
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, idx) => {
+      {/* KPI row — yellow hero card + soft white side cards. */}
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <div className="surface-butter rounded-2xl p-4">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-primary-foreground/70">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/40">
+              <heroStat.icon className="h-3 w-3" />
+            </span>
+            <span>{heroStat.label}</span>
+          </div>
+          <div className="mt-3 text-[26px] font-semibold tabular leading-none text-primary-foreground">
+            {heroStat.value.toLocaleString()}
+          </div>
+          {heroStat.delta !== 0 && (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-pill bg-white/40 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+              <HeroDeltaIcon className="h-2.5 w-2.5" />
+              {Math.abs(heroStat.delta)}% vs previous {SPARK_DAYS}d
+            </div>
+          )}
+        </div>
+
+        {sideStats.map((stat, idx) => {
           const positive = stat.delta >= 0;
           const DeltaIcon = positive ? ArrowUpRight : ArrowDownRight;
           const Icon = stat.icon;
+          const tone = (['mint', 'lavender', 'sky'] as const)[idx % 3];
           return (
             <div
               key={stat.label}
-              className="group rounded-xl border border-border/50 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-border hover:shadow-md animate-fade-in-up"
-              style={{ animationDelay: `${idx * 60}ms`, animationFillMode: 'both' }}
+              className="rounded-2xl border border-border bg-surface p-4"
             >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {stat.label}
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span
+                  className={cn(
+                    'flex h-6 w-6 items-center justify-center rounded-lg',
+                    `chip-${tone}`,
+                  )}
+                >
+                  <Icon className="h-3 w-3" />
                 </span>
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stat.bg}`}>
-                  <Icon className={`h-4 w-4 ${stat.color}`} />
-                </div>
+                <span>{stat.label}</span>
               </div>
-              <div className="mt-3 text-3xl font-bold tabular tracking-tight text-foreground">
+              <div className="mt-3 text-[22px] font-semibold tabular leading-none text-heading">
                 {stat.value.toLocaleString()}
               </div>
-              <div className="mt-2 flex items-center gap-1.5 text-xs">
-                <span
-                  className={
-                    positive
-                      ? 'inline-flex items-center gap-0.5 font-medium text-emerald-600'
-                      : 'inline-flex items-center gap-0.5 font-medium text-rose-600'
-                  }
-                >
-                  <DeltaIcon className="h-3 w-3" />
-                  {Math.abs(stat.delta)}%
-                </span>
-                <span className="text-muted-foreground">{dateRange}</span>
-              </div>
+              {stat.delta !== 0 && (
+                <div className="mt-2 flex items-center gap-1 text-[10.5px]">
+                  <span
+                    className={
+                      positive
+                        ? 'inline-flex items-center gap-0.5 text-emerald-700'
+                        : 'inline-flex items-center gap-0.5 text-rose-700'
+                    }
+                  >
+                    <DeltaIcon className="h-3 w-3" />
+                    {Math.abs(stat.delta)}%
+                  </span>
+                  <span className="text-muted-foreground">vs previous {SPARK_DAYS}d</span>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
       {/* Chart + Pending */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-5">
-        {/* Refund Volume Chart */}
-        <div className="rounded-xl border border-border/50 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] lg:col-span-3">
-          <div className="flex items-start justify-between">
+      <div className="mt-4 grid gap-4 lg:grid-cols-5">
+        <div className="rounded-2xl border border-border bg-surface lg:col-span-3">
+          <div className="flex items-center justify-between px-4 pt-3 pb-1.5">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Refund Volume</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <h2 className="text-heading-sm text-heading">Refund volume</h2>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
                 Daily cases over the last {SPARK_DAYS} days
               </p>
             </div>
-            <span className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
-              {dateRange}
-            </span>
           </div>
-          <div className="mt-4 h-56 w-full">
+          <div className="h-48 w-full px-2 pb-3">
             <RefundVolumeChart data={trendCreated} />
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="rounded-xl border border-border/50 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] lg:col-span-2">
-          <h2 className="text-sm font-semibold text-foreground">Pending Tasks</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Items needing your attention</p>
-          <div className="mt-4 space-y-2.5">
+        <div className="rounded-2xl border border-border bg-surface lg:col-span-2">
+          <div className="px-4 pt-3">
+            <h2 className="text-heading-sm text-heading">Pending tasks</h2>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Items needing your attention</p>
+          </div>
+          <ul className="px-3 py-3 space-y-1">
             <PendingTask
               icon={FileCheck2}
+              tone={taskTones[0]}
               label="Cases pending approval"
               count={pendingCases}
               href="/cases?status=PENDING_APPROVAL"
-              color="text-amber-600"
-              bg="bg-amber-50"
             />
             <PendingTask
               icon={UserPlus}
+              tone={taskTones[1]}
               label="User access requests"
               count={pendingApprovals}
               href="/admin/pending-approvals"
-              color="text-rose-600"
-              bg="bg-rose-50"
             />
             <PendingTask
               icon={Clock}
+              tone={taskTones[2]}
               label="Awaiting payment"
               count={awaitingPaymentCases}
               href="/operations"
-              color="text-indigo-600"
-              bg="bg-indigo-50"
             />
-          </div>
+          </ul>
         </div>
       </div>
 
       {/* Recent Cases */}
-      <div className="mt-6 rounded-xl border border-border/50 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between px-5 py-4">
+      <div className="mt-5 overflow-hidden rounded-3xl border border-border bg-surface">
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Recent Cases</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">Latest refund activity</p>
+            <h2 className="text-heading-md text-heading">Recent cases</h2>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">Latest refund activity</p>
           </div>
           <Link
             href="/cases"
-            className="rounded-lg border border-border/60 bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-muted"
           >
-            View all
+            <span>View all</span>
+            <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
           </Link>
         </div>
         {recentCases.length === 0 ? (
@@ -315,52 +337,47 @@ export default async function DashboardHome() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-t border-border/40 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  <th className="px-5 py-2.5 text-left">Case</th>
-                  <th className="px-5 py-2.5 text-left">Customer</th>
-                  <th className="px-5 py-2.5 text-left">Brand</th>
-                  <th className="px-5 py-2.5 text-left">Country</th>
-                  <th className="px-5 py-2.5 text-right">Amount</th>
-                  <th className="px-5 py-2.5 text-right">Updated</th>
-                  <th className="px-5 py-2.5 text-right">Status</th>
+            <table className="w-full text-[13px]">
+              <thead className="bg-surface-subtle">
+                <tr className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-5 py-2 text-left font-medium">Case</th>
+                  <th className="px-5 py-2 text-left font-medium">Customer</th>
+                  <th className="px-5 py-2 text-left font-medium">Brand</th>
+                  <th className="px-5 py-2 text-left font-medium">Country</th>
+                  <th className="px-5 py-2 text-right font-medium">Amount</th>
+                  <th className="px-5 py-2 text-right font-medium">Updated</th>
+                  <th className="px-5 py-2 text-right font-medium">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {recentCases.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="border-t border-border/30 transition-colors hover:bg-muted/30"
-                  >
-                    <td className="px-5 py-3">
+                  <tr key={c.id} className="transition-colors hover:bg-surface-subtle">
+                    <td className="px-5 py-2.5">
                       <Link
                         href={`/cases/${c.id}`}
-                        className="font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
+                        className="font-medium text-foreground hover:text-primary"
                       >
                         {c.externalCaseNumber || c.caseNumber}
                       </Link>
                     </td>
-                    <td className="px-5 py-3">
-                      <div className="font-medium text-foreground">
-                        {c.customerName || '\u2014'}
-                      </div>
+                    <td className="px-5 py-2.5">
+                      <div className="text-foreground">{c.customerName || '\u2014'}</div>
                       {c.customerEmail ? (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-[11.5px] text-muted-foreground">
                           {c.customerEmail}
                         </div>
                       ) : null}
                     </td>
-                    <td className="px-5 py-3 text-muted-foreground">
+                    <td className="px-5 py-2.5 text-muted-foreground">
                       {c.brand?.name ?? '\u2014'}
                     </td>
-                    <td className="px-5 py-3 text-muted-foreground">
+                    <td className="px-5 py-2.5 text-muted-foreground">
                       {c.country?.registry?.flag ? `${c.country.registry.flag} ` : ''}{c.country?.registry?.nameEn ?? c.country?.registryCode ?? '\u2014'}
                     </td>
-                    <td className="px-5 py-3 text-right font-mono tabular text-foreground">
+                    <td className="px-5 py-2.5 text-right tabular text-foreground">
                       {c.totalRefundAmount.toFixed(2)} {c.orderCurrency}
                     </td>
-                    <td className="px-5 py-3 text-right text-xs text-muted-foreground">
+                    <td className="px-5 py-2.5 text-right text-[11.5px] text-muted-foreground">
                       {new Intl.DateTimeFormat('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -368,12 +385,9 @@ export default async function DashboardHome() {
                         minute: '2-digit',
                       }).format(c.updatedAt)}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <Badge
-                        variant={statusTone[c.status] ?? 'default'}
-                        className="text-[10px] uppercase tracking-wide"
-                      >
-                        {c.status.replace(/_/g, ' ')}
+                    <td className="px-5 py-2.5 text-right">
+                      <Badge variant={statusTone[c.status] ?? 'default'}>
+                        {c.status.replace(/_/g, ' ').toLowerCase()}
                       </Badge>
                     </td>
                   </tr>
@@ -389,33 +403,34 @@ export default async function DashboardHome() {
 
 function PendingTask({
   icon: Icon,
+  tone,
   label,
   count,
   href,
-  color,
-  bg,
 }: {
   icon: React.ComponentType<{ className?: string }>;
+  tone: 'mint' | 'lavender' | 'peach' | 'sky' | 'rose' | 'butter';
   label: string;
   count: number;
   href: string;
-  color: string;
-  bg: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 rounded-lg border border-border/30 bg-muted/20 p-3 transition-all duration-150 hover:border-border/60 hover:bg-muted/40"
-    >
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${bg}`}>
-        <Icon className={`h-4 w-4 ${color}`} />
-      </div>
-      <span className="flex-1 text-[13px] font-medium text-foreground">
-        {label}
-      </span>
-      <span className="font-mono text-lg font-bold tabular text-foreground">
-        {count}
-      </span>
-    </Link>
+    <li>
+      <Link
+        href={href}
+        className="flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-[11.5px] transition-colors hover:bg-surface-subtle"
+      >
+        <span
+          className={cn(
+            'flex h-7 w-7 items-center justify-center rounded-lg',
+            `chip-${tone}`,
+          )}
+        >
+          <Icon className="h-3 w-3" />
+        </span>
+        <span className="flex-1 text-foreground">{label}</span>
+        <span className="tabular text-[12.5px] font-semibold text-heading">{count}</span>
+      </Link>
+    </li>
   );
 }

@@ -3,122 +3,124 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════
-   Design tokens — Clean modern SaaS palette
+   WOW Refund — design tokens
+   Alshaya-inspired professional admin dashboard.
+   - Cool near-white background
+   - Deep Alshaya navy as the single accent
+   - Tonal blue chip palette (no rainbow pastels) for icon backings
+   - Generous rounded surfaces (12-22px)
+   - Single subtle shadow; no glow, no aurora.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    --background:          0 0% 98%;
-    --surface:             0 0% 100%;
-    --surface-subtle:      220 14% 96%;
-    --surface-muted:       220 14% 94%;
+    /* ── Cool neutral scale ───────────────────────────────────────────
+       Page background + cards are pure white. The 25/100 steps stay just
+       perceptibly cool so input fills, hover wash, and muted headers are
+       still distinguishable on a white surface. */
+    --neutral-0:   0 0% 100%;          /* pure white card / surface */
+    --neutral-25:  214 14% 97.8%;      /* near-white wash (input bg, hover) */
+    --neutral-50:  0 0% 100%;          /* pure white page background */
+    --neutral-100: 214 16% 95.5%;      /* muted (table headers, chips) */
+    --neutral-150: 214 18% 92%;        /* hairline borders */
+    --neutral-200: 214 16% 88%;
+    --neutral-300: 214 14% 80%;
+    --neutral-400: 214 12% 60%;
+    --neutral-500: 215 14% 46%;
+    --neutral-600: 215 18% 34%;
+    --neutral-700: 215 22% 24%;
+    --neutral-800: 215 26% 16%;
+    --neutral-900: 215 30% 10%;
+    --neutral-950: 215 34% 6%;
 
-    --foreground:          222 47% 11%;
-    --heading:             222 47% 11%;
-    --label:               215 20% 30%;
-    --body:                215 16% 47%;
-    --muted:               220 14% 96%;
-    --muted-foreground:    215 16% 47%;
+    /* ── Surfaces ─────────────────────────────────────────────────── */
+    --background:          var(--neutral-50);
+    --surface:             var(--neutral-0);
+    --surface-subtle:      var(--neutral-25);
+    --surface-muted:       var(--neutral-100);
+    --surface-elevated:    var(--neutral-0);
 
-    --border:              220 13% 91%;
-    --input:               220 13% 91%;
-    --ring:                243 75% 59%;
+    /* ── Text ─────────────────────────────────────────────────────── */
+    --foreground:          var(--neutral-900);
+    --heading:             var(--neutral-950);
+    --label:               var(--neutral-700);
+    --body:                var(--neutral-600);
+    --muted:               var(--neutral-100);
+    --muted-foreground:    var(--neutral-500);
 
-    --primary:             243 75% 59%;
-    --primary-foreground:  0 0% 100%;
-    --primary-hover:       243 70% 53%;
-    --primary-deep:        243 60% 44%;
-    --primary-subtle:      243 75% 96%;
+    /* ── Borders ──────────────────────────────────────────────────── */
+    --border:              var(--neutral-150);
+    --border-strong:       var(--neutral-200);
+    --input:               var(--neutral-200);
 
-    --card:                0 0% 100%;
-    --card-foreground:     222 47% 11%;
-    --popover:             0 0% 100%;
-    --popover-foreground:  222 47% 11%;
+    /* ── Single accent — Alshaya-inspired deep navy ───────────────── */
+    --primary:             215 70% 30%;          /* deep corporate navy */
+    --primary-foreground:  0 0% 100%;            /* white on navy */
+    --primary-hover:       215 76% 24%;
+    --primary-deep:        215 84% 18%;
+    --primary-subtle:      215 70% 95%;
+    --ring:                215 70% 40%;
 
-    --secondary:           220 14% 96%;
-    --secondary-foreground:222 47% 11%;
+    --card:                var(--neutral-0);
+    --card-foreground:     var(--neutral-900);
+    --popover:             var(--neutral-0);
+    --popover-foreground:  var(--neutral-900);
 
-    --accent:              243 75% 59%;
+    --secondary:           var(--neutral-100);
+    --secondary-foreground: var(--neutral-900);
+
+    --accent:              215 70% 30%;
     --accent-foreground:   0 0% 100%;
 
-    --destructive:         0 84% 60%;
+    /* ── Status — muted, never neon ───────────────────────────────── */
+    --destructive:         358 70% 56%;
     --destructive-foreground: 0 0% 100%;
-    --success:             142 71% 45%;
+    --success:             152 50% 42%;
     --success-foreground:  0 0% 100%;
-    --warning:             38 92% 50%;
+    --warning:             32 88% 50%;
     --warning-foreground:  0 0% 100%;
-    --info:                217 91% 60%;
+    --info:                206 70% 52%;
     --info-foreground:     0 0% 100%;
 
-    --radius: 0.625rem;
+    /* ── Chip palette — readable accents on pure white ────────────── */
+    --chip-butter:    214 80% 90%;   /* bright light navy */
+    --chip-butter-fg: 215 80% 28%;
+    --chip-mint:     172 60% 84%;    /* lively teal */
+    --chip-mint-fg:  178 70% 22%;
+    --chip-lavender: 248 70% 91%;    /* richer periwinkle */
+    --chip-lavender-fg: 248 50% 38%;
+    --chip-peach:     22 90% 88%;    /* warm peach */
+    --chip-peach-fg:  18 70% 36%;
+    --chip-sky:      200 92% 86%;    /* punchy sky */
+    --chip-sky-fg:   205 70% 28%;
+    --chip-rose:     342 78% 90%;    /* clearer rose */
+    --chip-rose-fg:  342 50% 36%;
 
-    --sidebar-bg:          224 71% 4%;
-    --sidebar-fg:          213 31% 91%;
-    --sidebar-muted:       215 20% 20%;
-    --sidebar-active:      243 75% 59%;
-    --sidebar-hover:       215 20% 12%;
-  }
+    /* ── Shape ────────────────────────────────────────────────────── */
+    --radius:    0.875rem;   /* 14px — soft rounded */
+    --radius-sm: 0.625rem;
+    --radius-lg: 1.125rem;   /* 18px */
+    --radius-xl: 1.5rem;     /* 24px */
 
-  [data-theme='dark'],
-  .dark {
-    --background:          222 47% 6%;
-    --surface:             222 40% 10%;
-    --surface-subtle:      222 40% 12%;
-    --surface-muted:       222 40% 14%;
-
-    --foreground:          0 0% 95%;
-    --heading:             0 0% 95%;
-    --label:               215 25% 80%;
-    --body:                215 20% 65%;
-    --muted:               222 30% 18%;
-    --muted-foreground:    215 20% 60%;
-
-    --border:              222 20% 20%;
-    --input:               222 20% 20%;
-    --ring:                243 75% 65%;
-
-    --primary:             243 75% 65%;
-    --primary-foreground:  222 47% 6%;
-    --primary-hover:       243 66% 58%;
-    --primary-deep:        243 52% 46%;
-    --primary-subtle:      243 50% 20%;
-
-    --card:                222 40% 10%;
-    --card-foreground:     0 0% 95%;
-    --popover:             222 40% 10%;
-    --popover-foreground:  0 0% 95%;
-
-    --secondary:           222 30% 18%;
-    --secondary-foreground: 0 0% 95%;
-
-    --accent:              243 75% 65%;
-    --accent-foreground:   222 47% 6%;
-
-    --destructive:         0 63% 55%;
-    --destructive-foreground: 0 0% 95%;
-    --success:             142 60% 50%;
-    --success-foreground:  222 47% 6%;
-    --warning:             38 92% 55%;
-    --warning-foreground:  222 47% 6%;
-    --info:                243 75% 65%;
-    --info-foreground:     222 47% 6%;
-
-    --sidebar-bg:          222 47% 5%;
-    --sidebar-fg:          213 31% 91%;
-    --sidebar-muted:       215 20% 20%;
-    --sidebar-active:      243 75% 65%;
-    --sidebar-hover:       215 20% 10%;
+    /* ── Sidebar — narrow icon rail ───────────────────────────────── */
+    --sidebar-bg:          var(--neutral-50);
+    --sidebar-fg:          var(--neutral-700);
+    --sidebar-muted:       var(--neutral-500);
+    --sidebar-active:      var(--neutral-950);
+    --sidebar-active-bg:   var(--primary);
+    --sidebar-hover:       var(--neutral-100);
+    --sidebar-border:      var(--neutral-150);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Typography
+   Typography — Inter, calm scale.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
   html {
-    font-family: var(--font-sans), 'Inter', system-ui, -apple-system, sans-serif;
-    font-feature-settings: 'cv11', 'cv02', 'cv03', 'cv04', 'ss01';
+    font-family: var(--font-sans), 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -127,48 +129,45 @@
   body {
     @apply bg-background text-foreground;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.55;
   }
 
-  h1, h2, h3 {
-    @apply text-heading;
+  h1, h2, h3, h4, h5, h6 {
+    color: hsl(var(--heading));
     font-weight: 600;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.011em;
   }
-  h4, h5, h6 {
-    @apply text-heading;
-    font-weight: 600;
-  }
+  h1 { letter-spacing: -0.02em; }
 
   .tabular, [data-tabular='true'] {
     font-variant-numeric: tabular-nums;
   }
 
   ::selection {
-    background-color: hsl(var(--primary) / 0.15);
+    background-color: hsl(var(--primary) / 0.5);
     color: hsl(var(--foreground));
   }
 
   :focus-visible {
-    outline: 2px solid hsl(var(--ring) / 0.5);
+    outline: 2px solid hsl(var(--ring) / 0.55);
     outline-offset: 2px;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Scrollbar
+   Scrollbar — thin, neutral.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) transparent;
+    scrollbar-color: hsl(var(--border-strong)) transparent;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 8px;
+    height: 8px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
@@ -176,53 +175,71 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
+    background: hsl(var(--neutral-300));
     border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+    background-color: hsl(var(--neutral-400));
+    background-clip: content-box;
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Animations
+   Soft surface helpers.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  .hairline-b { box-shadow: inset 0 -1px 0 hsl(var(--border)); }
+  .hairline-t { box-shadow: inset 0 1px 0 hsl(var(--border)); }
+
+  /* Pastel chips — for menu / KPI icons. */
+  .chip-butter   { background-color: hsl(var(--chip-butter));   color: hsl(var(--chip-butter-fg)); }
+  .chip-mint     { background-color: hsl(var(--chip-mint));     color: hsl(var(--chip-mint-fg)); }
+  .chip-lavender { background-color: hsl(var(--chip-lavender)); color: hsl(var(--chip-lavender-fg)); }
+  .chip-peach    { background-color: hsl(var(--chip-peach));    color: hsl(var(--chip-peach-fg)); }
+  .chip-sky      { background-color: hsl(var(--chip-sky));      color: hsl(var(--chip-sky-fg)); }
+  .chip-rose     { background-color: hsl(var(--chip-rose));     color: hsl(var(--chip-rose-fg)); }
+
+  /* Soft solid surface used by hero KPI / featured card. */
+  .surface-butter { background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+
+  .kbd {
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 text-[10.5px] font-medium;
+    border-color: hsl(var(--border));
+    background-color: hsl(var(--surface));
+    color: hsl(var(--muted-foreground));
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Motion — restrained: hover colour transitions + 1 short fade-in.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
   @keyframes fade-in {
     from { opacity: 0; }
-    to { opacity: 1; }
+    to   { opacity: 1; }
   }
 
   @keyframes fade-in-up {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes slide-in-left {
-    from { opacity: 0; transform: translateX(-8px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-
-  @keyframes count-up {
     from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
-  .animate-fade-in {
-    animation: fade-in 0.3s ease-out both;
-  }
+  .animate-fade-in    { animation: fade-in 200ms ease-out both; }
+  .animate-fade-in-up { animation: fade-in-up 240ms ease-out both; }
+}
 
-  .animate-fade-in-up {
-    animation: fade-in-up 0.4s ease-out both;
-  }
-
-  .animate-slide-in-left {
-    animation: slide-in-left 0.3s ease-out both;
-  }
-
-  .animate-count-up {
-    animation: count-up 0.5s ease-out both;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

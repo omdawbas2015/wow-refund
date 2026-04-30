@@ -1,45 +1,31 @@
 import { type ReactNode } from 'react';
-import { Zap } from 'lucide-react';
 
 export default async function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen">
-      {/* Left panel - branding */}
-      <div className="hidden lg:flex lg:w-[45%] lg:flex-col lg:justify-between bg-[hsl(224,71%,4%)] p-10 text-white">
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Top bar */}
+      <header className="flex h-14 items-center px-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600">
-            <Zap className="h-4 w-4 text-white" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-2xl surface-butter text-[14px] font-semibold tracking-tight">
+            A
           </div>
-          <span className="text-lg font-semibold">WOW Refund</span>
+          <span className="text-[13.5px] font-semibold tracking-tight text-heading">
+            Alshaya Refund
+          </span>
         </div>
+      </header>
 
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Streamline your refund operations
-          </h1>
-          <p className="mt-3 text-base text-white/60 leading-relaxed">
-            Manage refund cases, track approvals, and process payments efficiently
-            with a modern operations platform.
-          </p>
-        </div>
-
-        <p className="text-xs text-white/30">
-          &copy; {new Date().getFullYear()} WOW Refund
-        </p>
-      </div>
-
-      {/* Right panel - form */}
-      <div className="flex flex-1 flex-col justify-center px-6 py-10 bg-white">
-        <div className="mx-auto w-full max-w-sm">
-          <div className="mb-8 lg:hidden flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600">
-              <Zap className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-lg font-semibold text-foreground">WOW Refund</span>
-          </div>
+      {/* Form */}
+      <main className="flex flex-1 items-center justify-center px-6 py-8">
+        <div className="w-full max-w-[380px] rounded-3xl border border-border bg-surface p-7">
           {children}
         </div>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="px-6 py-4 text-[11.5px] text-muted-foreground">
+        &copy; {new Date().getFullYear()} Alshaya Refund
+      </footer>
     </div>
   );
 }
