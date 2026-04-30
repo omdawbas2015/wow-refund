@@ -175,37 +175,37 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-[244px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
+    <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
       {/* Brand — navy chip with A monogram. */}
-      <div className="flex h-14 items-center gap-2.5 px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-2xl surface-butter text-[14px] font-semibold tracking-tight">
+      <div className="flex h-12 items-center gap-2 px-4">
+        <div className="flex h-7 w-7 items-center justify-center rounded-xl surface-butter text-[12px] font-semibold tracking-tight">
           A
         </div>
         <div className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-[13.5px] font-semibold tracking-tight text-heading">
+          <span className="truncate text-[12px] font-semibold tracking-tight text-heading">
             Alshaya Refund
           </span>
-          <span className="truncate text-[10.5px] text-muted-foreground">
+          <span className="truncate text-[9.5px] text-muted-foreground">
             Operations
           </span>
         </div>
       </div>
 
       {/* Search */}
-      <div className="px-4 pt-1">
+      <div className="px-3 pt-0.5">
         <button
           type="button"
           onClick={openSearch}
-          className="flex h-9 w-full items-center gap-2 rounded-pill border border-sidebar-border bg-surface px-3 text-[12px] text-sidebar-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+          className="flex h-8 w-full items-center gap-2 rounded-pill border border-sidebar-border bg-surface px-2.5 text-[11px] text-sidebar-muted transition-colors hover:bg-surface-muted hover:text-foreground"
           aria-label="Search"
         >
-          <SearchIcon className="h-3.5 w-3.5 shrink-0" />
+          <SearchIcon className="h-3 w-3 shrink-0" />
           <span className="flex-1 text-left">Search</span>
-          <kbd className="kbd">⌘K</kbd>
+          <kbd className="kbd text-[9px]">⌘K</kbd>
         </button>
       </div>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-4 pb-2">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pt-3 pb-1.5">
         {/* Dashboard */}
         <ul className="space-y-1">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
@@ -220,7 +220,7 @@ export function Sidebar({
           if (items.length === 0) return null;
           return (
             <div key={i}>
-              <div className="mt-5 mb-1.5 px-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-sidebar-muted">
+              <div className="mt-4 mb-1 px-2.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-sidebar-muted">
                 {section.label}
               </div>
               <ul className="space-y-1">
@@ -237,8 +237,8 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border px-3 py-3">
-        <ul className="space-y-1">
+      <div className="border-t border-sidebar-border px-2.5 py-2">
+        <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
             .map((item) => (
@@ -252,10 +252,10 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="flex h-10 items-center gap-3 rounded-2xl px-2 text-[12.5px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
+              className="flex h-8 items-center gap-2.5 rounded-xl px-1.5 text-[11px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl chip-rose">
-                <LogOut className="h-3.5 w-3.5" />
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg chip-rose">
+                <LogOut className="h-3 w-3" />
               </span>
               <span className="flex-1 truncate">Sign out</span>
             </a>
@@ -274,7 +274,7 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group flex h-10 items-center gap-3 rounded-2xl px-2 text-[12.5px] font-medium transition-colors',
+          'group flex h-8 items-center gap-2.5 rounded-xl px-1.5 text-[11px] font-medium transition-colors',
           isActive
             ? 'bg-surface text-heading shadow-xs'
             : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-heading',
@@ -282,16 +282,16 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       >
         <span
           className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-xl',
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg',
             isActive ? 'surface-butter' : CHIP_CLASS[item.tone],
           )}
         >
-          <Icon className="h-3.5 w-3.5" />
+          <Icon className="h-3 w-3" />
         </span>
         <span className="flex-1 truncate">{item.label}</span>
         {showBadge && (
           <span
-            className="inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-neutral-900 px-1.5 text-[10px] font-semibold leading-none text-white"
+            className="inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-neutral-900 px-1 text-[9px] font-semibold leading-none text-white"
             aria-label={`${item.badge} pending`}
           >
             {item.badge}

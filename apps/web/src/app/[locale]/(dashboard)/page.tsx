@@ -190,36 +190,36 @@ export default async function DashboardHome() {
   const taskTones = ['mint', 'lavender', 'peach'] as const;
 
   return (
-    <div className="px-6 py-6">
+    <div className="px-5 py-5">
       {/* Page header */}
-      <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div className="mb-5 flex flex-col gap-1.5 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-display-md text-heading">{greeting}</h1>
-          <p className="mt-1 text-[13px] text-body">
+          <h1 className="text-display-sm text-heading">{greeting}</h1>
+          <p className="mt-1 text-[12px] text-body">
             Here&apos;s what&apos;s happening with your refund operations.
           </p>
         </div>
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-[11px] text-muted-foreground">
           <span className="text-caption uppercase tracking-wider">Period</span>
           <span className="ml-2 font-medium text-foreground">{dateRange}</span>
         </div>
       </div>
 
       {/* KPI row — yellow hero card + soft white side cards. */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="surface-butter rounded-3xl p-5">
-          <div className="flex items-center gap-2 text-[12px] font-medium text-primary-foreground/70">
-            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/40">
-              <heroStat.icon className="h-3.5 w-3.5" />
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <div className="surface-butter rounded-2xl p-4">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-primary-foreground/70">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/40">
+              <heroStat.icon className="h-3 w-3" />
             </span>
             <span>{heroStat.label}</span>
           </div>
-          <div className="mt-4 text-[34px] font-semibold tabular leading-none text-primary-foreground">
+          <div className="mt-3 text-[26px] font-semibold tabular leading-none text-primary-foreground">
             {heroStat.value.toLocaleString()}
           </div>
           {heroStat.delta !== 0 && (
-            <div className="mt-2 inline-flex items-center gap-1 rounded-pill bg-white/40 px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
-              <HeroDeltaIcon className="h-3 w-3" />
+            <div className="mt-2 inline-flex items-center gap-1 rounded-pill bg-white/40 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+              <HeroDeltaIcon className="h-2.5 w-2.5" />
               {Math.abs(heroStat.delta)}% vs previous {SPARK_DAYS}d
             </div>
           )}
@@ -233,24 +233,24 @@ export default async function DashboardHome() {
           return (
             <div
               key={stat.label}
-              className="rounded-3xl border border-border bg-surface p-5"
+              className="rounded-2xl border border-border bg-surface p-4"
             >
-              <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <span
                   className={cn(
-                    'flex h-7 w-7 items-center justify-center rounded-xl',
+                    'flex h-6 w-6 items-center justify-center rounded-lg',
                     `chip-${tone}`,
                   )}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="h-3 w-3" />
                 </span>
                 <span>{stat.label}</span>
               </div>
-              <div className="mt-4 text-[28px] font-semibold tabular leading-none text-heading">
+              <div className="mt-3 text-[22px] font-semibold tabular leading-none text-heading">
                 {stat.value.toLocaleString()}
               </div>
               {stat.delta !== 0 && (
-                <div className="mt-2 flex items-center gap-1 text-[11.5px]">
+                <div className="mt-2 flex items-center gap-1 text-[10.5px]">
                   <span
                     className={
                       positive
@@ -270,25 +270,25 @@ export default async function DashboardHome() {
       </div>
 
       {/* Chart + Pending */}
-      <div className="mt-5 grid gap-5 lg:grid-cols-5">
-        <div className="rounded-3xl border border-border bg-surface lg:col-span-3">
-          <div className="flex items-center justify-between px-5 pt-4 pb-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-5">
+        <div className="rounded-2xl border border-border bg-surface lg:col-span-3">
+          <div className="flex items-center justify-between px-4 pt-3 pb-1.5">
             <div>
-              <h2 className="text-heading-md text-heading">Refund volume</h2>
-              <p className="mt-0.5 text-[12px] text-muted-foreground">
+              <h2 className="text-heading-sm text-heading">Refund volume</h2>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
                 Daily cases over the last {SPARK_DAYS} days
               </p>
             </div>
           </div>
-          <div className="h-56 w-full px-3 pb-4">
+          <div className="h-48 w-full px-2 pb-3">
             <RefundVolumeChart data={trendCreated} />
           </div>
         </div>
 
-        <div className="rounded-3xl border border-border bg-surface lg:col-span-2">
-          <div className="px-5 pt-4">
-            <h2 className="text-heading-md text-heading">Pending tasks</h2>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">Items needing your attention</p>
+        <div className="rounded-2xl border border-border bg-surface lg:col-span-2">
+          <div className="px-4 pt-3">
+            <h2 className="text-heading-sm text-heading">Pending tasks</h2>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Items needing your attention</p>
           </div>
           <ul className="px-3 py-3 space-y-1">
             <PendingTask
@@ -418,18 +418,18 @@ function PendingTask({
     <li>
       <Link
         href={href}
-        className="flex items-center gap-3 rounded-2xl px-2 py-2 text-[13px] transition-colors hover:bg-surface-subtle"
+        className="flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-[11.5px] transition-colors hover:bg-surface-subtle"
       >
         <span
           className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-xl',
+            'flex h-7 w-7 items-center justify-center rounded-lg',
             `chip-${tone}`,
           )}
         >
-          <Icon className="h-3.5 w-3.5" />
+          <Icon className="h-3 w-3" />
         </span>
         <span className="flex-1 text-foreground">{label}</span>
-        <span className="tabular text-[14px] font-semibold text-heading">{count}</span>
+        <span className="tabular text-[12.5px] font-semibold text-heading">{count}</span>
       </Link>
     </li>
   );
