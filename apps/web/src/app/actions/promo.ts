@@ -87,7 +87,7 @@ export async function allocatePromoAction(input: unknown): Promise<
     // stuck as ALLOCATED without a matching allocation row. Matches the
     // pattern used by cases.ts / batches.ts for multi-step mutations.
     type TxResult =
-      | { kind: 'ok'; code: string; allocationId: string }
+      | { kind: 'ok'; code: string; allocationId: string; expiresAt: Date | null }
       | { kind: 'out_of_stock' }
       | { kind: 'race' };
     const outcome = await prisma.$transaction(async (tx): Promise<TxResult> => {
@@ -99,7 +99,7 @@ export async function allocatePromoAction(input: unknown): Promise<
           OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         },
         orderBy: { uploadedAt: 'asc' },
-        select: { id: true, code: true },
+        select: { id: true, code: true, expiresAt: true },
       });
       if (!candidate) return { kind: 'out_of_stock' };
 
@@ -118,11 +118,11 @@ export async function allocatePromoAction(input: unknown): Promise<
           customerName: data.customerName ?? null,
           requestedById: user.id,
           reason: data.reason ?? null,
-          emailedAt: pool.type === 'CUSTOMER_COMPENSATION' ? new Date() : null,
+          emailedAt: null,
         },
       });
 
-      return { kind: 'ok', code: candidate.code, allocationId: allocation.id };
+      return { kind: 'ok', code: candidate.code, allocationId: allocation.id, expiresAt: candidate.expiresAt };
     });
 
     if (outcome.kind === 'out_of_stock') {
@@ -146,9 +146,15 @@ export async function allocatePromoAction(input: unknown): Promise<
             value: String(pool.value),
             currency: pool.currency,
             brandName: pool.brand.name,
-            expiresAt: 'No expiry',
+            expiresAt: outcome.expiresAt
+              ? outcome.expiresAt.toLocaleDateString('en-GB')
+              : 'No expiry',
           },
           context: { type: 'PROMO', id: outcome.allocationId },
+        });
+        await prisma.promoAllocation.update({
+          where: { id: outcome.allocationId },
+          data: { emailedAt: new Date() },
         });
       } catch (emailErr) {
         // Non-fatal: allocation succeeded, email is best-effort.
