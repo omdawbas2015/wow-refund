@@ -200,7 +200,7 @@ export default async function DashboardHome() {
           </p>
         </div>
         <div className="text-[12px] text-muted-foreground">
-          <span className="caption uppercase tracking-wider">Period</span>
+          <span className="text-caption uppercase tracking-wider">Period</span>
           <span className="ml-2 font-medium text-foreground">{dateRange}</span>
         </div>
       </div>
