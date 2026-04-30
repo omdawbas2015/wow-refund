@@ -1,14 +1,13 @@
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 /**
- * Aura brand mark — compact "Aura" wordmark + small rose gradient dot.
- *
- * Previously this rendered the large `aura-mark.png` lockup, which
- * operators found oversized, mis-aligned and visually dominant in the
- * workbench + case-detail views. This redesign is a lightweight,
- * CSS-only chip: a tiny pink-to-magenta gradient dot + "Aura" wordmark
- * in the brand's rose colour. Much smaller footprint, scales crisply
- * at every DPI, and matches the aesthetic of the rest of the app.
+ * Aura brand mark — renders the official Aura wordmark PNG
+ * (`/brand/aura-mark.png`, ~3:1 aspect ratio) so every surface in the
+ * app shows the exact same brand lockup the operator sees on Aura's
+ * own communications. `size` is the rendered height in pixels; width
+ * is derived from the image's natural aspect ratio so the mark scales
+ * crisply without distortion.
  */
 export function AuraLogo({
   size = 14,
@@ -19,33 +18,32 @@ export function AuraLogo({
   className?: string;
   title?: string;
 }) {
-  // Wordmark height matches `size`; the dot sits flush with the cap height.
-  const dotPx = Math.max(6, Math.round(size * 0.6));
-
+  // aura-mark.png is 640×212 (≈3.02:1).
+  const ratio = 640 / 212;
+  const width = Math.round(size * ratio);
   return (
     <span
       role="img"
       aria-label={title}
       title={title}
-      className={cn(
-        'inline-flex flex-none items-center gap-1 font-semibold leading-none',
-        className,
-      )}
-      style={{ fontSize: `${size}px`, color: '#C0006C' }}
+      className={cn('inline-flex flex-none items-center', className)}
+      style={{ height: `${size}px`, width: `${width}px` }}
     >
-      <span
-        aria-hidden="true"
-        className="rounded-full bg-gradient-to-br from-[#F6339A] to-[#C0006C]"
-        style={{ width: `${dotPx}px`, height: `${dotPx}px` }}
+      <Image
+        src="/brand/aura-mark.png"
+        alt={title}
+        width={640}
+        height={212}
+        priority={false}
+        className="h-full w-full object-contain"
       />
-      <span className="tracking-tight">Aura</span>
     </span>
   );
 }
 
 /**
- * Aura points badge — compact pink pill that combines the Aura brand
- * mark with a formatted points value. Use this instead of rendering
+ * Aura points badge — compact pink pill that combines the Aura
+ * wordmark with a formatted points value. Use this instead of rendering
  * AuraLogo + a separate points counter side-by-side: it keeps every
  * Aura points display visually identical across the Pool, case
  * details, and the new-case form.
@@ -66,11 +64,7 @@ export function AuraPointsBadge({
         className,
       )}
     >
-      <span
-        aria-hidden="true"
-        className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-[#F6339A] to-[#C0006C]"
-      />
-      <span className="font-semibold tracking-tight">Aura</span>
+      <AuraLogo size={12} />
       <span aria-hidden="true" className="opacity-40">
         ·
       </span>
