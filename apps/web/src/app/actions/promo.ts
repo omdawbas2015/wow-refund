@@ -136,7 +136,7 @@ export async function allocatePromoAction(input: unknown): Promise<
     if (pool.type === 'CUSTOMER_COMPENSATION') {
       try {
         const { dispatchEmail } = await import('@/lib/email/dispatcher');
-        await dispatchEmail({
+        const result = await dispatchEmail({
           templateKey: 'CUSTOMER_PROMO_COMPENSATION',
           locale: 'en',
           to: data.customerEmail,
@@ -152,10 +152,12 @@ export async function allocatePromoAction(input: unknown): Promise<
           },
           context: { type: 'PROMO', id: outcome.allocationId },
         });
-        await prisma.promoAllocation.update({
-          where: { id: outcome.allocationId },
-          data: { emailedAt: new Date() },
-        });
+        if (result.delivered) {
+          await prisma.promoAllocation.update({
+            where: { id: outcome.allocationId },
+            data: { emailedAt: new Date() },
+          });
+        }
       } catch (emailErr) {
         // Non-fatal: allocation succeeded, email is best-effort.
         console.error('[allocatePromoAction] email dispatch failed:', emailErr);
