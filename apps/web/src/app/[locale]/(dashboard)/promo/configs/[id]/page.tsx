@@ -51,7 +51,7 @@ export default async function PromoConfigDetailPage({ params }: PageProps) {
   const totalCodes = [...counts.values()].reduce((a, b) => a + b, 0);
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="mx-auto max-w-5xl px-8 py-10">
       <Link href="/promo" className="text-xs uppercase text-muted-foreground hover:text-primary">
         ← Promo codes
       </Link>

@@ -122,7 +122,7 @@ export default async function AgentsReportPage({ searchParams }: PageProps) {
     .sort((a, b) => b.refunded - a.refunded || b.created - a.created);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <Link
         href={`/reports?from=${range.fromIso}&to=${range.toIso}`}
         className="text-xs uppercase text-muted-foreground hover:text-primary"

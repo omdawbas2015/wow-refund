@@ -90,7 +90,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-8 py-10">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-display-md font-normal tracking-tight text-heading">Inbox</h1>

@@ -27,7 +27,7 @@ export default async function NewCasePage({
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="mx-auto max-w-5xl px-8 py-10">
       <Card>
         <CardHeader>
           <CardTitle className="text-heading-lg">Create refund case</CardTitle>

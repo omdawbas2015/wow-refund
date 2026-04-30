@@ -32,7 +32,7 @@ export default async function PendingApprovalsPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="mx-auto max-w-5xl px-8 py-10">
       <div className="mb-6">
         <h1 className="text-display-md font-normal tracking-tight text-heading">{t('title')}</h1>
         <p className="mt-2 text-body">{t('subtitle')}</p>

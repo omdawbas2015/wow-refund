@@ -60,13 +60,12 @@ export default async function AllocatePromoPage({
   const canManagePools = POOL_MANAGEMENT_ROLES.has(session.user.role ?? '');
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+    <div className="mx-auto max-w-3xl space-y-6 px-6 py-10">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-heading">Allocate promo</h1>
-          <p className="text-sm text-muted-foreground">
-            Send a promo code to a customer or issue a service-recovery code internally. We'll flag
-            any recent promos this customer already received.
+          <h1 className="text-display-md font-semibold tracking-tight text-heading">Send Promo</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Send a promo code to a customer or issue a service-recovery code internally.
           </p>
         </div>
         <div className="flex items-center gap-2">

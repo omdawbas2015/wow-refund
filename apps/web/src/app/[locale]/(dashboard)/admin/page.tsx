@@ -23,7 +23,7 @@ export default async function AdminPage() {
   if (session.user.role !== 'ADMIN') redirect('/');
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="mx-auto max-w-5xl px-8 py-10">
       <div className="mb-6">
         <h1 className="text-display-md font-normal tracking-tight text-heading">Administration</h1>
         <p className="mt-1 text-sm text-muted-foreground">

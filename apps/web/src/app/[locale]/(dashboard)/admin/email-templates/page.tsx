@@ -35,9 +35,9 @@ export default async function EmailTemplatesPage() {
   }, {});
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-8 py-10">
       <div>
-        <h1 className="text-heading-lg text-heading">Email Templates</h1>
+        <h1 className="text-display-md font-semibold tracking-tight text-heading">Email Templates</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Templated outbound emails. Variables in <code className="rounded bg-surface-subtle px-1 py-0.5 text-xs">{'{{double_curly}}'}</code> are substituted at send time. Each template has separate EN/AR rows.
         </p>
@@ -50,7 +50,7 @@ export default async function EmailTemplatesPage() {
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
-              <thead className="border-b border-border bg-surface-subtle text-left text-caption uppercase text-muted-foreground">
+              <thead className="border-b border-border/50 text-left text-caption uppercase text-muted-foreground">
                 <tr>
                   <th className="p-3">Key</th>
                   <th className="p-3">Subject (EN)</th>

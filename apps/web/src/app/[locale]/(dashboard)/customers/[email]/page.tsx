@@ -86,7 +86,7 @@ export default async function CustomerPage({
     .map(([currency, amount]) => formatCurrency(amount, currency, localeFmt, 2));
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <div className="mb-6">
         <div className="text-xs uppercase text-muted-foreground">Customer journey</div>
         <h1 className="text-display-md font-normal tracking-tight text-heading break-all">
@@ -176,7 +176,7 @@ export default async function CustomerPage({
         </CardHeader>
         <CardContent className="p-0">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-surface-subtle text-left text-caption uppercase text-muted-foreground">
+            <thead className="border-b border-border/50 text-left text-caption uppercase text-muted-foreground">
               <tr>
                 <th className="p-3">Case</th>
                 <th className="p-3">Country / Brand</th>

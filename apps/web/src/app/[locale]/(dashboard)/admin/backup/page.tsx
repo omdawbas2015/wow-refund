@@ -29,9 +29,9 @@ export default async function BackupAdminPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-4xl space-y-6 px-8 py-10">
       <div>
-        <h1 className="text-heading-lg text-heading">Backup</h1>
+        <h1 className="text-display-md font-semibold tracking-tight text-heading">Backup</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Configure automated database snapshots and retention. Manual backups
           can be triggered any time and are recorded in the run history.
@@ -58,7 +58,7 @@ export default async function BackupAdminPage() {
         </CardHeader>
         <CardContent className="p-0">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-surface-subtle/40 text-left text-caption uppercase text-muted-foreground">
+            <thead className="border-b border-border/50/40 text-left text-caption uppercase text-muted-foreground">
               <tr>
                 <th className="px-3 py-2.5">Trigger</th>
                 <th className="px-3 py-2.5">Status</th>

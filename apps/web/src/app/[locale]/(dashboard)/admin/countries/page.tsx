@@ -62,9 +62,9 @@ export default async function CountriesAdminPage() {
   const activeCount = rows.filter((r) => r.isActive).length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-8 py-10">
       <div>
-        <h1 className="text-heading-lg text-heading">Countries</h1>
+        <h1 className="text-display-md font-semibold tracking-tight text-heading">Countries</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Activate the countries your business operates in. Each active country plugs into case
           creation, promo configs, reports, and SLA rules — its currency lights up automatically and

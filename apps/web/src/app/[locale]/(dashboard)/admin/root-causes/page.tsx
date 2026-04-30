@@ -15,9 +15,9 @@ export default async function RootCausesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-8 py-10">
       <div>
-        <h1 className="text-heading-lg text-heading">Root Causes</h1>
+        <h1 className="text-display-md font-semibold tracking-tight text-heading">Root Causes</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Standardized reasons for refund requests. Used to power root-cause analytics.
         </p>
@@ -29,7 +29,7 @@ export default async function RootCausesPage() {
         </CardHeader>
         <CardContent className="p-0">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-surface-subtle text-left text-caption uppercase text-muted-foreground">
+            <thead className="border-b border-border/50 text-left text-caption uppercase text-muted-foreground">
               <tr>
                 <th className="p-3">Key</th>
                 <th className="p-3">Label</th>

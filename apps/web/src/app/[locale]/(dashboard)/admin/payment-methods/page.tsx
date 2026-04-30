@@ -15,7 +15,7 @@ export default async function PaymentMethodsAdminPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <Link href="/admin" className="text-xs uppercase text-muted-foreground hover:text-primary">
         ← Admin
       </Link>

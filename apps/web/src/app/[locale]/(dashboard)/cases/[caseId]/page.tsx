@@ -75,7 +75,7 @@ export default async function CaseDetailsPage({
       : refundCase.caseNumber;
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       {/* Page header card — case # + status on the left, country / brand
           on the right, customer + order + refund laid out as one
           consistent strip below. Reads as a single information block

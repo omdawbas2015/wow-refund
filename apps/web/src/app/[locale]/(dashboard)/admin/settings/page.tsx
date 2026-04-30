@@ -286,7 +286,7 @@ export default async function SettingsPage() {
 
       <div className="space-y-4 border-t border-border pt-8">
         <div>
-          <h2 className="text-heading-md text-heading">Workspace configuration</h2>
+          <h2 className="text-lg font-semibold text-heading">Workspace configuration</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Workspace-wide key/value settings. Changes apply immediately to all users.
           </p>
@@ -346,7 +346,7 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
-              <thead className="border-b border-border bg-surface-subtle text-left text-caption uppercase text-muted-foreground">
+              <thead className="border-b border-border/50 text-left text-caption uppercase text-muted-foreground">
                 <tr>
                   <th className="p-3">Key</th>
                   <th className="p-3">Value</th>

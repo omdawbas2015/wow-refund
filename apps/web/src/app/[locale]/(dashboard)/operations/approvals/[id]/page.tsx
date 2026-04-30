@@ -44,7 +44,7 @@ export default async function ApprovalBatchDetailPage({ params }: PageProps) {
   const currency = batch.cases[0]?.orderCurrency ?? '';
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <div className="mb-6 flex items-start justify-between">
         <div>
           <Link
