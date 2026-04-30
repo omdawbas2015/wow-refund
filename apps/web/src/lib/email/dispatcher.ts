@@ -42,6 +42,18 @@ export interface EmailDispatchResult {
 const WEBHOOK_URL = process.env['POWER_AUTOMATE_WEBHOOK_URL'] ?? '';
 const SIGNING_SECRET = process.env['POWER_AUTOMATE_SIGNING_SECRET'] ?? '';
 
+// Context-specific webhook overrides — each Power Automate flow has its own
+// trigger URL. When set, these take priority over the general WEBHOOK_URL.
+const PROMO_WEBHOOK_URL = process.env['POWER_AUTOMATE_PROMO_WEBHOOK_URL'] ?? '';
+const STORE_WEBHOOK_URL = process.env['POWER_AUTOMATE_STORE_WEBHOOK_URL'] ?? '';
+
+/** Pick the most specific webhook URL for this payload's context type. */
+function resolveWebhookUrl(contextType?: string): string {
+  if (contextType === 'PROMO' && PROMO_WEBHOOK_URL) return PROMO_WEBHOOK_URL;
+  if (contextType === 'STORE' && STORE_WEBHOOK_URL) return STORE_WEBHOOK_URL;
+  return WEBHOOK_URL;
+}
+
 export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatchResult> {
   // Load template if no override given
   let subject: string;
@@ -85,8 +97,11 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
     },
   });
 
+  // Resolve which webhook URL to use for this context type
+  const targetUrl = resolveWebhookUrl(payload.context?.type);
+
   // If no webhook configured (dev), log to console and mark SENT
-  if (!WEBHOOK_URL) {
+  if (!targetUrl) {
     console.log('\n══════════════════════════════════════════════════════════════');
     console.log('📧 EMAIL (dev mode — no Power Automate webhook configured)');
     console.log('──────────────────────────────────────────────────────────────');
@@ -107,7 +122,7 @@ export async function dispatchEmail(payload: EmailPayload): Promise<EmailDispatc
 
   // Production: POST to Power Automate
   try {
-    const res = await fetch(WEBHOOK_URL, {
+    const res = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

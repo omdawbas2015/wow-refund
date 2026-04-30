@@ -132,9 +132,29 @@ export async function allocatePromoAction(input: unknown): Promise<
       return { ok: false, error: 'Another allocation just claimed that code. Please retry.' };
     }
 
-    // TODO(phase-4.2): dispatch real email via Power Automate for
-    // CUSTOMER_COMPENSATION pools. For now the `emailedAt` timestamp doubles
-    // as a demo marker so the UI can surface "emailed" state.
+    // Dispatch real email via Power Automate for CUSTOMER_COMPENSATION pools.
+    if (pool.type === 'CUSTOMER_COMPENSATION') {
+      try {
+        const { dispatchEmail } = await import('@/lib/email/dispatcher');
+        await dispatchEmail({
+          templateKey: 'CUSTOMER_PROMO_COMPENSATION',
+          locale: 'en',
+          to: data.customerEmail,
+          variables: {
+            customerName: data.customerName ?? data.customerEmail,
+            promoCode: outcome.code,
+            value: String(pool.value),
+            currency: pool.currency,
+            brandName: pool.brand.name,
+            expiresAt: 'No expiry',
+          },
+          context: { type: 'PROMO', id: outcome.allocationId },
+        });
+      } catch (emailErr) {
+        // Non-fatal: allocation succeeded, email is best-effort.
+        console.error('[allocatePromoAction] email dispatch failed:', emailErr);
+      }
+    }
 
     revalidatePath('/promo');
     revalidatePath('/promo/allocate');
