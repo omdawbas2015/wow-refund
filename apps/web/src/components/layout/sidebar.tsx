@@ -176,14 +176,19 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full w-[244px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
-      {/* Brand — soft yellow chip with W. */}
+      {/* Brand — navy chip with A monogram. */}
       <div className="flex h-14 items-center gap-2.5 px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-2xl surface-butter text-[13px] font-bold tracking-tight">
-          W
+        <div className="flex h-8 w-8 items-center justify-center rounded-2xl surface-butter text-[14px] font-semibold tracking-tight">
+          A
         </div>
-        <span className="truncate text-[13.5px] font-semibold tracking-tight text-heading">
-          WOW Refund
-        </span>
+        <div className="flex min-w-0 flex-col leading-tight">
+          <span className="truncate text-[13.5px] font-semibold tracking-tight text-heading">
+            Alshaya Refund
+          </span>
+          <span className="truncate text-[10.5px] text-muted-foreground">
+            Operations
+          </span>
+        </div>
       </div>
 
       {/* Search */}
@@ -259,40 +264,40 @@ export function Sidebar({
       </div>
     </aside>
   );
+}
 
-  function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
-    const Icon = item.icon;
-    const showBadge = (item.badge ?? 0) > 0;
-    return (
-      <li>
-        <Link
-          href={item.href}
+function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
+  const Icon = item.icon;
+  const showBadge = (item.badge ?? 0) > 0;
+  return (
+    <li>
+      <Link
+        href={item.href}
+        className={cn(
+          'group flex h-10 items-center gap-3 rounded-2xl px-2 text-[12.5px] font-medium transition-colors',
+          isActive
+            ? 'bg-surface text-heading shadow-xs'
+            : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-heading',
+        )}
+      >
+        <span
           className={cn(
-            'group flex h-10 items-center gap-3 rounded-2xl px-2 text-[12.5px] font-medium transition-colors',
-            isActive
-              ? 'bg-surface text-heading shadow-xs'
-              : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-heading',
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-xl',
+            isActive ? 'surface-butter' : CHIP_CLASS[item.tone],
           )}
         >
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+        <span className="flex-1 truncate">{item.label}</span>
+        {showBadge && (
           <span
-            className={cn(
-              'flex h-7 w-7 shrink-0 items-center justify-center rounded-xl',
-              isActive ? 'surface-butter' : CHIP_CLASS[item.tone],
-            )}
+            className="inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-neutral-900 px-1.5 text-[10px] font-semibold leading-none text-white"
+            aria-label={`${item.badge} pending`}
           >
-            <Icon className="h-3.5 w-3.5" />
+            {item.badge}
           </span>
-          <span className="flex-1 truncate">{item.label}</span>
-          {showBadge && (
-            <span
-              className="inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-neutral-900 px-1.5 text-[10px] font-semibold leading-none text-white"
-              aria-label={`${item.badge} pending`}
-            >
-              {item.badge}
-            </span>
-          )}
-        </Link>
-      </li>
-    );
-  }
+        )}
+      </Link>
+    </li>
+  );
 }

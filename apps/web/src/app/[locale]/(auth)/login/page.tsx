@@ -13,7 +13,7 @@ export default async function LoginPage({
     <div>
       <h1 className="text-display-sm text-heading">Sign in</h1>
       <p className="mt-1 text-[13px] text-muted-foreground">
-        Use your work email to access WOW Refund.
+        Use your work email to access Alshaya Refund.
       </p>
 
       <div className="mt-6">

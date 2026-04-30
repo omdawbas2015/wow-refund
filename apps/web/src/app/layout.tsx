@@ -20,8 +20,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'WOW Refund',
-    template: '%s · WOW Refund',
+    default: 'Alshaya Refund',
+    template: '%s · Alshaya Refund',
   },
   description: 'Enterprise refund management platform',
   icons: { icon: '/favicon.ico' },

@@ -6,11 +6,11 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
       {/* Top bar */}
       <header className="flex h-14 items-center px-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-2xl surface-butter text-[13px] font-bold tracking-tight">
-            W
+          <div className="flex h-8 w-8 items-center justify-center rounded-2xl surface-butter text-[14px] font-semibold tracking-tight">
+            A
           </div>
           <span className="text-[13.5px] font-semibold tracking-tight text-heading">
-            WOW Refund
+            Alshaya Refund
           </span>
         </div>
       </header>
@@ -24,7 +24,7 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
 
       {/* Footer */}
       <footer className="px-6 py-4 text-[11.5px] text-muted-foreground">
-        &copy; {new Date().getFullYear()} WOW Refund
+        &copy; {new Date().getFullYear()} Alshaya Refund
       </footer>
     </div>
   );

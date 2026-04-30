@@ -1,24 +1,24 @@
-# DESIGN.md — WOW Refund
+# DESIGN.md — Alshaya Refund
 
-> Soft, friendly, dashboard-first design language. Cream surfaces, a warm
-> yellow accent, and pastel-tinted icon chips for navigation and KPIs.
-> The reference is a Dribbble-style admin dashboard — not Linear, not
-> Stripe; the goal is approachable and unmistakably human.
+> Professional, dashboard-first design language inspired by Alshaya's
+> corporate brand: clean cool surfaces, a single deep navy accent, and
+> tonal blue chips for navigation and KPIs. The goal is calm, restrained,
+> and unmistakably enterprise.
 
 ---
 
 ## 1. Principles
 
-1. **Warm cream over white.** The page background is a near-cream
-   (`#FBFAF6`), and panels lift to pure white. We never sit white on
-   white.
-2. **One accent — butter yellow.** `hsl(46 88% 62%)` is used on the
-   primary CTA, hero KPI card, sidebar brand, avatar, and active nav
-   chip. Hover deepens to `hsl(42 92% 56%)`.
-3. **Pastel icon chips.** Every nav item, KPI card, and pending-task
-   row has its icon inside a soft tinted square (mint / lavender /
-   peach / sky / rose / butter). The chip carries colour so the rest
-   of the surface stays calm.
+1. **Cool near-white over pure white.** The page background is a faintly
+   blue-tinted off-white; panels lift to pure white. We never sit white
+   on white, and we never use warm cream.
+2. **One accent — Alshaya navy.** `hsl(215 70% 30%)` is used on the
+   primary CTA, hero KPI card, sidebar brand chip, avatar, and active
+   nav chip. Hover deepens to `hsl(215 76% 24%)`.
+3. **Tonal chips, not rainbow.** Every nav item, KPI card, and
+   pending-task row has its icon inside a soft tinted square — light
+   navy, soft teal, periwinkle, cool slate, sky, or muted rose. The
+   chip carries colour so the rest of the surface stays calm.
 4. **Generous radius.** 12 px default, 18–28 px on cards, pill on
    buttons / chips / avatars. Nothing is square.
 5. **Restrained motion.** Hover transitions are colour changes only —
@@ -31,13 +31,14 @@
 ## 2. Tokens
 
 ### Colour
-- **Background**: cream `--neutral-50` (`#FBFAF6`-ish).
+- **Background**: faintly blue-tinted off-white `--neutral-50`
+  (`hsl(214 24% 97.5%)`).
 - **Surfaces**: pure white (`--neutral-0`) for panels and cards;
-  `--surface-subtle` cream wash for input backgrounds.
-- **Text**: `--heading` (near black), `--foreground` (zinc-900),
-  `--muted-foreground` (zinc-500).
-- **Border**: warm hairline `--neutral-150`.
-- **Primary**: butter yellow `hsl(46 88% 62%)` with deep cocoa
+  `--surface-subtle` ultra-light blue wash for input backgrounds.
+- **Text**: `--heading` (near black with a cool cast), `--foreground`,
+  `--muted-foreground`.
+- **Border**: cool hairline `--neutral-150`.
+- **Primary**: Alshaya-inspired navy `hsl(215 70% 30%)` with white
   foreground for AAA contrast.
 - **Status**: `success` mint, `warning` amber, `destructive` rose,
   `info` sky — all at low chroma.
