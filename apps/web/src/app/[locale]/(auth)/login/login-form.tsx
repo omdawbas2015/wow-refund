@@ -11,10 +11,22 @@ import { FormField } from '@/components/ui/form-field';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
+function mapAuthError(err: string | undefined | null): string | null {
+  if (!err) return null;
+  if (err === 'undefined' || err === 'null') return null;
+  if (err.includes('ACCOUNT_PENDING')) return 'Your account is pending approval.';
+  if (err.includes('ACCOUNT_SUSPENDED')) return 'Your account has been suspended.';
+  if (err.includes('ACCOUNT_LOCKED')) return 'Your account is locked. Try again later.';
+  if (err.includes('RATE_LIMITED')) return 'Too many attempts. Please wait a moment and try again.';
+  if (err === 'CredentialsSignin' || err.includes('Credentials')) return 'Invalid email or password.';
+  if (err === 'Configuration') return 'Authentication is misconfigured. Please contact support.';
+  return 'Invalid email or password.';
+}
+
 export function LoginForm({ callbackUrl, error: initialError }: { callbackUrl: string; error?: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(initialError ?? null);
+  const [error, setError] = useState<string | null>(mapAuthError(initialError));
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,11 +44,7 @@ export function LoginForm({ callbackUrl, error: initialError }: { callbackUrl: s
       });
 
       if (result?.error) {
-        const err = result.error;
-        if (err.includes('ACCOUNT_PENDING')) setError('Your account is pending approval.');
-        else if (err.includes('ACCOUNT_SUSPENDED')) setError('Your account has been suspended.');
-        else if (err.includes('ACCOUNT_LOCKED')) setError('Your account is locked.');
-        else setError('Invalid email or password.');
+        setError(mapAuthError(result.error));
         return;
       }
 
