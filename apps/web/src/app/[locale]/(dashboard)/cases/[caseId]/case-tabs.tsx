@@ -32,7 +32,7 @@ import {
 import { CustomerHistory } from './customer-history';
 import { CaseStatusStepper, type CaseStatus } from '@/components/ui/case-status-stepper';
 import { PaymentMethodIcons } from '@/components/ui/payment-method-icons';
-import { AuraLogo } from '@/components/ui/aura-logo';
+import { AuraPointsBadge } from '@/components/ui/aura-logo';
 import { CopyButton } from '@/components/ui/copy-button';
 import {
   Dialog,
@@ -676,14 +676,8 @@ function OverviewTab({
                   />
                 ))}
                 {caseData.auraPoints ? (
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
-                    <AuraLogo size={20} className="ring-1 ring-inset ring-black/10" />
-                    <div className="font-mono text-sm font-medium">
-                      {caseData.auraPoints.toLocaleString()}{' '}
-                      <span className="text-xs font-normal text-muted-foreground">
-                        points
-                      </span>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-2 p-4">
+                    <AuraPointsBadge points={caseData.auraPoints} />
                     <div className="ms-auto">
                       <AuraStatusBadge status={caseData.auraStatus} />
                     </div>

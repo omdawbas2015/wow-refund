@@ -18,7 +18,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { Input } from '@/components/ui/input';
 import { PaymentMethodIcons } from '@/components/ui/payment-method-icons';
 import { Textarea } from '@/components/ui/textarea';
-import { AuraLogo } from '@/components/ui/aura-logo';
+import { AuraPointsBadge } from '@/components/ui/aura-logo';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -564,47 +564,31 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
         )}
       </header>
 
-      {/* ── Customer ───────────────────────────────────────────── */}
-      <Section title="Customer">
-        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Name
-            </dt>
-            <dd className="font-medium text-heading">{c.customerName}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Email
-            </dt>
-            <dd className="flex items-center gap-1.5 truncate">
-              <span className="truncate text-foreground">{c.customerEmail}</span>
-              <CopyButton value={c.customerEmail} size="xs" label="Copy email" />
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Phone
-            </dt>
-            <dd className="flex items-center gap-1.5">
-              {c.customerPhone ? (
-                <>
-                  <span className="font-mono text-heading">{c.customerPhone}</span>
-                  <CopyButton value={c.customerPhone} size="xs" label="Copy phone" />
-                </>
-              ) : (
-                <span className="text-muted-foreground">No phone on file</span>
-              )}
-            </dd>
-          </div>
-          {branchLabel && (
-            <div>
-              <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Branch
-              </dt>
-              <dd className="text-foreground">{branchLabel}</dd>
-            </div>
-          )}
+      {/* ── Customer & order identifiers ─────────────────────────
+          These four fields are the ones the operator copy-pastes
+          constantly into the external refund system. Keep Case # and
+          Order # at the top — large, monospace, one-click copy — so
+          they're always the first thing under the eye. */}
+      <Section title="Customer & order">
+        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+          <DataField
+            label="Case #"
+            value={c.externalCaseNumber || c.caseNumber}
+            mono
+            copy
+            emphasised
+          />
+          <DataField label="Order #" value={c.orderNumber} mono copy emphasised />
+          <DataField label="Customer name" value={c.customerName} />
+          <DataField label="Email" value={c.customerEmail} copy />
+          <DataField
+            label="Phone"
+            value={c.customerPhone ?? ''}
+            mono
+            copy={!!c.customerPhone}
+            fallback="No phone on file"
+          />
+          {branchLabel && <DataField label="Branch" value={branchLabel} />}
         </dl>
       </Section>
 
@@ -631,12 +615,8 @@ function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }
             ))
           )}
           {c.auraPoints ? (
-            <div className="flex flex-wrap items-center gap-3 py-3">
-              <AuraLogo size={28} />
-              <div className="font-mono text-sm font-medium text-heading">
-                {c.auraPoints.toLocaleString()}{' '}
-                <span className="text-xs font-normal text-muted-foreground">points</span>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 py-3">
+              <AuraPointsBadge points={c.auraPoints} />
               <Badge variant="outline" className="text-[10px]">
                 {c.auraStatus.replace(/_/g, ' ')}
               </Badge>
@@ -756,6 +736,46 @@ function Section({
       </div>
       {children}
     </section>
+  );
+}
+
+// Small label-over-value block used throughout the workbench. Pass `copy`
+// to render a copy button next to the value, `mono` to render the value
+// in a monospace face (good for case #, order #, phone), and
+// `emphasised` to bump the value to heading size — meant for identifiers
+// the operator copy-pastes most often into the external refund tool.
+function DataField({
+  label,
+  value,
+  mono,
+  copy,
+  emphasised,
+  fallback,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  copy?: boolean;
+  emphasised?: boolean;
+  fallback?: string;
+}) {
+  const hasValue = value !== '';
+  const valueClass = cn(
+    'inline-flex min-w-0 items-center gap-1.5',
+    hasValue ? 'text-heading' : 'text-muted-foreground',
+    emphasised ? 'text-base font-semibold leading-tight' : 'font-medium',
+    mono ? 'font-mono' : '',
+  );
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
+      <dd className={valueClass}>
+        <span className="truncate">{hasValue ? value : (fallback ?? '—')}</span>
+        {copy && hasValue && <CopyButton value={value} size="xs" label={`Copy ${label}`} />}
+      </dd>
+    </div>
   );
 }
 
