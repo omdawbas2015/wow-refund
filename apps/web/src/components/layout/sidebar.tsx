@@ -17,7 +17,6 @@ import {
   User as UserIcon,
   LogOut,
   Send,
-  Search as SearchIcon,
 } from 'lucide-react';
 
 type ChipTone =
@@ -169,12 +168,6 @@ export function Sidebar({
     return pathname.endsWith(href) || pathname.includes(`${href}/`);
   }
 
-  function openSearch() {
-    window.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }),
-    );
-  }
-
   return (
     <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
       {/* Brand — Alshaya mark + name, links to dashboard. */}
@@ -192,23 +185,9 @@ export function Sidebar({
         </span>
       </Link>
 
-      {/* Search */}
-      <div className="px-3 pb-1">
-        <button
-          type="button"
-          onClick={openSearch}
-          className="flex h-8 w-full items-center gap-2 rounded-pill border border-sidebar-border bg-surface px-2.5 text-[11px] text-sidebar-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-          aria-label="Search"
-        >
-          <SearchIcon className="h-3 w-3 shrink-0" />
-          <span className="flex-1 text-left">Search</span>
-          <kbd className="kbd text-[9px]">&#8984;K</kbd>
-        </button>
-      </div>
-
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pt-1.5 pb-1.5">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-2 pb-2">
         {/* Dashboard */}
-        <ul className="space-y-1">
+        <ul className="space-y-0.5">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
         </ul>
 
@@ -221,10 +200,10 @@ export function Sidebar({
           if (items.length === 0) return null;
           return (
             <div key={i}>
-              <div className="mt-4 mb-1 px-2.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-sidebar-muted">
+              <div className="mt-5 mb-1.5 px-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-sidebar-muted">
                 {section.label}
               </div>
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {items.map((item) => (
                   <SidebarRow
                     key={item.href}
@@ -238,7 +217,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border px-2.5 py-2">
+      <div className="border-t border-sidebar-border px-3 py-2.5">
         <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
@@ -253,7 +232,7 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="flex h-8 items-center gap-2.5 rounded-xl px-1.5 text-[11px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
+              className="flex h-9 items-center gap-2.5 rounded-xl px-2 text-[11.5px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-lg chip-rose">
                 <LogOut className="h-3 w-3" />
@@ -275,7 +254,7 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group flex h-8 items-center gap-2.5 rounded-xl px-1.5 text-[11px] font-medium transition-colors',
+          'group flex h-9 items-center gap-2.5 rounded-xl px-2 text-[11.5px] font-medium transition-colors',
           isActive
             ? 'bg-surface text-heading shadow-xs'
             : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-heading',
