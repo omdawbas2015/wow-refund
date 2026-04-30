@@ -15,7 +15,6 @@ import {
   Settings,
   Bell,
   User as UserIcon,
-  Search as SearchIcon,
   LogOut,
   Send,
 } from 'lucide-react';
@@ -169,12 +168,6 @@ export function Sidebar({
     return pathname.endsWith(href) || pathname.includes(`${href}/`);
   }
 
-  function openSearch() {
-    window.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }),
-    );
-  }
-
   return (
     <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
       {/* Brand — Alshaya mark centered, links to dashboard. */}
@@ -191,21 +184,7 @@ export function Sidebar({
         </Link>
       </div>
 
-      {/* Search */}
-      <div className="px-3 pt-2">
-        <button
-          type="button"
-          onClick={openSearch}
-          className="flex h-8 w-full items-center gap-2 rounded-pill border border-sidebar-border bg-surface px-2.5 text-[11px] text-sidebar-muted transition-colors hover:bg-surface-muted hover:text-foreground"
-          aria-label="Search"
-        >
-          <SearchIcon className="h-3 w-3 shrink-0" />
-          <span className="flex-1 text-left">Search</span>
-          <kbd className="kbd text-[9px]">⌘K</kbd>
-        </button>
-      </div>
-
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pt-3 pb-1.5">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pt-2.5 pb-1.5">
         {/* Dashboard */}
         <ul className="space-y-1">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
