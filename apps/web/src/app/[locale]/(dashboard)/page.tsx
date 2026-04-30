@@ -190,15 +190,36 @@ export default async function DashboardHome() {
   const greeting = `${greetingFor(now)}, ${session?.user.name ?? ''}`.trim();
 
   return (
-    <div className="px-6 py-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {greeting}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Here&apos;s what&apos;s happening with your refund operations.
-        </p>
+    <div className="relative px-6 py-7">
+      {/* Hero header */}
+      <div className="relative mb-7 overflow-hidden rounded-2xl border border-border/70 bg-surface p-6 shadow-card animate-fade-in-up">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-brand-aurora opacity-80"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-brand-gradient opacity-[0.10] blur-3xl"
+        />
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-primary">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-ring" />
+              Live overview
+            </span>
+            <h1 className="mt-3 text-[28px] font-semibold leading-tight tracking-tight text-heading">
+              {greeting}
+            </h1>
+            <p className="mt-1.5 text-[13.5px] text-muted-foreground">
+              Here&apos;s what&apos;s happening with your refund operations.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+            <span className="rounded-full border border-border bg-surface/70 px-3 py-1 font-medium backdrop-blur-sm">
+              {dateRange}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -210,26 +231,33 @@ export default async function DashboardHome() {
           return (
             <div
               key={stat.label}
-              className="group rounded-xl border border-border/50 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-border hover:shadow-md animate-fade-in-up"
-              style={{ animationDelay: `${idx * 60}ms`, animationFillMode: 'both' }}
+              className="group relative overflow-hidden rounded-2xl border border-border/70 bg-surface p-5 shadow-card transition-all duration-300 ease-out-quart hover:-translate-y-0.5 hover:border-border-strong/80 hover:shadow-card-hover animate-fade-in-up"
+              style={{ animationDelay: `${idx * 70}ms`, animationFillMode: 'both' }}
             >
+              {/* hover wash */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              />
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <span className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   {stat.label}
                 </span>
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stat.bg}`}>
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl ring-1 ring-inset ring-border/40 ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
+                >
                   <Icon className={`h-4 w-4 ${stat.color}`} />
                 </div>
               </div>
-              <div className="mt-3 text-3xl font-bold tabular tracking-tight text-foreground">
+              <div className="mt-3 text-[32px] font-semibold tabular tracking-tight text-heading animate-count-up">
                 {stat.value.toLocaleString()}
               </div>
-              <div className="mt-2 flex items-center gap-1.5 text-xs">
+              <div className="mt-1.5 flex items-center gap-1.5 text-[11.5px]">
                 <span
                   className={
                     positive
-                      ? 'inline-flex items-center gap-0.5 font-medium text-emerald-600'
-                      : 'inline-flex items-center gap-0.5 font-medium text-rose-600'
+                      ? 'inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-700'
+                      : 'inline-flex items-center gap-0.5 rounded-full bg-rose-50 px-1.5 py-0.5 font-semibold text-rose-700'
                   }
                 >
                   <DeltaIcon className="h-3 w-3" />
@@ -245,28 +273,28 @@ export default async function DashboardHome() {
       {/* Chart + Pending */}
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
         {/* Refund Volume Chart */}
-        <div className="rounded-xl border border-border/50 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] lg:col-span-3">
+        <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-surface p-6 shadow-card transition-all duration-300 hover:border-border-strong/80 hover:shadow-card-hover lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '320ms', animationFillMode: 'both' }}>
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Refund Volume</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <h2 className="text-[15px] font-semibold tracking-tight text-heading">Refund Volume</h2>
+              <p className="mt-0.5 text-[12.5px] text-muted-foreground">
                 Daily cases over the last {SPARK_DAYS} days
               </p>
             </div>
-            <span className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+            <span className="rounded-full border border-border bg-surface-subtle px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
               {dateRange}
             </span>
           </div>
-          <div className="mt-4 h-56 w-full">
+          <div className="mt-5 h-56 w-full">
             <RefundVolumeChart data={trendCreated} />
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="rounded-xl border border-border/50 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] lg:col-span-2">
-          <h2 className="text-sm font-semibold text-foreground">Pending Tasks</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Items needing your attention</p>
-          <div className="mt-4 space-y-2.5">
+        <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-surface p-6 shadow-card transition-all duration-300 hover:border-border-strong/80 hover:shadow-card-hover lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '380ms', animationFillMode: 'both' }}>
+          <h2 className="text-[15px] font-semibold tracking-tight text-heading">Pending Tasks</h2>
+          <p className="mt-0.5 text-[12.5px] text-muted-foreground">Items needing your attention</p>
+          <div className="mt-5 space-y-2.5">
             <PendingTask
               icon={FileCheck2}
               label="Cases pending approval"
@@ -296,17 +324,18 @@ export default async function DashboardHome() {
       </div>
 
       {/* Recent Cases */}
-      <div className="mt-6 rounded-xl border border-border/50 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between px-5 py-4">
+      <div className="mt-6 overflow-hidden rounded-2xl border border-border/70 bg-surface shadow-card animate-fade-in-up" style={{ animationDelay: '440ms', animationFillMode: 'both' }}>
+        <div className="flex items-center justify-between px-6 py-4">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Recent Cases</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">Latest refund activity</p>
+            <h2 className="text-[15px] font-semibold tracking-tight text-heading">Recent Cases</h2>
+            <p className="mt-0.5 text-[12.5px] text-muted-foreground">Latest refund activity</p>
           </div>
           <Link
             href="/cases"
-            className="rounded-lg border border-border/60 bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="group inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12.5px] font-medium text-foreground shadow-xs transition-all duration-200 hover:border-primary/40 hover:bg-surface hover:shadow-sm"
           >
-            View all
+            <span>View all</span>
+            <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-primary" />
           </Link>
         </div>
         {recentCases.length === 0 ? (
@@ -405,15 +434,17 @@ function PendingTask({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-lg border border-border/30 bg-muted/20 p-3 transition-all duration-150 hover:border-border/60 hover:bg-muted/40"
+      className="group flex items-center gap-3 rounded-xl border border-border/60 bg-surface-subtle/40 p-3 transition-all duration-200 hover:-translate-y-px hover:border-primary/30 hover:bg-surface hover:shadow-sm"
     >
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${bg}`}>
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ring-border/40 ${bg} transition-transform duration-200 group-hover:scale-110`}
+      >
         <Icon className={`h-4 w-4 ${color}`} />
       </div>
       <span className="flex-1 text-[13px] font-medium text-foreground">
         {label}
       </span>
-      <span className="font-mono text-lg font-bold tabular text-foreground">
+      <span className="font-mono text-[18px] font-semibold tabular text-heading">
         {count}
       </span>
     </Link>

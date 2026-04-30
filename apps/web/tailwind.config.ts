@@ -28,10 +28,28 @@ const config: Config = {
           DEFAULT: 'hsl(var(--surface))',
           subtle: 'hsl(var(--surface-subtle))',
           muted: 'hsl(var(--surface-muted))',
+          elevated: 'hsl(var(--surface-elevated))',
         },
-        border: 'hsl(var(--border))',
+        border: {
+          DEFAULT: 'hsl(var(--border))',
+          strong: 'hsl(var(--border-strong))',
+        },
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        sidebar: {
+          bg: 'hsl(var(--sidebar-bg))',
+          fg: 'hsl(var(--sidebar-fg))',
+          muted: 'hsl(var(--sidebar-muted))',
+          active: 'hsl(var(--sidebar-active))',
+          'active-bg': 'hsl(var(--sidebar-active-bg))',
+          hover: 'hsl(var(--sidebar-hover))',
+          border: 'hsl(var(--sidebar-border))',
+        },
+        brand: {
+          from: 'hsl(var(--brand-from))',
+          via: 'hsl(var(--brand-via))',
+          to: 'hsl(var(--brand-to))',
+        },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
@@ -107,21 +125,32 @@ const config: Config = {
         '2xl': '24px',
       },
       boxShadow: {
-        // Modern soft shadows with subtle color tint
-        'xs': '0 1px 2px rgba(0, 0, 0, 0.04)',
-        'sm': '0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
-        DEFAULT: '0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
-        'md': '0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
-        'lg': '0 12px 32px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.04)',
-        'xl': '0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06)',
-        'glow': '0 0 0 1px hsl(var(--primary) / 0.08), 0 4px 16px hsl(var(--primary) / 0.12)',
-        'focus': '0 0 0 3px hsl(var(--ring) / 0.2)',
-        'inner': 'inset 0 1px 2px rgba(0, 0, 0, 0.04)',
-        'card': '0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.02)',
-        'card-hover': '0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)',
+        // World-class soft shadow system — feathered, never harsh
+        'xs': '0 1px 1px rgba(15, 23, 42, 0.04)',
+        'sm': '0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03)',
+        DEFAULT: '0 2px 6px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)',
+        'md': '0 4px 12px rgba(15, 23, 42, 0.07), 0 2px 4px rgba(15, 23, 42, 0.04)',
+        'lg': '0 12px 28px rgba(15, 23, 42, 0.08), 0 4px 8px rgba(15, 23, 42, 0.04)',
+        'xl': '0 24px 56px rgba(15, 23, 42, 0.12), 0 8px 16px rgba(15, 23, 42, 0.05)',
+        '2xl': '0 36px 80px rgba(15, 23, 42, 0.16), 0 12px 24px rgba(15, 23, 42, 0.06)',
+        'glow': '0 0 0 1px hsl(var(--primary) / 0.10), 0 8px 24px hsl(var(--primary) / 0.18)',
+        'glow-strong': '0 0 0 1px hsl(var(--primary) / 0.16), 0 14px 40px hsl(var(--primary) / 0.28)',
+        'focus': '0 0 0 3px hsl(var(--ring) / 0.25)',
+        'inner': 'inset 0 1px 2px rgba(15, 23, 42, 0.04)',
+        'card': '0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04)',
+        'card-hover': '0 6px 18px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.06)',
+        'brand-glow': '0 8px 24px hsl(var(--brand-via) / 0.25), 0 2px 8px hsl(var(--brand-from) / 0.15)',
       },
       transitionTimingFunction: {
         'out-quart': 'cubic-bezier(0.25, 1, 0.5, 1)',
+        'out-expo': 'cubic-bezier(0.16, 1, 0.3, 1)',
+        'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+      backgroundImage: {
+        'brand-gradient':
+          'linear-gradient(135deg, hsl(var(--brand-from)) 0%, hsl(var(--brand-via)) 55%, hsl(var(--brand-to)) 100%)',
+        'brand-gradient-soft':
+          'linear-gradient(135deg, hsl(var(--brand-from) / 0.12) 0%, hsl(var(--brand-via) / 0.10) 55%, hsl(var(--brand-to) / 0.10) 100%)',
       },
       keyframes: {
         'accordion-down': {
