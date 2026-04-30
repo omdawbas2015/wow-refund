@@ -44,7 +44,7 @@ export default async function DashboardLayout({
         />
         <BackLink />
         <main className="scrollbar-thin flex-1 overflow-y-auto bg-background">
-          <div className="animate-fade-in">
+          <div className="mx-auto w-full max-w-[1440px] animate-fade-in">
             {children}
           </div>
         </main>

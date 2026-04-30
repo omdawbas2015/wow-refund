@@ -23,8 +23,9 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 bg-background px-6">
-      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[12.5px]">
+    <header className="sticky top-0 z-30 bg-background">
+      <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center gap-3 px-6">
+        <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[12.5px]">
         {crumbs.map((c, i) => {
           const isLast = i === crumbs.length - 1;
           return (
@@ -44,9 +45,9 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
             </span>
           );
         })}
-      </nav>
+        </nav>
 
-      <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
         <button
           type="button"
           onClick={openSearch}
@@ -76,6 +77,7 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
             {userName || userEmail}
           </span>
         </button>
+        </div>
       </div>
     </header>
   );
