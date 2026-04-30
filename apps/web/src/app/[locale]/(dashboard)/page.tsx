@@ -209,45 +209,40 @@ export default async function DashboardHome() {
   const greeting = `${greetingFor(now)}, ${session?.user.name ?? ''}`.trim();
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
-      <div className="mb-6">
-        <h1 className="text-display-md font-normal tracking-tight text-heading">
+    <div className="mx-auto max-w-7xl px-8 py-10">
+      <div className="mb-8">
+        <h1 className="text-display-lg font-semibold tracking-tight text-heading">
           {greeting}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{fullDateFmt.format(now)}</p>
+        <p className="mt-1.5 text-sm text-muted-foreground">{fullDateFmt.format(now)}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat) => {
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {stats.map((stat, idx) => {
           const positive = stat.delta >= 0;
           const DeltaIcon = positive ? ArrowUpRight : ArrowDownRight;
           return (
             <Card
               key={stat.label}
-              className={`relative isolate overflow-hidden ${stat.surface} before:pointer-events-none before:absolute before:inset-0 before:-z-10 ${stat.glow}`}
+              className={`relative isolate overflow-hidden border-0 ${stat.surface} before:pointer-events-none before:absolute before:inset-0 before:-z-10 ${stat.glow} animate-fade-in-up`}
+              style={{ animationDelay: `${idx * 80}ms`, animationFillMode: 'both' }}
             >
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium text-body">
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                <CardTitle className="text-[13px] font-medium text-body">
                   {stat.label}
                 </CardTitle>
-                <span
-                  aria-hidden
-                  className="flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-surface/60 text-muted-foreground"
-                >
-                  <Maximize2 className="h-3.5 w-3.5" />
-                </span>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="text-[34px] font-semibold tabular leading-none text-foreground">
+                <div className="text-[38px] font-bold tabular leading-none tracking-tight text-foreground animate-count-up">
                   {stat.valueDisplay}
                 </div>
-                <div className="mt-6 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{dateRange}</span>
+                <div className="mt-5 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground/80">{dateRange}</span>
                   <span
                     className={
                       positive
-                        ? 'inline-flex items-center gap-0.5 font-semibold text-emerald-600 dark:text-emerald-400'
-                        : 'inline-flex items-center gap-0.5 font-semibold text-rose-600 dark:text-rose-400'
+                        ? 'inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-600'
+                        : 'inline-flex items-center gap-0.5 rounded-full bg-rose-50 px-2 py-0.5 font-semibold text-rose-600'
                     }
                   >
                     <DeltaIcon className="h-3.5 w-3.5" />
@@ -260,27 +255,27 @@ export default async function DashboardHome() {
         })}
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <div>
               <CardTitle className="text-base font-semibold">Refund volume</CardTitle>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="mt-1 text-[13px] text-muted-foreground">
                 Daily case volume across all brands and countries.
               </p>
             </div>
-            <span className="rounded-md border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-muted-foreground">
+            <span className="rounded-lg border border-border/60 bg-surface-subtle px-2.5 py-1 text-xs font-medium text-muted-foreground">
               Last {SPARK_DAYS} days
             </span>
           </CardHeader>
           <CardContent>
-            <div className="mt-1 flex items-baseline gap-3">
-              <div className="text-2xl font-semibold tabular">
+            <div className="mt-2 flex items-baseline gap-3">
+              <div className="text-3xl font-bold tabular tracking-tight">
                 {casesCreatedRecent.length.toLocaleString()}
               </div>
               <span className="text-xs text-muted-foreground">cases · {dateRange}</span>
             </div>
-            <div className="mt-3 h-56 w-full">
+            <div className="mt-4 h-60 w-full">
               <RefundVolumeChart data={trendCreated} />
             </div>
           </CardContent>
@@ -289,7 +284,7 @@ export default async function DashboardHome() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold">Pending tasks</CardTitle>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               Things waiting on you across the workspace.
             </p>
           </CardHeader>
@@ -328,7 +323,7 @@ export default async function DashboardHome() {
         <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base font-semibold">Recent cases</CardTitle>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               Latest activity across all countries.
             </p>
           </div>
@@ -362,21 +357,21 @@ export default async function DashboardHome() {
             <div className="-mx-6 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-y border-border bg-surface-subtle text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <th className="px-6 py-2.5 text-start">Case</th>
-                    <th className="px-6 py-2.5 text-start">Customer</th>
-                    <th className="px-6 py-2.5 text-start">Brand</th>
-                    <th className="px-6 py-2.5 text-start">Country</th>
-                    <th className="px-6 py-2.5 text-end">Refund</th>
-                    <th className="px-6 py-2.5 text-end">Updated</th>
-                    <th className="px-6 py-2.5 text-end">Status</th>
+                  <tr className="border-b border-border/60 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    <th className="px-6 py-3 text-start">Case</th>
+                    <th className="px-6 py-3 text-start">Customer</th>
+                    <th className="px-6 py-3 text-start">Brand</th>
+                    <th className="px-6 py-3 text-start">Country</th>
+                    <th className="px-6 py-3 text-end">Refund</th>
+                    <th className="px-6 py-3 text-end">Updated</th>
+                    <th className="px-6 py-3 text-end">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentCases.map((c) => (
                     <tr
                       key={c.id}
-                      className="border-b border-border last:border-b-0 hover:bg-surface-subtle/40"
+                      className="border-b border-border/40 last:border-b-0 transition-colors hover:bg-surface-subtle/50"
                     >
                       <td className="px-6 py-3 align-middle">
                         <Link
@@ -451,15 +446,15 @@ function PendingTask({
 }) {
   const toneClass =
     tone === 'amber'
-      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+      ? 'bg-amber-50 text-amber-600'
       : tone === 'rose'
-        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-        : 'bg-primary/10 text-primary';
+        ? 'bg-rose-50 text-rose-600'
+        : 'bg-primary/8 text-primary';
   return (
     <li>
       <Link
         href={href}
-        className="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-surface px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-surface-subtle"
+        className="flex items-start justify-between gap-3 rounded-xl border border-border/40 bg-surface px-4 py-3 transition-all duration-200 hover:border-primary/30 hover:shadow-xs"
       >
         <span className="flex items-start gap-3">
           <span
