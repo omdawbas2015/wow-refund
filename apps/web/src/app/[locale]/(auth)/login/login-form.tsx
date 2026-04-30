@@ -11,9 +11,9 @@ import { FormField } from '@/components/ui/form-field';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
+/** Translate a NextAuth error string to a user-facing message. */
 function mapAuthError(err: string | undefined | null): string | null {
   if (!err) return null;
-  if (err === 'undefined' || err === 'null') return null;
   if (err.includes('ACCOUNT_PENDING')) return 'Your account is pending approval.';
   if (err.includes('ACCOUNT_SUSPENDED')) return 'Your account has been suspended.';
   if (err.includes('ACCOUNT_LOCKED')) return 'Your account is locked. Try again later.';
@@ -23,10 +23,20 @@ function mapAuthError(err: string | undefined | null): string | null {
   return 'Invalid email or password.';
 }
 
+/**
+ * Filter the error string from URL params. NextAuth occasionally redirects
+ * to /login?error=undefined when its internal error code is missing —
+ * showing the literal "undefined" as a banner is worse than no banner.
+ */
+function initialErrorFromUrl(err: string | undefined): string | null {
+  if (!err || err === 'undefined' || err === 'null') return null;
+  return mapAuthError(err);
+}
+
 export function LoginForm({ callbackUrl, error: initialError }: { callbackUrl: string; error?: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(mapAuthError(initialError));
+  const [error, setError] = useState<string | null>(initialErrorFromUrl(initialError));
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
