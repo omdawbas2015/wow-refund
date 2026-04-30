@@ -58,7 +58,7 @@ export default async function BackupAdminPage() {
         </CardHeader>
         <CardContent className="p-0">
           <table className="w-full text-sm">
-            <thead className="border-b border-border/50/40 text-left text-caption uppercase text-muted-foreground">
+            <thead className="border-b border-border/50 text-left text-caption uppercase text-muted-foreground">
               <tr>
                 <th className="px-3 py-2.5">Trigger</th>
                 <th className="px-3 py-2.5">Status</th>
