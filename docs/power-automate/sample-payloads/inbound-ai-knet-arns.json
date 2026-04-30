@@ -1,7 +1,7 @@
 {
   "fromEmail": "finance@wow.local",
   "toEmail": "refunds@wow.local",
-  "subject": "RE: KNET batch KNT-2026-0007 — ARN list",
+  "subject": "RE: KNET batch KNET-2026-0007 — ARN list",
   "rawBody": "Processed today.\n\nREF-KW-2026-000001 → ARN 847312009912\nREF-KW-2026-000002 → ARN 847312009913\nREF-KW-2026-000003 → ARN 847312009914\n\nFinance",
   "powerAutomateRunId": "08585312000000000000000000000012",
   "aiParsed": {
