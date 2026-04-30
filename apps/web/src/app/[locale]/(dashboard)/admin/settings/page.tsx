@@ -240,20 +240,20 @@ export default async function SettingsPage() {
   const map = new Map(all.map((s) => [s.key, s.value]));
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-6xl space-y-10 px-8 py-10">
       <div>
-        <h1 className="text-heading-lg text-heading">Admin settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="text-display-md font-semibold tracking-tight text-heading">Admin settings</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
           Every administrative surface for the workspace. The sidebar keeps only daily-use links; everything else lives here so admin tools stay grouped and out of the way.
         </p>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-10">
         {GROUPS.map((group) => (
-          <section key={group.title} className="space-y-3">
+          <section key={group.title} className="space-y-4">
             <div>
-              <h2 className="text-heading-md text-heading">{group.title}</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">{group.description}</p>
+              <h2 className="text-lg font-semibold text-heading">{group.title}</h2>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">{group.description}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {group.links.map((link) => {
@@ -262,10 +262,10 @@ export default async function SettingsPage() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="group flex items-start gap-3 rounded-lg border border-border bg-surface p-4 transition-colors hover:border-primary/50 hover:bg-surface-subtle"
+                    className="group flex items-start gap-3.5 rounded-xl border border-border/50 bg-surface p-5 transition-all duration-200 hover:border-primary/40 hover:shadow-md"
                   >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      <Icon className="h-4 w-4" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/8 text-primary transition-colors group-hover:bg-primary/12">
+                      <Icon className="h-[18px] w-[18px]" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
