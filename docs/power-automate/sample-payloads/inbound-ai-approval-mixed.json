@@ -1,0 +1,15 @@
+{
+  "fromEmail": "kw-manager@wow.local",
+  "toEmail": "refunds@wow.local",
+  "subject": "RE: Approval batch APB-KW-2026-0001 — 3 cases for review",
+  "rawBody": "Approved for everyone except CRM-100002 — that one is fraud, reject it.\n\nThanks,\nKW Country Manager",
+  "powerAutomateRunId": "08585312000000000000000000000011",
+  "aiParsed": {
+    "intent": "APPROVAL_RESPONSE",
+    "confidence": 0.94,
+    "blanket": "APPROVED",
+    "perCase": [
+      { "caseNumber": "REF-KW-2026-000002", "decision": "REJECTED" }
+    ]
+  }
+}

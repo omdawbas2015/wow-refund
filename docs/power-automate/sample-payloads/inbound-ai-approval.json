@@ -1,0 +1,13 @@
+{
+  "fromEmail": "kw-manager@wow.local",
+  "toEmail": "refunds@wow.local",
+  "subject": "RE: Approval batch APB-KW-2026-0001 — 3 cases for review",
+  "rawBody": "Hi team,\n\nApproved. All three look good — please go ahead with the refunds.\n\nThanks,\nKW Country Manager",
+  "powerAutomateRunId": "08585312000000000000000000000010",
+  "aiParsed": {
+    "intent": "APPROVAL_RESPONSE",
+    "confidence": 0.97,
+    "blanket": "APPROVED",
+    "perCase": []
+  }
+}

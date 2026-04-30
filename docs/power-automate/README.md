@@ -272,18 +272,35 @@ should receive the email within a few seconds.
 ```
 v2/docs/power-automate/
 ├── README.md                         (this file)
+├── ai-inbound-flow.md                AI-powered inbound flow with manager allowlist
 ├── test-webhook.sh                   smoke test for the inbound endpoint
 ├── flows/
 │   ├── outbound-request-schema.json  Trigger schema for the outbound flow
 │   ├── outbound-flow-definition.json Full Code-view JSON for outbound
-│   └── inbound-flow-definition.json  Full Code-view JSON for inbound
+│   ├── inbound-flow-definition.json  Full Code-view JSON for inbound
+│   ├── ai-inbound-flow-definition.json Full Code-view JSON for the AI inbound flow
+│   └── ai-parsed-reply-schema.json   Parse JSON schema for the AI Builder output
+├── packages/
+│   ├── wow-outbound-mailer.zip       Importable Solution ZIP (outbound)
+│   ├── wow-inbound-listener.zip      Importable Solution ZIP (basic inbound)
+│   └── wow-ai-inbound-listener.zip   Importable Solution ZIP (AI inbound)
 └── sample-payloads/
     ├── outbound-approval-email.json  Example app→PA outbound POST
     ├── inbound-approval-reply.json   Example PA→app inbound POST (manager reply)
     ├── inbound-knet-arn-reply.json   Example PA→app inbound POST (finance ARNs)
     ├── inbound-aura-confirmation.json Example PA→app inbound POST (Aura team)
-    └── inbound-unrelated.json        Example PA→app inbound POST that should be IGNORED
+    ├── inbound-unrelated.json        Example PA→app inbound POST that should be IGNORED
+    ├── inbound-ai-approval.json      AI flow — manager approves all
+    ├── inbound-ai-approval-mixed.json AI flow — manager approves all except one case
+    ├── inbound-ai-knet-arns.json     AI flow — finance returns ARNs per case
+    ├── inbound-ai-unclear.json       AI flow — AI cannot tell, no DB changes
+    └── inbound-ai-unauthorized.json  AI flow — sender not on allowlist, rejected
 ```
+
+> **Need to gate inbound replies to known managers and use AI to detect
+> the verdict?** See [`ai-inbound-flow.md`](./ai-inbound-flow.md) for
+> the full flow design, the AI Builder / GPT prompt to copy-paste, and
+> the new `aiParsed` payload field.
 
 ---
 

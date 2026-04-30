@@ -13,11 +13,49 @@ export interface ProcessOutcome {
     | 'KNET_ARN_REPLY'
     | 'AURA_CONFIRMATION'
     | 'CUSTOMER_REPLY'
-    | 'IGNORED';
+    | 'IGNORED'
+    | 'UNAUTHORIZED_SENDER'
+    | 'UNCLEAR_INTENT';
   payload?: Record<string, unknown>;
   linkedBatchId?: string;
   linkedCaseId?: string;
   linkedComponentId?: string;
+}
+
+/**
+ * Optional pre-parsed result from an upstream AI step (e.g. an AI Builder /
+ * GPT prompt action inside a Power Automate flow). When present this is the
+ * authoritative source of truth and replaces the heuristic regex parsers
+ * below — but only for matching intents.
+ *
+ * `intent === 'UNCLEAR'` lets the AI explicitly say "I cannot tell"; we then
+ * never auto-decide the batch and just record the inbound row as FAILED so
+ * a human can review.
+ */
+export interface AiParsedReply {
+  intent:
+    | 'APPROVAL_RESPONSE'
+    | 'KNET_ARN_REPLY'
+    | 'AURA_CONFIRMATION'
+    | 'CUSTOMER_REPLY'
+    | 'UNCLEAR';
+  confidence?: number;
+  /** Used by approval / aura handlers when no per-case decisions are given. */
+  blanket?: 'APPROVED' | 'REJECTED';
+  /** Per-case decisions; case numbers must match `RefundCase.caseNumber`. */
+  perCase?: Array<{ caseNumber: string; decision: 'APPROVED' | 'REJECTED' }>;
+  /** Used by KNET handler — maps customer-visible order/case numbers to ARNs. */
+  arns?: Array<{ caseNumber: string; arn: string }>;
+  /** Free-text reason returned when intent === 'UNCLEAR'. */
+  reason?: string;
+}
+
+export interface ProcessInboundArgs {
+  fromEmail: string;
+  subject: string;
+  rawBody: string;
+  /** Optional AI-parsed payload from Power Automate. */
+  aiParsed?: AiParsedReply;
 }
 
 /**
@@ -27,34 +65,126 @@ export interface ProcessOutcome {
  * `IGNORED` so a human can review the inbound row in the admin panel later.
  * Calls into prisma so the per-handler updates participate in the same DB.
  */
-export async function processInboundReply(args: {
-  fromEmail: string;
-  subject: string;
-  rawBody: string;
-}): Promise<ProcessOutcome> {
-  const { subject, rawBody } = args;
+export async function processInboundReply(
+  args: ProcessInboundArgs,
+): Promise<ProcessOutcome> {
+  const { fromEmail, subject, rawBody, aiParsed } = args;
+
+  // If the AI step explicitly says it can't classify the email, we never
+  // touch the batches — humans handle the inbound row from the admin panel.
+  if (aiParsed?.intent === 'UNCLEAR') {
+    await prisma.auditLog.create({
+      data: {
+        actorEmail: fromEmail,
+        action: 'inbound.ai_unclear',
+        entityType: 'INBOUND_EMAIL',
+        entityId: subject.slice(0, 200),
+        afterData: JSON.stringify({
+          reason: aiParsed.reason ?? 'AI returned UNCLEAR intent',
+          confidence: aiParsed.confidence ?? null,
+        }),
+      },
+    });
+    return {
+      intent: 'UNCLEAR_INTENT',
+      payload: {
+        reason: aiParsed.reason ?? 'AI returned UNCLEAR intent',
+        confidence: aiParsed.confidence ?? null,
+      },
+    };
+  }
 
   const haystack = `${subject}\n${rawBody}`;
   const approvalMatch = haystack.match(APPROVAL_BATCH_NUMBER_REGEX);
   const knetMatch = haystack.match(KNET_BATCH_NUMBER_REGEX);
   const auraMatch = haystack.match(AURA_BATCH_NUMBER_REGEX);
 
-  if (approvalMatch?.length) {
-    return await applyApprovalReply(approvalMatch[0]!, rawBody);
+  // The AI's intent (when provided) takes precedence over the regex-based
+  // dispatch — so a forwarded thread that contains both an APR-* number and
+  // a KNT-* number is still routed to the right handler.
+  const intent = aiParsed?.intent ?? null;
+
+  if (approvalMatch?.length && (intent === null || intent === 'APPROVAL_RESPONSE')) {
+    return await applyApprovalReply(approvalMatch[0]!, fromEmail, rawBody, aiParsed);
   }
-  if (knetMatch?.length) {
-    return await applyKnetArnReply(knetMatch[0]!, rawBody);
+  if (knetMatch?.length && (intent === null || intent === 'KNET_ARN_REPLY')) {
+    return await applyKnetArnReply(knetMatch[0]!, fromEmail, rawBody, aiParsed);
   }
-  if (auraMatch?.length) {
-    return await applyAuraConfirmation(auraMatch[0]!, rawBody);
+  if (auraMatch?.length && (intent === null || intent === 'AURA_CONFIRMATION')) {
+    return await applyAuraConfirmation(auraMatch[0]!, fromEmail, rawBody, aiParsed);
   }
 
   return { intent: 'IGNORED' };
 }
 
+/**
+ * Verify the inbound `fromEmail` is actually allowed to drive a decision
+ * on this batch. We accept either:
+ *   - the batch's own `recipientEmails` list (case-insensitive), or
+ *   - any active User in the DB whose role.key is in `extraRoles`
+ *     (and, when given, whose primaryCountryId matches `countryId`).
+ *
+ * On rejection we write an audit row and return false so the caller can
+ * short-circuit with an UNAUTHORIZED_SENDER outcome.
+ */
+async function isAuthorizedSender(opts: {
+  fromEmail: string;
+  recipientEmails: string;
+  extraRoles: ReadonlyArray<string>;
+  countryId?: string | null;
+  batchEntityType: string;
+  batchEntityId: string;
+}): Promise<boolean> {
+  const sender = opts.fromEmail.trim().toLowerCase();
+  if (!sender) return false;
+
+  // Match resolve-approver.ts: recipientEmails uses comma OR semicolon
+  // separators (Outlook serializes recipient lists with `;` while our
+  // own UI defaults to `,`). Splitting on only one of them rejects
+  // legitimate managers — see Devin Review on PR #21.
+  const recipients = opts.recipientEmails
+    .split(/[,;]/)
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (recipients.includes(sender)) return true;
+
+  const user = await prisma.user.findFirst({
+    where: {
+      email: { equals: sender },
+      status: 'ACTIVE',
+      deletedAt: null,
+    },
+    include: { role: true },
+  });
+  if (
+    user?.role &&
+    opts.extraRoles.includes(user.role.key) &&
+    (!opts.countryId || user.primaryCountryId === opts.countryId)
+  ) {
+    return true;
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      actorEmail: opts.fromEmail,
+      action: 'inbound.unauthorized_sender',
+      entityType: opts.batchEntityType,
+      entityId: opts.batchEntityId,
+      afterData: JSON.stringify({
+        recipients,
+        extraRoles: opts.extraRoles,
+        countryId: opts.countryId ?? null,
+      }),
+    },
+  });
+  return false;
+}
+
 async function applyApprovalReply(
   batchNumber: string,
+  fromEmail: string,
   rawBody: string,
+  aiParsed?: AiParsedReply,
 ): Promise<ProcessOutcome> {
   const batch = await prisma.approvalBatch.findUnique({
     where: { batchNumber },
@@ -67,15 +197,49 @@ async function applyApprovalReply(
     return { intent: 'IGNORED', payload: { reason: 'batch closed', batchNumber } };
   }
 
-  const parsed = parseApprovalReply(rawBody);
+  // Only the manager(s) we sent the batch to — or another active country
+  // manager / admin for this country — can drive a decision. Any other
+  // sender is recorded in the audit log but never moves cases.
+  const allowed = await isAuthorizedSender({
+    fromEmail,
+    recipientEmails: batch.recipientEmails,
+    extraRoles: ['MANAGER', 'ADMIN'],
+    countryId: batch.countryId,
+    batchEntityType: 'APPROVAL_BATCH',
+    batchEntityId: batch.id,
+  });
+  if (!allowed) {
+    return {
+      intent: 'UNAUTHORIZED_SENDER',
+      linkedBatchId: batch.id,
+      payload: { reason: 'sender not on approval allowlist', batchNumber, fromEmail },
+    };
+  }
+
   const decisions = new Map<string, 'APPROVED' | 'REJECTED'>();
 
-  for (const entry of parsed.perCase) decisions.set(entry.caseNumber, entry.decision);
-
-  // Blanket fallback only kicks in if the manager didn't list specific cases.
-  if (decisions.size === 0 && parsed.blanket) {
-    for (const c of batch.cases) {
-      if (c.status === 'PENDING_APPROVAL') decisions.set(c.caseNumber, parsed.blanket);
+  // Prefer AI-parsed decisions when supplied — the AI sees the whole email
+  // (signatures, quoted threads) and is much better than regex at handling
+  // "approve all except case X" or natural-language replies.
+  if (aiParsed?.intent === 'APPROVAL_RESPONSE') {
+    // Apply blanket FIRST so per-case entries can override it. This is the
+    // "approve all except X" pattern: blanket=APPROVED + perCase=[REJECTED X].
+    if (aiParsed.blanket) {
+      for (const c of batch.cases) {
+        if (c.status === 'PENDING_APPROVAL') decisions.set(c.caseNumber, aiParsed.blanket);
+      }
+    }
+    for (const entry of aiParsed.perCase ?? []) {
+      decisions.set(entry.caseNumber, entry.decision);
+    }
+  } else {
+    const parsed = parseApprovalReply(rawBody);
+    for (const entry of parsed.perCase) decisions.set(entry.caseNumber, entry.decision);
+    // Blanket fallback only kicks in if the manager didn't list specific cases.
+    if (decisions.size === 0 && parsed.blanket) {
+      for (const c of batch.cases) {
+        if (c.status === 'PENDING_APPROVAL') decisions.set(c.caseNumber, parsed.blanket);
+      }
     }
   }
 
@@ -162,7 +326,9 @@ async function applyApprovalReply(
 
 async function applyKnetArnReply(
   batchNumber: string,
+  fromEmail: string,
   rawBody: string,
+  aiParsed?: AiParsedReply,
 ): Promise<ProcessOutcome> {
   const batch = await prisma.knetBatch.findUnique({
     where: { batchNumber },
@@ -175,7 +341,29 @@ async function applyKnetArnReply(
     return { intent: 'IGNORED', payload: { reason: 'batch closed', batchNumber } };
   }
 
-  const arnEntries = parseArnReply(rawBody);
+  // KNET ARN replies must come from Finance — the team / mailbox we sent
+  // the batch to. We accept the explicit recipient(s) plus any ACTIVE user
+  // with FINANCE / ADMIN role as a delegation fallback.
+  const allowed = await isAuthorizedSender({
+    fromEmail,
+    recipientEmails: batch.recipientEmails,
+    extraRoles: ['FINANCE', 'ADMIN'],
+    countryId: null,
+    batchEntityType: 'KNET_BATCH',
+    batchEntityId: batch.id,
+  });
+  if (!allowed) {
+    return {
+      intent: 'UNAUTHORIZED_SENDER',
+      linkedBatchId: batch.id,
+      payload: { reason: 'sender not on KNET ARN allowlist', batchNumber, fromEmail },
+    };
+  }
+
+  const arnEntries =
+    aiParsed?.intent === 'KNET_ARN_REPLY' && aiParsed.arns?.length
+      ? aiParsed.arns.map((a) => ({ caseNumber: a.caseNumber, arn: a.arn }))
+      : parseArnReply(rawBody);
   if (arnEntries.length === 0) {
     return { intent: 'IGNORED', payload: { reason: 'no ARN entries parsed' } };
   }
@@ -257,7 +445,9 @@ async function applyKnetArnReply(
 
 async function applyAuraConfirmation(
   batchNumber: string,
+  fromEmail: string,
   rawBody: string,
+  aiParsed?: AiParsedReply,
 ): Promise<ProcessOutcome> {
   const batch = await prisma.auraBatch.findUnique({
     where: { batchNumber },
@@ -270,20 +460,62 @@ async function applyAuraConfirmation(
     return { intent: 'IGNORED', payload: { reason: 'batch closed', batchNumber } };
   }
 
+  // Aura confirmations come from the Aura points operations team. The role
+  // for these users in the seeded RBAC is OPERATIONS; ADMIN is allowed as
+  // a fallback for break-glass cases.
+  const allowed = await isAuthorizedSender({
+    fromEmail,
+    recipientEmails: batch.recipientEmails,
+    extraRoles: ['OPERATIONS', 'ADMIN'],
+    countryId: null,
+    batchEntityType: 'AURA_BATCH',
+    batchEntityId: batch.id,
+  });
+  if (!allowed) {
+    return {
+      intent: 'UNAUTHORIZED_SENDER',
+      linkedBatchId: batch.id,
+      payload: { reason: 'sender not on Aura allowlist', batchNumber, fromEmail },
+    };
+  }
+
   // Aura confirmation reuses the approval parser: per-case decisions when the
   // team lists case numbers, plus a blanket fallback for simple replies like
   // "all done" / "confirmed" / "تم". APPROVED → COMPLETED, REJECTED → FAILED.
-  const parsed = parseApprovalReply(rawBody);
   const decisions = new Map<string, 'COMPLETED' | 'FAILED'>();
-  for (const entry of parsed.perCase) {
-    decisions.set(entry.caseNumber, entry.decision === 'APPROVED' ? 'COMPLETED' : 'FAILED');
-  }
-  if (decisions.size === 0 && parsed.blanket) {
-    const blanketStatus: 'COMPLETED' | 'FAILED' =
-      parsed.blanket === 'APPROVED' ? 'COMPLETED' : 'FAILED';
-    for (const c of batch.cases) {
-      if (c.auraStatus === 'PENDING' || c.auraStatus === 'IN_BATCH') {
-        decisions.set(c.caseNumber, blanketStatus);
+  if (aiParsed?.intent === 'AURA_CONFIRMATION') {
+    // Apply blanket FIRST so per-case entries can override it
+    // ("all done except X").
+    if (aiParsed.blanket) {
+      const blanketStatus: 'COMPLETED' | 'FAILED' =
+        aiParsed.blanket === 'APPROVED' ? 'COMPLETED' : 'FAILED';
+      for (const c of batch.cases) {
+        if (c.auraStatus === 'PENDING' || c.auraStatus === 'IN_BATCH') {
+          decisions.set(c.caseNumber, blanketStatus);
+        }
+      }
+    }
+    for (const entry of aiParsed.perCase ?? []) {
+      decisions.set(
+        entry.caseNumber,
+        entry.decision === 'APPROVED' ? 'COMPLETED' : 'FAILED',
+      );
+    }
+  } else {
+    const parsed = parseApprovalReply(rawBody);
+    for (const entry of parsed.perCase) {
+      decisions.set(
+        entry.caseNumber,
+        entry.decision === 'APPROVED' ? 'COMPLETED' : 'FAILED',
+      );
+    }
+    if (decisions.size === 0 && parsed.blanket) {
+      const blanketStatus: 'COMPLETED' | 'FAILED' =
+        parsed.blanket === 'APPROVED' ? 'COMPLETED' : 'FAILED';
+      for (const c of batch.cases) {
+        if (c.auraStatus === 'PENDING' || c.auraStatus === 'IN_BATCH') {
+          decisions.set(c.caseNumber, blanketStatus);
+        }
       }
     }
   }

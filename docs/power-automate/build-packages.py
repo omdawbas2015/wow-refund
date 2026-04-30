@@ -280,6 +280,21 @@ def main() -> int:
         output_path=PACKAGES_DIR / "wow-inbound-listener.zip",
     )
 
+    build_package(
+        package_name="wow-ai-inbound-listener",
+        display_name="WOW Refund — AI Inbound listener (Outlook → GPT → webhook)",
+        description=(
+            "AI-enhanced inbound flow. Adds a sender allowlist + an Azure "
+            "OpenAI chat-completion step that classifies each reply into a "
+            "structured aiParsed JSON (intent / blanket / perCase / arns / "
+            "confidence / reason). Replies the AI marks UNCLEAR are sent "
+            "back to the manager for clarification and never decide the "
+            "batch. See docs/power-automate/ai-inbound-flow.md for setup."
+        ),
+        flow_definition_path=FLOWS_DIR / "ai-inbound-flow-definition.json",
+        output_path=PACKAGES_DIR / "wow-ai-inbound-listener.zip",
+    )
+
     return 0
 
 

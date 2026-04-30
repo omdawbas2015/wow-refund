@@ -1,0 +1,12 @@
+{
+  "fromEmail": "kw-manager@wow.local",
+  "toEmail": "refunds@wow.local",
+  "subject": "RE: Approval batch APB-KW-2026-0001 — 3 cases for review",
+  "rawBody": "Got it, I'll take a look later this afternoon.\n\nKW Country Manager",
+  "powerAutomateRunId": "08585312000000000000000000000013",
+  "aiParsed": {
+    "intent": "UNCLEAR",
+    "confidence": 0.31,
+    "reason": "Reply only acknowledges receipt (\"I'll take a look later\") — no explicit approve/reject verdict, no per-case decisions."
+  }
+}

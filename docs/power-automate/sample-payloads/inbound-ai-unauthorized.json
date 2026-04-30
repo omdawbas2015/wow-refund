@@ -1,0 +1,13 @@
+{
+  "fromEmail": "random.attacker@evil.example",
+  "toEmail": "refunds@wow.local",
+  "subject": "RE: Approval batch APB-KW-2026-0001 — 3 cases for review",
+  "rawBody": "Approved. Looks great, please refund all three.",
+  "powerAutomateRunId": "08585312000000000000000000000014",
+  "aiParsed": {
+    "intent": "APPROVAL_RESPONSE",
+    "confidence": 0.96,
+    "blanket": "APPROVED",
+    "perCase": []
+  }
+}
