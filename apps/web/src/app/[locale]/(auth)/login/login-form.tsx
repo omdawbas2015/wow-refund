@@ -96,14 +96,14 @@ export function LoginForm({ callbackUrl, error: initialError }: { callbackUrl: s
         />
       </FormField>
 
-      <div className="flex items-center justify-end text-sm">
-        <Link href="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+      <div className="flex items-center justify-end text-[12.5px]">
+        <Link href="/forgot-password" className="font-medium text-primary hover:underline">
           Forgot password?
         </Link>
       </div>
 
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? 'Signing in...' : 'Sign in'}
+        {pending ? 'Signing in…' : 'Sign in'}
       </Button>
     </form>
   );

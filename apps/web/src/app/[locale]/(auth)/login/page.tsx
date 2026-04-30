@@ -11,20 +11,18 @@ export default async function LoginPage({
 
   return (
     <div>
-      <h2 className="text-2xl font-bold tracking-tight text-foreground">
-        Sign in to your account
-      </h2>
-      <p className="mt-1.5 text-sm text-muted-foreground">
-        Enter your credentials to access the platform
+      <h1 className="text-display-sm text-heading">Sign in</h1>
+      <p className="mt-1 text-[13px] text-muted-foreground">
+        Use your work email to access WOW Refund.
       </p>
 
-      <div className="mt-8">
+      <div className="mt-6">
         <LoginForm callbackUrl={callbackUrl} error={params.error} />
       </div>
 
-      <div className="mt-6 text-center text-sm text-muted-foreground">
+      <div className="mt-5 text-[12.5px] text-muted-foreground">
         Don&apos;t have an account?{' '}
-        <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link href="/signup" className="font-medium text-primary hover:underline">
           Request access
         </Link>
       </div>

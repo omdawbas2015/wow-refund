@@ -3,188 +3,140 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════
-   Design tokens — World-class light-mode SaaS palette
-   Inspired by Linear, Stripe, Vercel & Notion (see DESIGN.md)
+   WOW Refund — design tokens
+   Inspired by Linear / Stripe Dashboard / Notion / Vercel.
+   Goals: light-mode only, calm neutral surfaces, a SINGLE accent
+   colour (no gradient logos, no aurora glows), strict 4px spacing,
+   tight typographic scale, hover-only motion.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    /* Surfaces — warm-tinted neutral whites for a Linear-like clarity */
-    --background:          240 25% 98.5%;   /* near-white with cool indigo wash */
-    --surface:             0 0% 100%;        /* pure white cards */
-    --surface-subtle:      240 20% 97%;      /* subtle hover/divider tone */
-    --surface-muted:       240 14% 95%;      /* deeper muted surface */
-    --surface-elevated:    0 0% 100%;
+    /* ── Neutral scale (zinc-leaning slate) ───────────────────────── */
+    --neutral-0:   0 0% 100%;
+    --neutral-50:  220 20% 98.5%;
+    --neutral-100: 220 16% 96%;
+    --neutral-150: 220 14% 94%;
+    --neutral-200: 220 14% 91%;
+    --neutral-300: 220 12% 86%;
+    --neutral-400: 220 10% 70%;
+    --neutral-500: 220 9% 55%;
+    --neutral-600: 220 10% 42%;
+    --neutral-700: 220 12% 30%;
+    --neutral-800: 220 18% 18%;
+    --neutral-900: 220 22% 11%;
+    --neutral-950: 220 28% 6%;
 
-    /* Text */
-    --foreground:          224 30% 12%;
-    --heading:             224 32% 9%;       /* near-ink */
-    --label:               224 16% 28%;
-    --body:                222 12% 42%;
-    --muted:               240 14% 96%;
-    --muted-foreground:    222 10% 50%;
+    /* ── Surfaces ─────────────────────────────────────────────────── */
+    --background:          var(--neutral-50);
+    --surface:             var(--neutral-0);
+    --surface-subtle:      var(--neutral-50);
+    --surface-muted:       var(--neutral-100);
+    --surface-elevated:    var(--neutral-0);
 
-    /* Borders & dividers — ultra-subtle */
-    --border:              224 18% 90%;
-    --border-strong:       224 18% 84%;
-    --input:               224 18% 90%;
-    --ring:                250 92% 64%;
+    /* ── Text ─────────────────────────────────────────────────────── */
+    --foreground:          var(--neutral-900);
+    --heading:             var(--neutral-950);
+    --label:               var(--neutral-700);
+    --body:                var(--neutral-600);
+    --muted:               var(--neutral-100);
+    --muted-foreground:    var(--neutral-500);
 
-    /* Brand — Linear/Stripe inspired indigo→violet */
-    --primary:             250 92% 62%;
+    /* ── Borders ──────────────────────────────────────────────────── */
+    --border:              var(--neutral-200);
+    --border-strong:       var(--neutral-300);
+    --input:               var(--neutral-200);
+
+    /* ── Single accent — deep, refined indigo (Linear/Vercel feel) ── */
+    --primary:             231 64% 48%;
     --primary-foreground:  0 0% 100%;
-    --primary-hover:       250 90% 56%;
-    --primary-deep:        250 80% 48%;
-    --primary-subtle:      250 100% 97%;
+    --primary-hover:       231 68% 42%;
+    --primary-deep:        231 70% 36%;
+    --primary-subtle:      231 100% 97%;
+    --ring:                231 64% 48%;
 
-    /* Brand gradient stops (used in CSS) */
-    --brand-from:          243 75% 60%;     /* indigo */
-    --brand-via:           266 90% 64%;     /* violet */
-    --brand-to:            322 90% 62%;     /* magenta-pink */
+    --card:                var(--neutral-0);
+    --card-foreground:     var(--neutral-900);
+    --popover:             var(--neutral-0);
+    --popover-foreground:  var(--neutral-900);
 
-    --card:                0 0% 100%;
-    --card-foreground:     224 30% 12%;
-    --popover:             0 0% 100%;
-    --popover-foreground:  224 30% 12%;
+    --secondary:           var(--neutral-100);
+    --secondary-foreground: var(--neutral-900);
 
-    --secondary:           240 14% 96%;
-    --secondary-foreground:224 30% 14%;
-
-    --accent:              250 92% 62%;
+    --accent:              231 64% 48%;
     --accent-foreground:   0 0% 100%;
 
-    /* Status — saturated but tasteful */
-    --destructive:         358 78% 56%;
+    /* ── Status — muted, never neon ───────────────────────────────── */
+    --destructive:         358 70% 50%;
     --destructive-foreground: 0 0% 100%;
-    --success:             152 70% 40%;
+    --success:             152 56% 36%;
     --success-foreground:  0 0% 100%;
-    --warning:             36 95% 50%;
+    --warning:             32 88% 44%;
     --warning-foreground:  0 0% 100%;
-    --info:                217 91% 58%;
+    --info:                217 78% 50%;
     --info-foreground:     0 0% 100%;
 
-    /* Shape */
-    --radius: 0.75rem;
+    /* ── Shape ────────────────────────────────────────────────────── */
+    --radius: 0.5rem;     /* 8px — Linear/Vercel default */
+    --radius-sm: 0.375rem;
+    --radius-lg: 0.625rem;
 
-    /* Sidebar — light mode, elegantly tinted */
-    --sidebar-bg:          240 30% 99%;
-    --sidebar-fg:          224 22% 22%;
-    --sidebar-muted:       224 12% 50%;
-    --sidebar-active:      250 92% 62%;
-    --sidebar-active-bg:   250 100% 97%;
-    --sidebar-hover:       240 18% 95.5%;
-    --sidebar-border:      224 18% 92%;
-  }
-
-  /* Dark mode kept as graceful fallback only — app is light-mode-first.
-     We do not toggle this at runtime; tokens here exist solely so any
-     OS-level forced-colors / system requests degrade nicely. */
-  [data-theme='dark'],
-  .dark {
-    --background:          224 35% 5%;
-    --surface:             224 30% 8%;
-    --surface-subtle:      224 28% 10%;
-    --surface-muted:       224 26% 12%;
-    --surface-elevated:    224 30% 10%;
-
-    --foreground:          0 0% 96%;
-    --heading:             0 0% 98%;
-    --label:               220 18% 80%;
-    --body:                220 12% 65%;
-    --muted:               224 24% 14%;
-    --muted-foreground:    220 12% 60%;
-
-    --border:              224 18% 18%;
-    --border-strong:       224 18% 24%;
-    --input:               224 18% 18%;
-    --ring:                250 92% 70%;
-
-    --primary:             250 92% 68%;
-    --primary-foreground:  224 35% 6%;
-    --primary-hover:       250 90% 62%;
-    --primary-deep:        250 80% 54%;
-    --primary-subtle:      250 60% 18%;
-
-    --card:                224 30% 8%;
-    --card-foreground:     0 0% 96%;
-    --popover:             224 30% 8%;
-    --popover-foreground:  0 0% 96%;
-
-    --secondary:           224 24% 14%;
-    --secondary-foreground: 0 0% 96%;
-
-    --accent:              250 92% 68%;
-    --accent-foreground:   224 35% 6%;
-
-    --destructive:         358 78% 60%;
-    --success:             152 60% 50%;
-    --warning:             36 95% 60%;
-    --info:                217 91% 64%;
-
-    --sidebar-bg:          224 35% 5%;
-    --sidebar-fg:          220 18% 88%;
-    --sidebar-muted:       220 12% 55%;
-    --sidebar-active:      250 92% 68%;
-    --sidebar-active-bg:   250 60% 18%;
-    --sidebar-hover:       224 26% 12%;
-    --sidebar-border:      224 18% 16%;
+    /* ── Sidebar (light, denser) ──────────────────────────────────── */
+    --sidebar-bg:          var(--neutral-50);
+    --sidebar-fg:          var(--neutral-700);
+    --sidebar-muted:       var(--neutral-500);
+    --sidebar-active:      var(--neutral-950);
+    --sidebar-active-bg:   var(--neutral-150);
+    --sidebar-hover:       var(--neutral-100);
+    --sidebar-border:      var(--neutral-200);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Typography
+   Typography — single Inter face, tight scale, no decorative weights.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
   html {
     font-family: var(--font-sans), 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    /* Inter feature flags for cleaner numerals + alt forms */
-    font-feature-settings: 'cv11', 'cv02', 'cv03', 'cv04', 'ss01', 'ss03';
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    scroll-behavior: smooth;
   }
 
   body {
     @apply bg-background text-foreground;
     font-size: 14px;
-    line-height: 1.6;
-    background-image:
-      radial-gradient(at 0% 0%, hsl(var(--brand-from) / 0.04) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsl(var(--brand-to) / 0.03) 0px, transparent 45%);
-    background-attachment: fixed;
+    line-height: 1.55;
   }
 
-  h1, h2, h3 {
-    @apply text-heading;
+  h1, h2, h3, h4, h5, h6 {
+    color: hsl(var(--heading));
     font-weight: 600;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.011em;
   }
-  h4, h5, h6 {
-    @apply text-heading;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-  }
+  h1 { letter-spacing: -0.02em; }
 
+  /* Tabular numerics for data-heavy tables and KPI numbers. */
   .tabular, [data-tabular='true'] {
     font-variant-numeric: tabular-nums;
   }
 
   ::selection {
-    background-color: hsl(var(--primary) / 0.18);
+    background-color: hsl(var(--primary) / 0.15);
     color: hsl(var(--foreground));
   }
 
   :focus-visible {
     outline: 2px solid hsl(var(--ring) / 0.55);
     outline-offset: 2px;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Scrollbar
+   Scrollbar — thin, neutral, never blue.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
@@ -194,8 +146,8 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
@@ -203,85 +155,51 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--border-strong));
+    background: hsl(var(--neutral-300));
     border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.55);
+    background-color: hsl(var(--neutral-400));
+    background-clip: content-box;
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Brand utilities
+   Surfaces & utility helpers — minimal, functional.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
-  /* Stripe-style multi-stop brand gradient */
-  .bg-brand-gradient {
-    background-image: linear-gradient(
-      135deg,
-      hsl(var(--brand-from)) 0%,
-      hsl(var(--brand-via)) 55%,
-      hsl(var(--brand-to)) 100%
-    );
+  /* Tight 1px hairline divider for sectioning panels. */
+  .hairline-b { box-shadow: inset 0 -1px 0 hsl(var(--border)); }
+  .hairline-t { box-shadow: inset 0 1px 0 hsl(var(--border)); }
+
+  /* Surface variants. */
+  .surface-1 { background-color: hsl(var(--surface)); }
+  .surface-2 { background-color: hsl(var(--surface-subtle)); }
+
+  /* Sticky top nav — solid white, hairline border, no glass blur. */
+  .nav-surface {
+    background-color: hsl(var(--surface));
+    border-color: hsl(var(--border));
   }
 
-  .text-brand-gradient {
-    background-image: linear-gradient(
-      135deg,
-      hsl(var(--brand-from)) 0%,
-      hsl(var(--brand-via)) 55%,
-      hsl(var(--brand-to)) 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  /* Soft brand wash for hero/auth backgrounds */
-  .bg-brand-aurora {
-    background-image:
-      radial-gradient(ellipse 80% 60% at 10% 0%, hsl(var(--brand-from) / 0.16) 0%, transparent 60%),
-      radial-gradient(ellipse 70% 50% at 100% 0%, hsl(var(--brand-to) / 0.14) 0%, transparent 55%),
-      radial-gradient(ellipse 60% 60% at 50% 100%, hsl(var(--brand-via) / 0.10) 0%, transparent 60%);
-  }
-
-  /* Subtle dotted/grid background for empty states + sidebars */
-  .bg-grid-subtle {
-    background-image:
-      linear-gradient(to right, hsl(var(--border) / 0.55) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.55) 1px, transparent 1px);
-    background-size: 32px 32px;
-  }
-
-  .bg-dot-subtle {
-    background-image: radial-gradient(hsl(var(--border-strong)) 1px, transparent 1px);
-    background-size: 18px 18px;
-  }
-
-  /* Glass surface — for top bars / floating panels */
-  .glass {
-    background-color: hsl(var(--surface) / 0.72);
-    backdrop-filter: saturate(180%) blur(12px);
-    -webkit-backdrop-filter: saturate(180%) blur(12px);
-    border-color: hsl(var(--border) / 0.6);
-  }
-
-  /* Hover lift utility */
-  .lift {
-    transition:
-      transform 220ms cubic-bezier(0.25, 1, 0.5, 1),
-      box-shadow 220ms cubic-bezier(0.25, 1, 0.5, 1),
-      border-color 220ms cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  .lift:hover {
-    transform: translateY(-2px);
+  /* Subtle keyboard hint pill */
+  .kbd {
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 text-[10.5px] font-medium;
+    border-color: hsl(var(--border));
+    background-color: hsl(var(--surface));
+    color: hsl(var(--muted-foreground));
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Animations
+   Motion — Linear-style restraint: hover transitions and a single
+   short fade-in for first paint. No infinite loops, no gradients
+   panning, no glow pulses. Honors prefers-reduced-motion.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
@@ -291,90 +209,12 @@
   }
 
   @keyframes fade-in-up {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  @keyframes fade-in-down {
-    from { opacity: 0; transform: translateY(-10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes slide-in-left {
-    from { opacity: 0; transform: translateX(-12px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-
-  @keyframes slide-in-right {
-    from { opacity: 0; transform: translateX(12px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-
-  @keyframes scale-in {
-    from { opacity: 0; transform: scale(0.96); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-
-  @keyframes count-up {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes shimmer {
-    0%   { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-
-  @keyframes pulse-ring {
-    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45); }
-    50%      { box-shadow: 0 0 0 8px hsl(var(--primary) / 0); }
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-4px); }
-  }
-
-  @keyframes gradient-pan {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  .animate-fade-in       { animation: fade-in 320ms cubic-bezier(0.25, 1, 0.5, 1) both; }
-  .animate-fade-in-up    { animation: fade-in-up 480ms cubic-bezier(0.25, 1, 0.5, 1) both; }
-  .animate-fade-in-down  { animation: fade-in-down 320ms cubic-bezier(0.25, 1, 0.5, 1) both; }
-  .animate-slide-in-left { animation: slide-in-left 360ms cubic-bezier(0.25, 1, 0.5, 1) both; }
-  .animate-slide-in-right{ animation: slide-in-right 360ms cubic-bezier(0.25, 1, 0.5, 1) both; }
-  .animate-scale-in      { animation: scale-in 240ms cubic-bezier(0.25, 1, 0.5, 1) both; }
-  .animate-count-up      { animation: count-up 540ms cubic-bezier(0.25, 1, 0.5, 1) both; }
-  .animate-pulse-ring    { animation: pulse-ring 2.2s ease-out infinite; }
-  .animate-float         { animation: float 5s ease-in-out infinite; }
-  .animate-gradient-pan  {
-    background-size: 200% 200%;
-    animation: gradient-pan 8s ease infinite;
-  }
-
-  .animate-shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--surface-subtle)) 0%,
-      hsl(var(--surface-muted)) 50%,
-      hsl(var(--surface-subtle)) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.6s linear infinite;
-  }
-
-  /* Stagger helpers — apply to children */
-  .stagger > *:nth-child(1) { animation-delay: 40ms; }
-  .stagger > *:nth-child(2) { animation-delay: 100ms; }
-  .stagger > *:nth-child(3) { animation-delay: 160ms; }
-  .stagger > *:nth-child(4) { animation-delay: 220ms; }
-  .stagger > *:nth-child(5) { animation-delay: 280ms; }
-  .stagger > *:nth-child(6) { animation-delay: 340ms; }
-  .stagger > *:nth-child(7) { animation-delay: 400ms; }
-  .stagger > *:nth-child(8) { animation-delay: 460ms; }
+  .animate-fade-in    { animation: fade-in 200ms ease-out both; }
+  .animate-fade-in-up { animation: fade-in-up 240ms ease-out both; }
 }
 
 /* Respect reduced motion */

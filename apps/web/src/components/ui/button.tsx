@@ -4,45 +4,43 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  // Base — micro-interactions: hover lift, active press, focus ring, icon scale
+  // Base — restrained, professional. Single colour-change on hover, no
+  // translate, no glow. Active state is a subtle press.
   [
-    'group relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-[13.5px] font-medium tracking-tight',
-    'transition-all duration-200 ease-out-quart',
+    'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-[13px] font-medium',
+    'transition-colors duration-150',
     'disabled:pointer-events-none disabled:opacity-50',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-    '[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-transform [&_svg]:duration-200',
-    'active:scale-[0.98]',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background',
+    '[&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0',
   ].join(' '),
   {
     variants: {
       variant: {
-        default: [
-          'text-primary-foreground shadow-sm',
-          'bg-brand-gradient bg-[length:200%_200%] bg-[position:0%_50%]',
-          'hover:bg-[position:100%_50%] hover:shadow-glow hover:-translate-y-px',
-          'active:shadow-sm active:translate-y-0',
-        ].join(' '),
+        // Filled accent — single solid colour, hover deepens it.
+        default:
+          'bg-primary text-primary-foreground hover:bg-primary-hover',
         solid:
-          'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover hover:shadow-md hover:-translate-y-px active:shadow-sm active:translate-y-0',
+          'bg-primary text-primary-foreground hover:bg-primary-hover',
         destructive:
-          'bg-destructive text-destructive-foreground shadow-sm hover:brightness-95 hover:shadow-md hover:-translate-y-px',
+          'bg-destructive text-destructive-foreground hover:brightness-95',
+        // Outline — neutral border + subtle hover surface.
         outline:
-          'border border-border bg-surface text-foreground shadow-xs hover:bg-surface-subtle hover:border-primary/40 hover:shadow-sm hover:-translate-y-px',
+          'border border-border bg-surface text-foreground hover:bg-surface-subtle',
         secondary:
-          'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/70 hover:shadow-sm',
+          'border border-transparent bg-surface-muted text-foreground hover:bg-border',
         ghost:
-          'text-foreground hover:bg-surface-subtle hover:text-foreground',
+          'text-foreground hover:bg-surface-muted',
         link:
           'text-primary underline-offset-4 hover:underline',
         success:
-          'bg-success text-success-foreground shadow-sm hover:brightness-95 hover:shadow-md hover:-translate-y-px',
+          'bg-success text-success-foreground hover:brightness-95',
       },
       size: {
-        default: 'h-10 px-5 py-2',
-        sm: 'h-8 rounded-md px-3.5 text-[12.5px]',
-        lg: 'h-11 rounded-xl px-6 text-[14.5px]',
-        xl: 'h-12 rounded-xl px-7 text-[15px]',
-        icon: 'h-10 w-10',
+        default: 'h-9 px-3.5',
+        sm: 'h-8 px-3 text-[12.5px]',
+        lg: 'h-10 px-4 text-[13.5px]',
+        xl: 'h-11 px-5 text-[14px]',
+        icon: 'h-9 w-9',
       },
     },
     defaultVariants: {
