@@ -32,6 +32,7 @@ import {
   Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatMoney } from '@/lib/format';
 
 export interface PoolCaseComponent {
   id: string;
@@ -121,8 +122,11 @@ export interface RefundPoolPanelProps {
 // Display helpers
 // ---------------------------------------------------------------------------
 
+// Delegate to the shared `formatMoney` helper so the Pool renders
+// currency with the same decimals + grouping as the rest of the app
+// (KWD / BHD at 3 decimals, 2 decimals everywhere else).
 function money(amount: number, currency: string) {
-  return `${amount.toFixed(2)} ${currency}`;
+  return formatMoney(amount, currency);
 }
 
 function nextActionMeta(a: NextAction): { label: string; tone: string } {
