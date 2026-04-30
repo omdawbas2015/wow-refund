@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Link } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
@@ -176,16 +177,20 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
-      {/* Brand — navy chip with A monogram. */}
+      {/* Brand — Alshaya logo mark. */}
       <div className="flex h-12 items-center gap-2 px-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-xl surface-butter text-[12px] font-semibold tracking-tight">
-          A
-        </div>
+        <Image
+          src="/brand/alshaya-mark.png"
+          alt="Alshaya"
+          width={26}
+          height={26}
+          className="h-[26px] w-[26px] shrink-0 object-contain"
+        />
         <div className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-[12px] font-semibold tracking-tight text-heading">
+          <span className="truncate text-[11.5px] font-semibold tracking-tight text-heading">
             Alshaya Refund
           </span>
-          <span className="truncate text-[9.5px] text-muted-foreground">
+          <span className="truncate text-[9px] text-muted-foreground">
             Operations
           </span>
         </div>

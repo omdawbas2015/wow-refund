@@ -1,14 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
 import { cn } from '@/lib/utils';
 
 /**
- * Aura brand mark — compact "Aura" wordmark + small rose gradient dot.
- *
- * Previously this rendered the large `aura-mark.png` lockup, which
- * operators found oversized, mis-aligned and visually dominant in the
- * workbench + case-detail views. This redesign is a lightweight,
- * CSS-only chip: a tiny pink-to-magenta gradient dot + "Aura" wordmark
- * in the brand's rose colour. Much smaller footprint, scales crisply
- * at every DPI, and matches the aesthetic of the rest of the app.
+ * Aura brand mark — renders the official Aura logo from /brand/aura-points.png.
  */
 export function AuraLogo({
   size = 14,
@@ -19,8 +13,7 @@ export function AuraLogo({
   className?: string;
   title?: string;
 }) {
-  // Wordmark height matches `size`; the dot sits flush with the cap height.
-  const dotPx = Math.max(6, Math.round(size * 0.6));
+  const imgH = Math.max(14, size);
 
   return (
     <span
@@ -28,17 +21,16 @@ export function AuraLogo({
       aria-label={title}
       title={title}
       className={cn(
-        'inline-flex flex-none items-center gap-1 font-semibold leading-none',
+        'inline-flex flex-none items-center leading-none',
         className,
       )}
-      style={{ fontSize: `${size}px`, color: '#C0006C' }}
     >
-      <span
-        aria-hidden="true"
-        className="rounded-full bg-gradient-to-br from-[#F6339A] to-[#C0006C]"
-        style={{ width: `${dotPx}px`, height: `${dotPx}px` }}
+      <img
+        src="/brand/aura-points.png"
+        alt={title}
+        style={{ height: `${imgH}px`, width: 'auto' }}
+        className="object-contain"
       />
-      <span className="tracking-tight">Aura</span>
     </span>
   );
 }
@@ -62,15 +54,15 @@ export function AuraPointsBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border border-[#E6007E]/20 bg-[#FFF2F8] px-2.5 py-0.5 text-xs font-medium text-[#C0006C]',
+        'inline-flex items-center gap-1.5 rounded-full border border-[#1B4D5A]/20 bg-[#F0F7F8] px-2.5 py-0.5 text-xs font-medium text-[#1B4D5A]',
         className,
       )}
     >
-      <span
-        aria-hidden="true"
-        className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-[#F6339A] to-[#C0006C]"
+      <img
+        src="/brand/aura-points.png"
+        alt="Aura"
+        className="h-3 w-auto object-contain"
       />
-      <span className="font-semibold tracking-tight">Aura</span>
       <span aria-hidden="true" className="opacity-40">
         ·
       </span>

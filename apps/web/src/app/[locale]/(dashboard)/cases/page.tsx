@@ -162,17 +162,17 @@ export default async function CasesPage({
   const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
   return (
-    <div className="mx-auto max-w-7xl px-8 py-10">
-      <div className="mb-6 flex items-center justify-between gap-4">
+    <div className="mx-auto max-w-7xl px-6 py-6">
+      <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-display-md font-semibold tracking-tight text-heading">
             Refund cases
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Manage and track all refund requests across brands.
           </p>
         </div>
-        <Button asChild size="lg">
+        <Button asChild size="default">
           <Link href={`/${locale}/cases/new`}>
             <Plus className="h-4 w-4" />
             New case
