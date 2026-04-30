@@ -117,6 +117,32 @@ describe('processInboundReply', () => {
       expect(userFindFirst).not.toHaveBeenCalled();
     });
 
+    it('accepts a sender on a SEMICOLON-separated recipientEmails list (Outlook style)', async () => {
+      // Outlook serializes recipient lists with `;`. We must accept that.
+      approvalFindUnique.mockResolvedValue({
+        ...baseBatch,
+        recipientEmails: 'manager.a@wow.local; manager.b@wow.local ;manager.c@wow.local',
+      });
+
+      try {
+        await processInboundReply({
+          fromEmail: 'manager.b@wow.local',
+          subject: 'RE: APB-KW-2026-90002',
+          rawBody: 'Approved.',
+        });
+      } catch {
+        // expected — rest of pipeline isn't mocked.
+      }
+
+      const unauthorized = auditCreate.mock.calls.find(
+        (c) =>
+          (c[0] as { data: { action: string } }).data.action ===
+          'inbound.unauthorized_sender',
+      );
+      expect(unauthorized).toBeUndefined();
+      expect(userFindFirst).not.toHaveBeenCalled();
+    });
+
     it('accepts a sender that is an active manager for the batch country', async () => {
       approvalFindUnique.mockResolvedValue(baseBatch);
       userFindFirst.mockResolvedValue({

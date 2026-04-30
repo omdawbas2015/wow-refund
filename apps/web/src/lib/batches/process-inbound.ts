@@ -138,8 +138,12 @@ async function isAuthorizedSender(opts: {
   const sender = opts.fromEmail.trim().toLowerCase();
   if (!sender) return false;
 
+  // Match resolve-approver.ts: recipientEmails uses comma OR semicolon
+  // separators (Outlook serializes recipient lists with `;` while our
+  // own UI defaults to `,`). Splitting on only one of them rejects
+  // legitimate managers — see Devin Review on PR #21.
   const recipients = opts.recipientEmails
-    .split(',')
+    .split(/[,;]/)
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
   if (recipients.includes(sender)) return true;
