@@ -3,12 +3,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 const auditCreate = vi.fn();
 const approvalFindUnique = vi.fn();
 const userFindFirst = vi.fn();
+const transaction = vi.fn();
 
 vi.mock('@wow/db', () => ({
   prisma: {
     auditLog: { create: (...args: unknown[]) => auditCreate(...args) },
     approvalBatch: { findUnique: (...args: unknown[]) => approvalFindUnique(...args) },
     user: { findFirst: (...args: unknown[]) => userFindFirst(...args) },
+    $transaction: (...args: unknown[]) => transaction(...args),
     // Other models are not used in the tests below; they will throw a clear
     // error if they get hit, signalling an unintended code path.
   },
@@ -20,6 +22,7 @@ beforeEach(() => {
   auditCreate.mockReset();
   approvalFindUnique.mockReset();
   userFindFirst.mockReset();
+  transaction.mockReset();
   auditCreate.mockResolvedValue(undefined);
 });
 
@@ -160,6 +163,52 @@ describe('processInboundReply', () => {
       expect(out.intent).toBe('UNAUTHORIZED_SENDER');
       const args = auditCreate.mock.calls[0]?.[0] as { data: { action: string } };
       expect(args.data.action).toBe('inbound.unauthorized_sender');
+    });
+  });
+
+  describe('AI APPROVAL_RESPONSE — blanket + perCase ("approve all except X")', () => {
+    it('applies blanket to every pending case, then per-case overrides', async () => {
+      const batch = {
+        id: 'batch_2',
+        batchNumber: 'APB-KW-2026-91001',
+        countryId: 'kw',
+        status: 'SENT',
+        recipientEmails: 'kw-manager@wow.local',
+        cases: [
+          { id: 'c1', caseNumber: 'REF-KW-2026-000001', status: 'PENDING_APPROVAL' },
+          { id: 'c2', caseNumber: 'REF-KW-2026-000002', status: 'PENDING_APPROVAL' },
+          { id: 'c3', caseNumber: 'REF-KW-2026-000003', status: 'PENDING_APPROVAL' },
+        ],
+      };
+      approvalFindUnique.mockResolvedValue(batch);
+
+      // Capture the decisions that the inner $transaction would have applied.
+      // We resolve immediately so the outer flow returns the payload.
+      transaction.mockResolvedValue(undefined);
+
+      const out = await processInboundReply({
+        fromEmail: 'kw-manager@wow.local',
+        subject: 'RE: APB-KW-2026-91001',
+        rawBody: 'Approve all except case 2',
+        aiParsed: {
+          intent: 'APPROVAL_RESPONSE',
+          confidence: 0.95,
+          blanket: 'APPROVED',
+          perCase: [
+            { caseNumber: 'REF-KW-2026-000002', decision: 'REJECTED' },
+          ],
+        },
+      });
+
+      expect(out.intent).toBe('APPROVAL_RESPONSE');
+      const decisions = out.payload?.['decisions'] as Array<[string, string]>;
+      // Blanket APPROVED applied to all 3 cases first, then perCase
+      // overrode case 2 with REJECTED. Order matches batch.cases order.
+      expect(decisions).toEqual([
+        ['REF-KW-2026-000001', 'APPROVED'],
+        ['REF-KW-2026-000002', 'REJECTED'],
+        ['REF-KW-2026-000003', 'APPROVED'],
+      ]);
     });
   });
 });

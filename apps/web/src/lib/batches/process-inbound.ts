@@ -218,13 +218,15 @@ async function applyApprovalReply(
   // (signatures, quoted threads) and is much better than regex at handling
   // "approve all except case X" or natural-language replies.
   if (aiParsed?.intent === 'APPROVAL_RESPONSE') {
-    for (const entry of aiParsed.perCase ?? []) {
-      decisions.set(entry.caseNumber, entry.decision);
-    }
-    if (decisions.size === 0 && aiParsed.blanket) {
+    // Apply blanket FIRST so per-case entries can override it. This is the
+    // "approve all except X" pattern: blanket=APPROVED + perCase=[REJECTED X].
+    if (aiParsed.blanket) {
       for (const c of batch.cases) {
         if (c.status === 'PENDING_APPROVAL') decisions.set(c.caseNumber, aiParsed.blanket);
       }
+    }
+    for (const entry of aiParsed.perCase ?? []) {
+      decisions.set(entry.caseNumber, entry.decision);
     }
   } else {
     const parsed = parseApprovalReply(rawBody);
@@ -478,13 +480,9 @@ async function applyAuraConfirmation(
   // "all done" / "confirmed" / "تم". APPROVED → COMPLETED, REJECTED → FAILED.
   const decisions = new Map<string, 'COMPLETED' | 'FAILED'>();
   if (aiParsed?.intent === 'AURA_CONFIRMATION') {
-    for (const entry of aiParsed.perCase ?? []) {
-      decisions.set(
-        entry.caseNumber,
-        entry.decision === 'APPROVED' ? 'COMPLETED' : 'FAILED',
-      );
-    }
-    if (decisions.size === 0 && aiParsed.blanket) {
+    // Apply blanket FIRST so per-case entries can override it
+    // ("all done except X").
+    if (aiParsed.blanket) {
       const blanketStatus: 'COMPLETED' | 'FAILED' =
         aiParsed.blanket === 'APPROVED' ? 'COMPLETED' : 'FAILED';
       for (const c of batch.cases) {
@@ -492,6 +490,12 @@ async function applyAuraConfirmation(
           decisions.set(c.caseNumber, blanketStatus);
         }
       }
+    }
+    for (const entry of aiParsed.perCase ?? []) {
+      decisions.set(
+        entry.caseNumber,
+        entry.decision === 'APPROVED' ? 'COMPLETED' : 'FAILED',
+      );
     }
   } else {
     const parsed = parseApprovalReply(rawBody);
