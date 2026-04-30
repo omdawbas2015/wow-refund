@@ -43,8 +43,10 @@ export default async function DashboardLayout({
           currentLocale={locale}
         />
         <BackLink />
-        <main className="scrollbar-thin flex-1 overflow-y-auto">
-          {children}
+        <main className="scrollbar-thin flex-1 overflow-y-auto bg-background">
+          <div className="animate-fade-in">
+            {children}
+          </div>
         </main>
       </div>
       <CommandPalette role={session.user.role ?? null} />
