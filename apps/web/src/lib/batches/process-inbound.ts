@@ -150,7 +150,7 @@ async function isAuthorizedSender(opts: {
 
   const user = await prisma.user.findFirst({
     where: {
-      email: { equals: sender, mode: 'insensitive' },
+      email: { equals: sender },
       status: 'ACTIVE',
       deletedAt: null,
     },
