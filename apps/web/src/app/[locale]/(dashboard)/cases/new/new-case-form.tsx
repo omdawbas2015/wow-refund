@@ -429,8 +429,8 @@ export function NewCaseForm({
           className={cn(
             'group relative flex w-full items-center gap-3 rounded-lg border p-3.5 text-start transition-colors',
             includeAura
-              ? 'border-[#E6007E]/50 bg-[#FFF7FB]'
-              : 'border-border bg-surface hover:border-[#E6007E]/30 hover:bg-[#FFF7FB]/60',
+              ? 'border-[#194C5A]/40 bg-[#F0F6F7]'
+              : 'border-border bg-surface hover:border-[#194C5A]/25 hover:bg-[#F0F6F7]/60',
           )}
         >
           <AuraLogo size={14} />
@@ -444,7 +444,7 @@ export function NewCaseForm({
             className={cn(
               'flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 transition-colors',
               includeAura
-                ? 'border-[#E6007E] bg-[#E6007E] text-white'
+                ? 'border-[#194C5A] bg-[#194C5A] text-white'
                 : 'border-border bg-white',
             )}
           >
