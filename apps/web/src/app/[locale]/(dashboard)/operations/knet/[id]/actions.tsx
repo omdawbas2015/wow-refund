@@ -124,10 +124,10 @@ export function KnetBatchActions(props: {
 
   if (props.status === 'DRAFT') {
     return (
-      <div className="rounded-md border border-border bg-surface-subtle p-4">
-        <div className="mb-2 text-sm">
-          Draft batch with {props.components.length} component(s). Recipients:{' '}
-          <code>{props.recipientEmails}</code>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface-subtle p-4">
+        <div className="text-sm text-muted-foreground">
+          {props.components.length} component(s) ready ·{' '}
+          <span className="font-mono text-xs text-foreground">{props.recipientEmails}</span>
         </div>
         <Button onClick={send} disabled={pending}>
           {pending ? 'Sending…' : 'Send to finance'}
@@ -139,7 +139,7 @@ export function KnetBatchActions(props: {
   if (props.status === 'COMPLETED' || props.status === 'CANCELLED') {
     return (
       <div className="rounded-md border border-border bg-surface-subtle p-4 text-sm text-muted-foreground">
-        This batch is {props.status.toLowerCase()}. No further actions.
+        Batch {props.status.toLowerCase()}.
       </div>
     );
   }
@@ -150,15 +150,18 @@ export function KnetBatchActions(props: {
   return (
     <div className="space-y-4">
       <div className="rounded-md border border-border bg-surface-subtle p-4">
-        <div className="mb-2 text-sm font-medium">Paste finance ARN response</div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="text-sm font-medium">Paste ARN reply</span>
+          <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+            CASE · AUTH · ARN
+          </span>
+        </div>
         <Textarea
-          rows={5}
-          placeholder={`REF-KW-2026-000001  123456  ARN-KW-9999-AAA
-REF-KW-2026-000002  654321  ARN-KW-9999-BBB
-# use "-" or "N/A" if a component has no auth code:
-REF-KW-2026-000003  -        ARN-KW-9999-CCC`}
+          rows={4}
+          placeholder={'REF-KW-2026-000001  123456  ARN-KW-9999-AAA\nREF-KW-2026-000002  654321  ARN-KW-9999-BBB'}
           value={arnPaste}
           onChange={(e) => setArnPaste(e.target.value)}
+          className="font-mono text-xs"
         />
         <div className="mt-2 flex justify-end">
           <Button onClick={ingest} disabled={pending}>

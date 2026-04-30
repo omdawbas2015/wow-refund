@@ -38,7 +38,7 @@
     "Subject_lower": {
       "runAfter": {},
       "type": "Compose",
-      "inputs": "@toLower(triggerOutputs()?['body/subject'])"
+      "inputs": "@toLower(coalesce(triggerOutputs()?['body/subject'], ''))"
     },
     "Has_batch_id": {
       "runAfter": {

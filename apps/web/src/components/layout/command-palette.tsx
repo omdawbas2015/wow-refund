@@ -25,7 +25,6 @@ import {
   Plus,
   CheckCircle2,
   Send,
-  Sparkles,
   Search as SearchIcon,
   type LucideIcon,
 } from 'lucide-react';
@@ -45,12 +44,11 @@ type ActionItem = {
 const ACTIONS: ActionItem[] = [
   // ---------- Navigate ----------
   { id: 'nav-dashboard', label: 'Go to Dashboard', group: 'Navigate', icon: LayoutDashboard, href: '/' },
-  { id: 'nav-cases', label: 'Go to Cases', group: 'Navigate', icon: FileText, href: '/cases' },
-  { id: 'nav-operations', label: 'Go to Refund Operations', group: 'Navigate', icon: ShieldCheck, href: '/operations' },
+  { id: 'nav-cases', label: 'Go to Refund Cases', group: 'Navigate', icon: FileText, href: '/cases' },
+  { id: 'nav-operations', label: 'Go to Refund Pool', group: 'Navigate', icon: ShieldCheck, href: '/operations' },
   { id: 'nav-promo', label: 'Go to Promo Codes', group: 'Navigate', icon: Gift, href: '/promo' },
   { id: 'nav-stores', label: 'Go to Stores Communication', group: 'Navigate', icon: Store, href: '/help-desk/stores' },
   { id: 'nav-reports', label: 'Go to Reports', group: 'Navigate', icon: BarChart3, href: '/reports' },
-  { id: 'nav-changelog', label: 'Open Changelog', group: 'Navigate', icon: Sparkles, href: '/changelog' },
 
   // ---------- Cases ----------
   { id: 'case-create', label: 'Create refund case', hint: 'New case', group: 'Cases', icon: Plus, href: '/cases/new', keywords: ['new', 'case', 'refund'] },
@@ -84,8 +82,7 @@ const ACTIONS: ActionItem[] = [
   { id: 'admin-settings', label: 'System settings', group: 'Admin', icon: Settings, href: '/admin/settings', roles: ['ADMIN'] },
 
   // ---------- Help ----------
-  { id: 'help-shortcuts', label: 'Show keyboard shortcuts', hint: 'Press ?', group: 'Help', icon: Sparkles, keywords: ['help', 'shortcut'] },
-  { id: 'help-changelog', label: 'See what\'s new', group: 'Help', icon: Sparkles, href: '/changelog' },
+  { id: 'help-shortcuts', label: 'Show keyboard shortcuts', hint: 'Press ?', group: 'Help', icon: SearchIcon, keywords: ['help', 'shortcut'] },
 ];
 
 const GROUP_ORDER: ActionItem['group'][] = ['Navigate', 'Cases', 'Operations', 'Promo', 'Admin', 'Help'];

@@ -12,7 +12,10 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@wow/db';
-import { processInboundReply } from '@/lib/batches/process-inbound';
+import {
+  processInboundReply,
+  type AiParsedReply,
+} from '@/lib/batches/process-inbound';
 
 const INBOUND_SECRET = process.env['POWER_AUTOMATE_INBOUND_SECRET'] ?? '';
 
@@ -22,6 +25,12 @@ interface InboundPayload {
   subject: string;
   rawBody: string;
   powerAutomateRunId?: string;
+  /**
+   * Optional AI-parsed payload from Power Automate's GPT / AI Builder step.
+   * When present this is the authoritative source of truth for the decision
+   * and overrides the regex-based fallback parser on the server side.
+   */
+  aiParsed?: AiParsedReply;
 }
 
 export async function POST(req: NextRequest) {
@@ -62,12 +71,22 @@ export async function POST(req: NextRequest) {
       fromEmail: payload.fromEmail,
       subject: payload.subject,
       rawBody: payload.rawBody,
+      aiParsed: payload.aiParsed,
     });
 
+    // Map outcome intents to inboundEmail.parseStatus. UNAUTHORIZED_SENDER
+    // and UNCLEAR_INTENT both leave the batch untouched but are surfaced as
+    // FAILED rows in the admin panel so a human can decide what to do.
+    const parseStatus =
+      outcome.intent === 'IGNORED'
+        ? 'IGNORED'
+        : outcome.intent === 'UNAUTHORIZED_SENDER' || outcome.intent === 'UNCLEAR_INTENT'
+          ? 'FAILED'
+          : 'PARSED';
     await prisma.inboundEmail.update({
       where: { id: record.id },
       data: {
-        parseStatus: outcome.intent === 'IGNORED' ? 'IGNORED' : 'PARSED',
+        parseStatus,
         parsedIntent: outcome.intent,
         parsedPayload: outcome.payload ? JSON.stringify(outcome.payload) : null,
         parsedAt: new Date(),

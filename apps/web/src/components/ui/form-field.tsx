@@ -14,7 +14,7 @@ interface FormFieldProps {
 
 export function FormField({ label, id, required, hint, error, children, className }: FormFieldProps) {
   return (
-    <div className={cn('space-y-1.5', className)}>
+    <div className={cn('space-y-2', className)}>
       <Label htmlFor={id}>
         {label}
         {required ? <span className="ms-0.5 text-destructive">*</span> : null}

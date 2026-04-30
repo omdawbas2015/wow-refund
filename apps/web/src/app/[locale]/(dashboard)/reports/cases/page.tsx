@@ -60,7 +60,7 @@ export default async function CaseStatusReportPage({ searchParams }: PageProps) 
   const map = new Map(grouped.map((g) => [g.status, g._count._all]));
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <div className="mx-auto max-w-3xl px-8 py-10">
       <Link
         href={`/reports?from=${range.fromIso}&to=${range.toIso}`}
         className="text-xs uppercase text-muted-foreground hover:text-primary"

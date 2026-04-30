@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -188,9 +189,32 @@ function KnetBadge({ label, size }: RendererProps) {
 }
 
 function AuraBadge({ label, size }: RendererProps) {
+  // Aura chip composed in CSS to match Apple Pay's pattern: small
+  // bitmap icon + wordmark next to it. The wordmark uses the official
+  // Aura magenta (#ee0677). Composing in CSS (vs. dropping in a
+  // pre-rendered logo PNG) lets us hit the exact h-9 / w-14 chip
+  // footprint without letterboxing or excess white halo.
+  const iconDim = size === 'md' ? 18 : 9;
   return (
     <Chip label={label} size={size} className="bg-white">
-      <AuraGlyph size={size} />
+      <span className="inline-flex items-center gap-[2px]">
+        <Image
+          src="/brand/aura-icon.png"
+          alt=""
+          width={iconDim * 2}
+          height={iconDim * 2}
+          className="object-contain"
+          style={{ height: `${iconDim}px`, width: `${iconDim}px` }}
+        />
+        <span
+          className={cn(
+            'font-semibold leading-none tracking-[0.04em] text-[#ee0677]',
+            size === 'md' ? 'text-[10px]' : 'text-[6px]',
+          )}
+        >
+          AURA
+        </span>
+      </span>
     </Chip>
   );
 }
@@ -235,23 +259,4 @@ function AppleLogo({ size }: { size: PaymentSize }) {
   );
 }
 
-function AuraGlyph({ size }: { size: PaymentSize }) {
-  // Aura brand mark: pink circle with Arabic calligraphy "نور" inside.
-  const cls = size === 'md' ? 'h-6 w-6' : 'h-3.5 w-3.5';
-  return (
-    <svg viewBox="0 0 48 48" className={cls} aria-hidden fill="none">
-      <circle cx="24" cy="24" r="20" stroke="#E6007E" strokeWidth="3" fill="none" />
-      <text
-        x="24"
-        y="28"
-        textAnchor="middle"
-        fontFamily="Arial, sans-serif"
-        fontWeight="700"
-        fontSize="16"
-        fill="#E6007E"
-      >
-        نور
-      </text>
-    </svg>
-  );
-}
+

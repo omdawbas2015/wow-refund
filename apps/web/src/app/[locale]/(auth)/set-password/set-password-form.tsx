@@ -1,7 +1,6 @@
 'use client';
 
 import { useTransition } from 'react';
-import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,6 @@ import { FormField } from '@/components/ui/form-field';
 import { setPasswordAction } from '@/app/actions/auth';
 
 export function SetPasswordForm() {
-  const t = useTranslations('auth.setPassword');
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -21,7 +19,7 @@ export function SetPasswordForm() {
     startTransition(async () => {
       const result = await setPasswordAction(fd);
       if (result.ok) {
-        toast.success(t('success'));
+        toast.success('Password set successfully.');
         router.push('/');
         router.refresh();
       } else {
@@ -31,17 +29,17 @@ export function SetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label={t('passwordLabel')} id="password" required hint="At least 8 characters, with letters and numbers">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <FormField label="New password" id="password" required hint="At least 8 characters, with letters and numbers">
         <Input id="password" name="password" type="password" autoComplete="new-password" required disabled={pending} />
       </FormField>
 
-      <FormField label={t('confirmPasswordLabel')} id="confirmPassword" required>
+      <FormField label="Confirm password" id="confirmPassword" required>
         <Input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required disabled={pending} />
       </FormField>
 
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? '…' : t('submit')}
+        {pending ? 'Setting...' : 'Set password'}
       </Button>
     </form>
   );

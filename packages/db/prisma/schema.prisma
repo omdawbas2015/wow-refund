@@ -209,6 +209,7 @@ model User {
   casesCreated          RefundCase[] @relation("CaseCreatedBy")
   casesAssigned         RefundCase[] @relation("CaseAssignedTo")
   casesApprovedByUser   RefundCase[] @relation("CaseApprovedBy")
+  casesCustomerCallBy   RefundCase[] @relation("CaseCustomerCallBy")
   componentsRefunded    RefundComponent[] @relation("ComponentRefundedBy")
   notesAuthored         CaseNote[]    @relation("NoteAuthor")
   noteMentions          CaseNoteMention[]
@@ -392,6 +393,19 @@ enum AuraStatus {
   FAILED
 }
 
+/// Post-refund customer-call follow-up state — captured after the ARN
+/// email is sent. The agent tries to call the customer to confirm receipt;
+/// either they answer ("ANSWERED" — nothing else to do) or they don't
+/// ("NO_ANSWER" — we send a follow-up email on the ARN thread). Cases
+/// where a call is unnecessary fall into "NOT_NEEDED".
+enum CustomerCallStatus {
+  NOT_APPLICABLE // case not yet executed
+  PENDING // ARN email sent, waiting for the agent to reach the customer
+  ANSWERED // agent reached the customer; ARN email is enough
+  NO_ANSWER // agent couldn't reach; follow-up reply sent on the ARN thread
+  NOT_NEEDED // agent decided no call is required for this case
+}
+
 /// Refund case — the main business entity.
 model RefundCase {
   id              String     @id @default(cuid())
@@ -459,6 +473,14 @@ model RefundCase {
 
   // Customer communication
   customerNotifiedAt DateTime?
+
+  // Post-refund customer call follow-up. Captures the outcome of the
+  // agent's call after the ARN email has been sent to the customer.
+  customerCallStatus      CustomerCallStatus @default(NOT_APPLICABLE)
+  customerCallUpdatedAt   DateTime?
+  customerCallById        String?
+  customerCallBy          User?              @relation("CaseCustomerCallBy", fields: [customerCallById], references: [id])
+  customerCallFollowUpAt  DateTime? // when the follow-up reply was dispatched
 
   // Approval linkage
   approvalBatchId String?

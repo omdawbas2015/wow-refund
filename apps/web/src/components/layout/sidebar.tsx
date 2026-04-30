@@ -1,6 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { Link } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
@@ -11,77 +10,76 @@ import {
   Gift,
   Store,
   BarChart3,
-  Users,
   ClipboardList,
-  Globe,
   Settings,
-  CreditCard,
-  Mail,
-  Tag,
-  AlertTriangle,
-  History,
-  MessageSquare,
-  ShieldAlert,
-  Timer,
   Bell,
-  Search as SearchIcon,
-  Sparkles,
   User as UserIcon,
-  Activity,
-  Server,
-  CalendarClock,
-  Coins,
-  Building2,
-  CalendarRange,
-  Workflow,
-  CloudUpload,
-  ToggleLeft,
-  Palette,
+  Search as SearchIcon,
+  LogOut,
+  Send,
+  Zap,
 } from 'lucide-react';
 
-interface NavSection {
-  label: string;
-  items: (NavItem & { module?: string })[];
-}
 interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
+  module?: string;
+  badge?: number;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
 }
 
 export function Sidebar({
   role,
   disabledModules = [],
+  pendingAccessRequestCount = 0,
 }: {
   role: string | null;
   disabledModules?: string[];
+  pendingAccessRequestCount?: number;
 }) {
   const pathname = usePathname();
-  const t = useTranslations('nav');
   const disabled = new Set(disabledModules);
 
-  const opsRole = role === 'ADMIN' || role === 'OPERATIONS' || role === 'MANAGER';
+  const opsRole =
+    role === 'ADMIN' ||
+    role === 'MANAGER' ||
+    role === 'REFUND_AGENT' ||
+    role === 'OPERATIONS';
+
+  const dashboardItem: NavItem = {
+    label: 'Dashboard',
+    href: '/',
+    icon: LayoutDashboard,
+  };
+
   const sections: NavSection[] = [
     {
-      label: '',
+      label: 'Refund',
       items: [
-        { label: t('dashboard'), href: '/', icon: LayoutDashboard },
-        { label: t('cases'), href: '/cases', icon: FileText },
-        { label: 'Search', href: '/search', icon: SearchIcon },
-        { label: 'Notifications', href: '/notifications', icon: Bell },
-        { label: 'Profile', href: '/profile', icon: UserIcon },
+        { label: 'Refund Cases', href: '/cases', icon: FileText },
         ...(opsRole
-          ? [{ label: t('operations'), href: '/operations', icon: ShieldCheck }]
+          ? [{ label: 'Refund Pool', href: '/operations', icon: ShieldCheck }]
           : []),
-        { label: t('promo'), href: '/promo', icon: Gift, module: 'promo' },
       ],
     },
     {
-      label: t('helpDesk'),
+      label: 'Promo',
+      items: [
+        { label: 'Promo Admin', href: '/promo', icon: Gift, module: 'promo' },
+        { label: 'Send Promo', href: '/promo/allocate', icon: Send, module: 'promo' },
+      ],
+    },
+    {
+      label: 'Help Desk',
       items: [
         {
-          label: t('storesCommunication'),
+          label: 'Stores',
           href: '/help-desk/stores',
           icon: Store,
           module: 'stores',
@@ -89,54 +87,83 @@ export function Sidebar({
       ],
     },
     {
-      label: t('reports'),
+      label: 'Reports',
       items: [
-        { label: t('reports'), href: '/reports', icon: BarChart3, module: 'reports' },
-        { label: 'Changelog', href: '/changelog', icon: Sparkles },
+        { label: 'Reports', href: '/reports', icon: BarChart3, module: 'reports' },
+        { label: 'Notifications', href: '/notifications', icon: Bell },
       ],
     },
     {
-      label: t('admin'),
+      label: 'Admin',
       items: [
-        { label: t('users'), href: '/admin/users', icon: Users, adminOnly: true },
-        { label: t('pendingApprovals'), href: '/admin/pending-approvals', icon: ClipboardList, adminOnly: true },
-        { label: t('countries'), href: '/admin/countries', icon: Globe, adminOnly: true },
-        { label: 'Currencies', href: '/admin/currencies', icon: Coins, adminOnly: true },
-        { label: 'Brands', href: '/admin/brands', icon: Tag, adminOnly: true },
-        { label: 'Branches', href: '/admin/branches', icon: Building2, adminOnly: true },
-        { label: t('paymentMethods'), href: '/admin/payment-methods', icon: CreditCard, adminOnly: true },
-        { label: 'Root Causes', href: '/admin/root-causes', icon: AlertTriangle, adminOnly: true },
-        { label: 'Store Templates', href: '/admin/store-templates', icon: MessageSquare, adminOnly: true },
-        { label: t('emailTemplates'), href: '/admin/email-templates', icon: Mail, adminOnly: true },
-        { label: t('auditLog') ?? 'Audit Log', href: '/admin/audit-log', icon: History, adminOnly: true },
-        { label: 'Email Log', href: '/admin/email-log', icon: Mail, adminOnly: true },
-        { label: 'SLA Rules', href: '/admin/sla-rules', icon: Timer, adminOnly: true },
-        { label: 'Fraud Signals', href: '/admin/fraud-signals', icon: ShieldAlert, adminOnly: true, module: 'fraud-signals' },
-        { label: 'Automation Rules', href: '/admin/automation-rules', icon: Workflow, adminOnly: true, module: 'automation-rules' },
-        { label: 'Batch Schedules', href: '/admin/batch-schedules', icon: CalendarRange, adminOnly: true, module: 'batch-schedules' },
-        { label: 'Scheduled Reports', href: '/admin/scheduled-reports', icon: CalendarClock, adminOnly: true, module: 'scheduled-reports' },
-        { label: 'Backup', href: '/admin/backup', icon: CloudUpload, adminOnly: true, module: 'backup' },
-        { label: 'Modules', href: '/admin/modules', icon: ToggleLeft, adminOnly: true },
-        { label: 'Design Tokens', href: '/admin/design-tokens', icon: Palette, adminOnly: true },
-        { label: 'Cron Status', href: '/admin/cron-status', icon: Activity, adminOnly: true },
-        { label: 'System Info', href: '/admin/system-info', icon: Server, adminOnly: true },
-        { label: t('settings'), href: '/admin/settings', icon: Settings, adminOnly: true },
+        {
+          label: 'User Requests',
+          href: '/admin/pending-approvals',
+          icon: ClipboardList,
+          adminOnly: true,
+          badge: pendingAccessRequestCount,
+        },
       ],
     },
   ];
 
+  const footerItems: NavItem[] = [
+    { label: 'Profile', href: '/profile', icon: UserIcon },
+    { label: 'Settings', href: '/admin/settings', icon: Settings, adminOnly: true },
+  ];
+
+  function isActiveHref(href: string) {
+    if (href === '/') return pathname === '/' || /^\/(en)$/.test(pathname);
+    return pathname.endsWith(href) || pathname.includes(`${href}/`);
+  }
+
+  function openSearch() {
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }),
+    );
+  }
+
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-e border-border bg-surface">
-      <div className="flex h-14 items-center gap-2 px-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-          </svg>
+    <aside className="flex h-full w-[240px] shrink-0 flex-col bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))]">
+      {/* Brand */}
+      <div className="px-4 pt-5 pb-1">
+        <div className="flex items-center gap-2.5 px-2 py-1">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20">
+            <Zap className="h-4 w-4 text-white" />
+          </div>
+          <div className="min-w-0">
+            <span className="block truncate text-[13px] font-semibold text-white">
+              WOW Refund
+            </span>
+            <span className="block truncate text-[10px] text-[hsl(var(--sidebar-fg))]/50">
+              Refund Operations
+            </span>
+          </div>
         </div>
-        <span className="text-sm font-semibold tracking-tight">WOW Refund</span>
       </div>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-2">
+      {/* Search */}
+      <div className="px-4 py-2">
+        <button
+          type="button"
+          onClick={openSearch}
+          className="flex h-8 w-full items-center gap-2 rounded-md bg-white/[0.06] px-2.5 text-[12px] text-[hsl(var(--sidebar-fg))]/50 transition-colors hover:bg-white/[0.1] hover:text-[hsl(var(--sidebar-fg))]/80"
+          aria-label="Search"
+        >
+          <SearchIcon className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1 text-left">Search...</span>
+          <kbd className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[10px] font-medium">
+            Ctrl K
+          </kbd>
+        </button>
+      </div>
+
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-2 pb-2">
+        {/* Dashboard */}
+        <ul className="mb-1">
+          <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
+        </ul>
+
         {sections.map((section, i) => {
           const items = section.items.filter(
             (item) =>
@@ -145,39 +172,76 @@ export function Sidebar({
           );
           if (items.length === 0) return null;
           return (
-            <div key={i} className="mb-4">
-              {section.label ? (
-                <div className="mb-1 px-2 text-caption uppercase text-muted-foreground">
-                  {section.label}
-                </div>
-              ) : null}
+            <div key={i} className="mb-0.5">
+              <div className="mb-1 mt-4 px-2 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--sidebar-fg))]/30">
+                {section.label}
+              </div>
               <ul className="space-y-0.5">
-                {items.map((item) => {
-                  const isActive =
-                    item.href === '/' ? pathname === '/' || /^\/(en|ar)$/.test(pathname) : pathname.endsWith(item.href) || pathname.includes(`${item.href}/`);
-                  const Icon = item.icon;
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors',
-                          isActive
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-body hover:bg-surface-subtle hover:text-foreground',
-                        )}
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
+                {items.map((item) => (
+                  <SidebarRow
+                    key={item.href}
+                    item={item}
+                    isActive={isActiveHref(item.href)}
+                  />
+                ))}
               </ul>
             </div>
           );
         })}
       </nav>
+
+      <div className="border-t border-white/[0.06] px-3 py-2.5">
+        <ul className="space-y-0.5">
+          {footerItems
+            .filter((item) => !item.adminOnly || role === 'ADMIN')
+            .map((item) => (
+              <SidebarRow
+                key={item.href}
+                item={item}
+                isActive={isActiveHref(item.href)}
+              />
+            ))}
+          <li>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a
+              href="/api/auth/signout"
+              className="flex h-8 items-center gap-2.5 rounded-md px-2 text-[12px] font-medium text-[hsl(var(--sidebar-fg))]/40 transition-colors hover:bg-red-500/10 hover:text-red-400"
+            >
+              <LogOut className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1 truncate">Sign out</span>
+            </a>
+          </li>
+        </ul>
+      </div>
     </aside>
+  );
+}
+
+function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
+  const Icon = item.icon;
+  const showBadge = (item.badge ?? 0) > 0;
+  return (
+    <li>
+      <Link
+        href={item.href}
+        className={cn(
+          'group flex h-8 items-center gap-2.5 rounded-md px-2 text-[12px] font-medium transition-all duration-150',
+          isActive
+            ? 'bg-white/[0.1] text-white'
+            : 'text-[hsl(var(--sidebar-fg))]/60 hover:bg-white/[0.06] hover:text-white',
+        )}
+      >
+        <Icon className={cn('h-3.5 w-3.5 shrink-0', isActive ? 'text-indigo-400' : 'opacity-50 group-hover:opacity-80')} />
+        <span className="flex-1 truncate">{item.label}</span>
+        {showBadge && (
+          <span
+            className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
+            aria-label={`${item.badge} pending`}
+          >
+            {item.badge}
+          </span>
+        )}
+      </Link>
+    </li>
   );
 }

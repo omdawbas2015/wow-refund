@@ -1,23 +1,22 @@
-import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SetPasswordForm } from './set-password-form';
 
 export default async function SetPasswordPage() {
   const session = await auth();
   if (!session?.user) redirect('/login');
 
-  const t = await getTranslations('auth.setPassword');
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="space-y-1.5">
-        <CardTitle className="text-heading-lg">{t('title')}</CardTitle>
-        <CardDescription>{t('subtitle')}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div>
+      <h2 className="text-2xl font-bold tracking-tight text-foreground">
+        Set your password
+      </h2>
+      <p className="mt-1.5 text-sm text-muted-foreground">
+        Choose a secure password for your account
+      </p>
+      <div className="mt-8">
         <SetPasswordForm />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

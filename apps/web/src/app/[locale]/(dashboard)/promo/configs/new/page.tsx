@@ -25,7 +25,7 @@ export default async function NewPromoConfigPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-8">
+    <div className="mx-auto max-w-2xl px-8 py-10">
       <Link href="/promo" className="text-xs uppercase text-muted-foreground hover:text-primary">
         ← Promo codes
       </Link>

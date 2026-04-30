@@ -1,0 +1,328 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": { "defaultValue": {}, "type": "Object" },
+    "$authentication": { "defaultValue": {}, "type": "SecureObject" }
+  },
+  "triggers": {
+    "When_a_new_email_arrives_(V3)": {
+      "type": "OpenApiConnectionNotification",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_office365",
+          "operationId": "OnNewEmailV3",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+        },
+        "parameters": {
+          "folderPath": "Inbox",
+          "importance": "Any",
+          "fetchOnlyWithAttachment": false,
+          "includeAttachments": false
+        },
+        "subscribe": { "method": "post", "uri": "@listCallbackUrl()" }
+      },
+      "description": "Trigger fires for every new mail in the refund-ops mailbox Inbox."
+    }
+  },
+  "actions": {
+    "Init_appBaseUrl": {
+      "runAfter": {},
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "appBaseUrl",
+            "type": "string",
+            "value": "<APP_BASE_URL>"
+          }
+        ]
+      },
+      "description": "Replace <APP_BASE_URL> with the public URL of the WOW Refund app, e.g. https://refund.example.com (no trailing slash)."
+    },
+    "Init_inboundSecret": {
+      "runAfter": { "Init_appBaseUrl": ["Succeeded"] },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "inboundSecret",
+            "type": "string",
+            "value": "<INBOUND_SECRET>"
+          }
+        ]
+      },
+      "description": "Replace <INBOUND_SECRET> with the value of POWER_AUTOMATE_INBOUND_SECRET in the platform .env."
+    },
+    "Init_aoaiEndpoint": {
+      "runAfter": { "Init_inboundSecret": ["Succeeded"] },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "aoaiEndpoint",
+            "type": "string",
+            "value": "<AZURE_OPENAI_CHAT_COMPLETIONS_URL>"
+          }
+        ]
+      },
+      "description": "Replace with the full Azure OpenAI Chat Completions URL, e.g. https://<resource>.openai.azure.com/openai/deployments/<deployment>/chat/completions?api-version=2024-08-01-preview"
+    },
+    "Init_aoaiKey": {
+      "runAfter": { "Init_aoaiEndpoint": ["Succeeded"] },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "aoaiKey",
+            "type": "string",
+            "value": "<AZURE_OPENAI_API_KEY>"
+          }
+        ]
+      },
+      "description": "Replace with your Azure OpenAI resource key."
+    },
+    "Init_systemPrompt": {
+      "runAfter": { "Init_aoaiKey": ["Succeeded"] },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "systemPrompt",
+            "type": "string",
+            "value": "You are a strict email classifier for a refund-operations system. Given a reply email, return ONLY a single JSON object that conforms to this schema (no prose, no markdown fences):\n\n{\n  \"intent\": \"APPROVAL_RESPONSE\" | \"KNET_ARN_REPLY\" | \"AURA_CONFIRMATION\" | \"CUSTOMER_REPLY\" | \"UNCLEAR\",\n  \"confidence\": <number between 0 and 1>,\n  \"blanket\": \"APPROVED\" | \"REJECTED\" | null,\n  \"perCase\": [ { \"caseNumber\": \"<REF-...>\", \"decision\": \"APPROVED\" | \"REJECTED\" } ],\n  \"arns\":    [ { \"caseNumber\": \"<REF-...>\", \"arn\": \"<digits>\" } ],\n  \"reason\":  \"<short string, required when intent === 'UNCLEAR'>\"\n}\n\nRULES:\n1. Return UNCLEAR unless you are at least 90% sure of an explicit, unambiguous decision. \"looks ok I guess\", \"will review\", \"FYI\", \"thanks, noted\" \u2192 UNCLEAR. Forwarded threads where the manager only adds \"FYI\" or \"noted\" \u2192 UNCLEAR.\n2. APPROVAL_RESPONSE: subject contains an APB-XX-YYYY-NNNN batch number, or body lists REF-XX-YYYY-NNNNNN case numbers and uses approve/reject verbs (English: approved, approve all, go ahead, yes please refund | Arabic: \u0645\u0648\u0627\u0641\u0642\u060c \u0623\u0648\u0627\u0641\u0642\u060c \u062a\u0645 \u0627\u0644\u0627\u0639\u062a\u0645\u0627\u062f). Use blanket=APPROVED for global approvals; perCase[] when specific cases are listed. When both appear (e.g. \"approve all except CRM-100002\"), set blanket = global decision AND list exceptions in perCase with the opposite decision.\n3. KNET_ARN_REPLY: Finance reply with bank ARNs. Populate arns[] with each {caseNumber, arn} pair you can extract. Match cases by REF-... numbers exactly; ignore lines without a clear case\u2194ARN pairing.\n4. AURA_CONFIRMATION: Aura points operations team confirming/rejecting (subject contains AURA-YYYY-NNNN). APPROVED = Aura processed; REJECTED = Aura failed.\n5. CUSTOMER_REPLY: sender is the customer (not manager / Finance / Aura).\n6. Always include 'reason' when intent === 'UNCLEAR' (under 200 chars).\n7. NEVER guess. When in doubt, return UNCLEAR.\n\nIf an AVAILABLE_CASES variable is provided (caseNumber\u2192externalCaseNumber map), use it to translate customer-facing references (CRM-100002, Order 2002033) to canonical REF-... numbers. If you cannot resolve, drop the entry rather than guessing."
+          }
+        ]
+      },
+      "description": "System prompt for the AI step. Edit here to tweak classification behaviour."
+    },
+    "Init_availableCases": {
+      "runAfter": { "Init_systemPrompt": ["Succeeded"] },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "availableCases",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      },
+      "description": "Optional. If your tenant can fetch the case list for the batch in the subject (via Dataverse or another HTTP call to the platform), populate this variable as 'REF-KW-2026-000001=CRM-100001, REF-KW-2026-000002=CRM-100002'. Empty string is fine; the model just won't translate CRM numbers."
+    },
+    "Init_appBasicUser": {
+      "runAfter": { "Init_availableCases": ["Succeeded"] },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "appBasicUser",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      },
+      "description": "Optional Basic-auth username for the platform tunnel. Leave empty when the platform is hosted publicly without HTTP Basic auth (production). Set to 'user' when posting to a Devin dev tunnel."
+    },
+    "Init_appBasicPass": {
+      "runAfter": { "Init_appBasicUser": ["Succeeded"] },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "appBasicPass",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      },
+      "description": "Optional Basic-auth password matching appBasicUser. Leave empty in production. Required when posting to a Devin dev tunnel (paste the auto-generated tunnel password here)."
+    },
+    "Subject_lower": {
+      "runAfter": { "Init_appBasicPass": ["Succeeded"] },
+      "type": "Compose",
+      "inputs": "@toLower(coalesce(triggerOutputs()?['body/subject'], ''))",
+      "description": "Defensive coalesce — Office 365 Outlook V3 returns null subject for some edge-case mails (calendar invites, voicemail notifications) and toLower(null) blows up the whole flow."
+    },
+    "Has_batch_id": {
+      "runAfter": { "Subject_lower": ["Succeeded"] },
+      "type": "If",
+      "expression": {
+        "or": [
+          { "contains": ["@outputs('Subject_lower')", "apb-"] },
+          { "contains": ["@outputs('Subject_lower')", "knet-"] },
+          { "contains": ["@outputs('Subject_lower')", "aura-"] }
+        ]
+      },
+      "actions": {
+        "Call_AOAI_chat_completion": {
+          "runAfter": {},
+          "type": "Http",
+          "inputs": {
+            "method": "POST",
+            "uri": "@variables('aoaiEndpoint')",
+            "headers": {
+              "Content-Type": "application/json",
+              "api-key": "@variables('aoaiKey')"
+            },
+            "body": {
+              "temperature": 0,
+              "response_format": { "type": "json_object" },
+              "messages": [
+                { "role": "system", "content": "@variables('systemPrompt')" },
+                {
+                  "role": "user",
+                  "content": "@{concat('Subject: ', triggerOutputs()?['body/subject'], '\n\nBody:\n', coalesce(triggerOutputs()?['body/body'], triggerOutputs()?['body/bodyPreview'], ''), '\n\nAVAILABLE_CASES: ', variables('availableCases'))}"
+                }
+              ]
+            }
+          },
+          "description": "Calls Azure OpenAI Chat Completions and forces JSON-mode output. Replace the URL/key in the Init_aoaiEndpoint / Init_aoaiKey actions, NOT here."
+        },
+        "Parse_AOAI_response": {
+          "runAfter": { "Call_AOAI_chat_completion": ["Succeeded"] },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Call_AOAI_chat_completion')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "choices": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "object",
+                        "properties": {
+                          "content": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Parse_aiParsed_json": {
+          "runAfter": { "Parse_AOAI_response": ["Succeeded"] },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Parse_AOAI_response')?['choices'][0]?['message']?['content']",
+            "schema": {
+              "type": "object",
+              "required": ["intent", "confidence"],
+              "properties": {
+                "intent": {
+                  "type": "string",
+                  "enum": [
+                    "APPROVAL_RESPONSE",
+                    "KNET_ARN_REPLY",
+                    "AURA_CONFIRMATION",
+                    "CUSTOMER_REPLY",
+                    "UNCLEAR"
+                  ]
+                },
+                "confidence": { "type": "number" },
+                "blanket": { "type": ["string", "null"] },
+                "perCase": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "caseNumber": { "type": "string" },
+                      "decision": { "type": "string" }
+                    }
+                  }
+                },
+                "arns": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "caseNumber": { "type": "string" },
+                      "arn": { "type": "string" }
+                    }
+                  }
+                },
+                "reason": { "type": "string" }
+              }
+            }
+          }
+        },
+        "Is_unclear": {
+          "runAfter": { "Parse_aiParsed_json": ["Succeeded"] },
+          "type": "If",
+          "expression": {
+            "equals": ["@body('Parse_aiParsed_json')?['intent']", "UNCLEAR"]
+          },
+          "actions": {
+            "Reply_asking_for_clarification": {
+              "runAfter": {},
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_office365",
+                  "operationId": "ReplyToV3",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                },
+                "parameters": {
+                  "message/Id": "@triggerOutputs()?['body/id']",
+                  "message/Subject": "@{concat('RE: ', triggerOutputs()?['body/subject'])}",
+                  "message/Body": "<p>Hi,</p><p>I couldn\u2019t determine an explicit decision from your reply. Could you confirm whether the cases should be <strong>APPROVED</strong> or <strong>REJECTED</strong>, and list any per-case exceptions?</p><p>Thanks,<br/>WOW Refund Bot</p>",
+                  "message/Importance": "Normal",
+                  "comment": "<p>Hi,</p><p>I couldn\u2019t determine an explicit decision from your reply. Could you confirm whether the cases should be <strong>APPROVED</strong> or <strong>REJECTED</strong>, and list any per-case exceptions?</p><p>Thanks,<br/>WOW Refund Bot</p>",
+                  "replyAll": false
+                }
+              },
+              "description": "Asks the manager to clarify; the platform never sees this email so it does NOT decide the batch."
+            },
+            "Terminate_unclear": {
+              "runAfter": { "Reply_asking_for_clarification": ["Succeeded", "Failed", "Skipped"] },
+              "type": "Terminate",
+              "inputs": { "runStatus": "Succeeded" }
+            }
+          },
+          "else": {
+            "actions": {
+              "POST_to_webhook": {
+                "runAfter": {},
+                "type": "Http",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@{concat(variables('appBaseUrl'), '/api/webhooks/power-automate')}",
+                  "headers": {
+                    "Content-Type": "application/json",
+                    "x-wow-signature": "@variables('inboundSecret')",
+                    "Authorization": "@{if(empty(variables('appBasicUser')), '', concat('Basic ', base64(concat(variables('appBasicUser'), ':', variables('appBasicPass')))))}"
+                  },
+                  "body": {
+                    "fromEmail": "@{triggerOutputs()?['body/from']}",
+                    "toEmail": "@{triggerOutputs()?['body/to']}",
+                    "subject": "@{triggerOutputs()?['body/subject']}",
+                    "rawBody": "@{coalesce(triggerOutputs()?['body/body'], triggerOutputs()?['body/bodyPreview'], '')}",
+                    "powerAutomateRunId": "@{workflow().run.name}",
+                    "aiParsed": "@body('Parse_aiParsed_json')"
+                  }
+                },
+                "description": "Forwards the email + AI verdict to the platform. Adds Basic-auth Authorization header only when appBasicUser is non-empty (Devin dev-tunnel scenario); production deploys leave both vars empty and the header is omitted."
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "actions": {
+          "Terminate_skipped": {
+            "runAfter": {},
+            "type": "Terminate",
+            "inputs": { "runStatus": "Succeeded" },
+            "description": "Email is unrelated to a refund batch \u2014 drop it without notifying the platform."
+          }
+        }
+      }
+    }
+  },
+  "outputs": {}
+}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +27,6 @@ interface ApprovalRowProps {
 }
 
 export function ApprovalRow({ user, roles, countries }: ApprovalRowProps) {
-  const t = useTranslations('admin.pendingApprovals');
   const [pending, startTransition] = useTransition();
   const [roleId, setRoleId] = useState<string>('');
   const [countryId, setCountryId] = useState<string>('');
@@ -47,7 +45,7 @@ export function ApprovalRow({ user, roles, countries }: ApprovalRowProps) {
 
     startTransition(async () => {
       const result = await approveUserAction(fd);
-      if (result.ok) toast.success(t('approveSuccess'));
+      if (result.ok) toast.success('User approved successfully');
       else toast.error(result.error);
     });
   }
@@ -63,13 +61,13 @@ export function ApprovalRow({ user, roles, countries }: ApprovalRowProps) {
 
     startTransition(async () => {
       const result = await rejectUserAction(fd);
-      if (result.ok) toast.success(t('rejectSuccess'));
+      if (result.ok) toast.success('User rejected');
       else toast.error(result.error);
     });
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="text-sm font-medium">{user.name}</div>
@@ -82,7 +80,7 @@ export function ApprovalRow({ user, roles, countries }: ApprovalRowProps) {
           <div className="flex flex-wrap items-center gap-2">
             <Select value={roleId} onValueChange={setRoleId}>
               <SelectTrigger className="w-44">
-                <SelectValue placeholder={t('assignRole')} />
+                <SelectValue placeholder="Assign role" />
               </SelectTrigger>
               <SelectContent>
                 {roles.map((r) => (
@@ -95,7 +93,7 @@ export function ApprovalRow({ user, roles, countries }: ApprovalRowProps) {
 
             <Select value={countryId} onValueChange={setCountryId}>
               <SelectTrigger className="w-48">
-                <SelectValue placeholder={t('assignCountry')} />
+                <SelectValue placeholder="Assign country" />
               </SelectTrigger>
               <SelectContent>
                 {countries.map((c) => (
@@ -108,25 +106,25 @@ export function ApprovalRow({ user, roles, countries }: ApprovalRowProps) {
 
             <Button size="sm" onClick={handleApprove} disabled={pending}>
               <CheckCircle2 className="h-4 w-4" />
-              {t('approve')}
+              Approve
             </Button>
 
             <Button size="sm" variant="outline" onClick={() => setRejecting(true)} disabled={pending}>
               <XCircle className="h-4 w-4" />
-              {t('reject')}
+              Reject
             </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
-              placeholder={t('reason')}
+              placeholder="Reason for rejection"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-64"
               disabled={pending}
             />
             <Button size="sm" variant="destructive" onClick={handleReject} disabled={pending}>
-              {t('reject')}
+              Reject
             </Button>
             <Button
               size="sm"

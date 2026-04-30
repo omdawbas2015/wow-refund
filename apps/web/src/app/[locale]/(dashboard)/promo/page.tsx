@@ -131,11 +131,11 @@ export default async function PromoPage({
   const canAllocate = ALLOCATE_ROLES.has(session.user.role ?? '');
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
+    <div className="mx-auto max-w-7xl space-y-6 px-8 py-10">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-heading">Promo codes</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-display-md font-semibold tracking-tight text-heading">Promo Administration</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage compensation and service-recovery pools across brands and countries.
           </p>
         </div>
@@ -158,7 +158,7 @@ export default async function PromoPage({
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Available codes" value={totalAvailable.toLocaleString()} hint="ready to allocate" />
         <StatCard label="Allocated" value={totalAllocated.toLocaleString()} hint="sent to customers" />
         <StatCard
@@ -170,12 +170,12 @@ export default async function PromoPage({
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Pools</h2>
+        <h2 className="mb-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Pools</h2>
         <PoolsBoard pools={summaries} locale={locale} />
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Recent allocations</h2>
+        <h2 className="mb-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Recent allocations</h2>
         <Card>
           <CardContent className="p-0">
             {recentAllocations.length === 0 ? (
@@ -183,9 +183,9 @@ export default async function PromoPage({
                 No promos allocated yet. Use <span className="font-medium text-heading">Allocate promo</span> to send one.
               </p>
             ) : (
-              <ul className="divide-y divide-border">
+              <ul className="divide-y divide-border/40">
                 {recentAllocations.map((a) => (
-                  <li key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
+                  <li key={a.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 text-sm transition-colors hover:bg-surface-subtle/50">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 text-heading">
                         <span className="font-medium">{a.customerEmail}</span>
@@ -235,12 +235,12 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardContent className="py-4">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className={`mt-1 text-2xl font-semibold tabular-nums ${warn ? 'text-amber-600 dark:text-amber-400' : 'text-heading'}`}>
+      <CardContent className="py-5 px-6">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">{label}</p>
+        <p className={`mt-2 text-3xl font-bold tabular-nums tracking-tight ${warn ? 'text-amber-600' : 'text-heading'}`}>
           {value}
         </p>
-        {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
   );

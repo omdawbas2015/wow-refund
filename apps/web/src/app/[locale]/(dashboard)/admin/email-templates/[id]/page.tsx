@@ -30,7 +30,7 @@ export default async function EmailTemplateDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <div className="mx-auto max-w-3xl px-8 py-10">
       <Link
         href="/admin/email-templates"
         className="text-xs uppercase text-muted-foreground hover:text-primary"

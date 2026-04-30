@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Link } from '@/i18n/routing';
 import { signIn } from 'next-auth/react';
@@ -13,7 +12,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 export function LoginForm({ callbackUrl, error: initialError }: { callbackUrl: string; error?: string }) {
-  const t = useTranslations('auth.login');
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(initialError ?? null);
@@ -35,21 +33,21 @@ export function LoginForm({ callbackUrl, error: initialError }: { callbackUrl: s
 
       if (result?.error) {
         const err = result.error;
-        if (err.includes('ACCOUNT_PENDING')) setError(t('accountPending'));
-        else if (err.includes('ACCOUNT_SUSPENDED')) setError(t('accountSuspended'));
-        else if (err.includes('ACCOUNT_LOCKED')) setError(t('accountLocked'));
-        else setError(t('invalidCredentials'));
+        if (err.includes('ACCOUNT_PENDING')) setError('Your account is pending approval.');
+        else if (err.includes('ACCOUNT_SUSPENDED')) setError('Your account has been suspended.');
+        else if (err.includes('ACCOUNT_LOCKED')) setError('Your account is locked.');
+        else setError('Invalid email or password.');
         return;
       }
 
-      toast.success(t('submit'));
+      toast.success('Signed in successfully');
       router.push(callbackUrl);
       router.refresh();
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {error ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -57,7 +55,7 @@ export function LoginForm({ callbackUrl, error: initialError }: { callbackUrl: s
         </Alert>
       ) : null}
 
-      <FormField label={t('emailLabel')} id="email" required>
+      <FormField label="Email address" id="email" required>
         <Input
           id="email"
           name="email"
@@ -69,7 +67,7 @@ export function LoginForm({ callbackUrl, error: initialError }: { callbackUrl: s
         />
       </FormField>
 
-      <FormField label={t('passwordLabel')} id="password" required>
+      <FormField label="Password" id="password" required>
         <Input
           id="password"
           name="password"
@@ -80,15 +78,14 @@ export function LoginForm({ callbackUrl, error: initialError }: { callbackUrl: s
         />
       </FormField>
 
-      <div className="flex items-center justify-between text-sm">
-        <div />
-        <Link href="/forgot-password" className="font-medium text-primary hover:underline">
-          {t('forgotPassword')}
+      <div className="flex items-center justify-end text-sm">
+        <Link href="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+          Forgot password?
         </Link>
       </div>
 
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? '…' : t('submit')}
+        {pending ? 'Signing in...' : 'Sign in'}
       </Button>
     </form>
   );

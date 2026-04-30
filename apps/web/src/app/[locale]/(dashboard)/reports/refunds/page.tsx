@@ -50,7 +50,7 @@ export default async function RefundsReportPage({ searchParams }: PageProps) {
     .sort((a, b) => b.amount - a.amount);
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-8 py-10">
       <Link
         href={`/reports?from=${range.fromIso}&to=${range.toIso}`}
         className="text-xs uppercase text-muted-foreground hover:text-primary"

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +10,6 @@ import { CheckCircle2 } from 'lucide-react';
 import { signupAction } from '@/app/actions/auth';
 
 export function SignupForm() {
-  const t = useTranslations('auth.signup');
   const [pending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
 
@@ -33,19 +31,19 @@ export function SignupForm() {
     return (
       <Alert variant="success">
         <CheckCircle2 className="h-4 w-4" />
-        <AlertTitle>{t('pendingTitle')}</AlertTitle>
-        <AlertDescription>{t('pendingMessage')}</AlertDescription>
+        <AlertTitle>Request submitted</AlertTitle>
+        <AlertDescription>Your access request has been submitted. You will receive an email once approved.</AlertDescription>
       </Alert>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label={t('nameLabel')} id="name" required>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <FormField label="Full name" id="name" required>
         <Input id="name" name="name" type="text" autoComplete="name" required disabled={pending} />
       </FormField>
 
-      <FormField label={t('emailLabel')} id="email" required>
+      <FormField label="Email address" id="email" required>
         <Input
           id="email"
           name="email"
@@ -57,12 +55,12 @@ export function SignupForm() {
         />
       </FormField>
 
-      <FormField label={t('phoneLabel')} id="phone">
+      <FormField label="Phone number" id="phone">
         <Input id="phone" name="phone" type="tel" autoComplete="tel" disabled={pending} />
       </FormField>
 
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? '…' : t('submit')}
+        {pending ? 'Submitting...' : 'Request access'}
       </Button>
     </form>
   );
