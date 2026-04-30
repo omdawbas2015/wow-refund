@@ -261,13 +261,24 @@ Use it for the fastest path to a working flow:
      (The flow uses the REST API directly, so AI Builder licensing
      is **not** required.)
    - `aoaiKey` → your Azure OpenAI resource key.
-5. Optional — the `availableCases` variable is empty by default. If
+5. **Only if `appBaseUrl` is a Devin dev tunnel** (e.g.
+   `https://<id>-tunnel-<rand>.devinapps.com`), the tunnel guards
+   inbound traffic with HTTP Basic auth and the flow needs to send
+   the matching credentials. Edit two more `Initialize variable`
+   actions:
+   - `appBasicUser` → tunnel username (Devin tunnels default to
+     `user`).
+   - `appBasicPass` → tunnel password (the long random string from
+     the tunnel URL prompt).
+   For production deploys without HTTP Basic auth, leave both empty
+   — the `Authorization` header is then omitted automatically.
+6. Optional — the `availableCases` variable is empty by default. If
    you can fetch the case list for the batch in the subject (e.g. by
    adding an HTTP action to call the platform), populate it as
    `REF-KW-2026-000001=CRM-100001, REF-KW-2026-000002=CRM-100002` so
    the AI can translate customer-facing CRM numbers to canonical
    `REF-…` numbers.
-6. Save → **Turn on**.
+7. Save → **Turn on**.
 
 Send a test reply from a manager who is on the batch's
 `recipientEmails` and check the run history. Inside the platform the

@@ -110,8 +110,36 @@
       },
       "description": "Optional. If your tenant can fetch the case list for the batch in the subject (via Dataverse or another HTTP call to the platform), populate this variable as 'REF-KW-2026-000001=CRM-100001, REF-KW-2026-000002=CRM-100002'. Empty string is fine; the model just won't translate CRM numbers."
     },
-    "Subject_lower": {
+    "Init_appBasicUser": {
       "runAfter": { "Init_availableCases": ["Succeeded"] },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "appBasicUser",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      },
+      "description": "Optional Basic-auth username for the platform tunnel. Leave empty when the platform is hosted publicly without HTTP Basic auth (production). Set to 'user' when posting to a Devin dev tunnel."
+    },
+    "Init_appBasicPass": {
+      "runAfter": { "Init_appBasicUser": ["Succeeded"] },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "appBasicPass",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      },
+      "description": "Optional Basic-auth password matching appBasicUser. Leave empty in production. Required when posting to a Devin dev tunnel (paste the auto-generated tunnel password here)."
+    },
+    "Subject_lower": {
+      "runAfter": { "Init_appBasicPass": ["Succeeded"] },
       "type": "Compose",
       "inputs": "@toLower(coalesce(triggerOutputs()?['body/subject'], ''))",
       "description": "Defensive coalesce — Office 365 Outlook V3 returns null subject for some edge-case mails (calendar invites, voicemail notifications) and toLower(null) blows up the whole flow."
@@ -266,7 +294,8 @@
                   "uri": "@{concat(variables('appBaseUrl'), '/api/webhooks/power-automate')}",
                   "headers": {
                     "Content-Type": "application/json",
-                    "x-wow-signature": "@variables('inboundSecret')"
+                    "x-wow-signature": "@variables('inboundSecret')",
+                    "Authorization": "@{if(empty(variables('appBasicUser')), '', concat('Basic ', base64(concat(variables('appBasicUser'), ':', variables('appBasicPass')))))}"
                   },
                   "body": {
                     "fromEmail": "@{triggerOutputs()?['body/from']}",
@@ -277,7 +306,7 @@
                     "aiParsed": "@body('Parse_aiParsed_json')"
                   }
                 },
-                "description": "Forwards the email + AI verdict to the platform. The platform applies its own sender allowlist and the AI's per-case decisions atomically."
+                "description": "Forwards the email + AI verdict to the platform. Adds Basic-auth Authorization header only when appBasicUser is non-empty (Devin dev-tunnel scenario); production deploys leave both vars empty and the header is omitted."
               }
             }
           }
