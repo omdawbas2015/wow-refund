@@ -239,7 +239,51 @@ The expected output is a single line of JSON; feed it directly into
 
 ---
 
-## 5. Click-through setup
+## 5. Quick install — Solution ZIP
+
+A pre-built importable package is shipped at
+[`packages/wow-ai-inbound-listener.zip`](./packages/wow-ai-inbound-listener.zip).
+Use it for the fastest path to a working flow:
+
+1. Open Power Automate → **My flows → Import → Import Package
+   (Legacy)** → upload the ZIP.
+2. The wizard asks you to bind the **Office 365 Outlook** connector;
+   pick (or create) the connection that owns the shared mailbox.
+3. Click **Import**. The flow lands as a draft.
+4. Open the flow → edit the four `Initialize variable` actions at the
+   top and replace the placeholders with your real values:
+   - `appBaseUrl` → public URL of the WOW Refund app, e.g.
+     `https://refund.example.com` (no trailing slash).
+   - `inboundSecret` → the value of `POWER_AUTOMATE_INBOUND_SECRET`
+     in the platform's `.env`.
+   - `aoaiEndpoint` → the full Azure OpenAI Chat Completions URL,
+     e.g. `https://<resource>.openai.azure.com/openai/deployments/<deployment>/chat/completions?api-version=2024-08-01-preview`.
+     (The flow uses the REST API directly, so AI Builder licensing
+     is **not** required.)
+   - `aoaiKey` → your Azure OpenAI resource key.
+5. Optional — the `availableCases` variable is empty by default. If
+   you can fetch the case list for the batch in the subject (e.g. by
+   adding an HTTP action to call the platform), populate it as
+   `REF-KW-2026-000001=CRM-100001, REF-KW-2026-000002=CRM-100002` so
+   the AI can translate customer-facing CRM numbers to canonical
+   `REF-…` numbers.
+6. Save → **Turn on**.
+
+Send a test reply from a manager who is on the batch's
+`recipientEmails` and check the run history. Inside the platform the
+inbound row should show `parsedIntent: 'APPROVAL_RESPONSE'` and the
+batch's cases should be moved to APPROVED / REJECTED according to
+the AI verdict.
+
+> **Don't want to use the ZIP?** The full Code-view JSON is at
+> [`flows/ai-inbound-flow-definition.json`](./flows/ai-inbound-flow-definition.json) —
+> create a new "Automated cloud flow" in Power Automate and paste it
+> into the Code view, or build it action-by-action with the
+> click-through guide below.
+
+---
+
+## 6. Click-through setup (manual)
 
 Reuse the existing inbound flow steps (1, 2, 7 from
 [`README.md` §2](./README.md)) and insert the AI step between them.
@@ -295,7 +339,7 @@ Reuse the existing inbound flow steps (1, 2, 7 from
 
 ---
 
-## 6. Sample payloads
+## 7. Sample payloads
 
 | Scenario | Sample |
 | -------- | ------ |
@@ -321,7 +365,7 @@ field is one of `APPROVAL_RESPONSE`, `KNET_ARN_REPLY`,
 
 ---
 
-## 7. Operational notes
+## 8. Operational notes
 
 - **Audit trail.** Both unauthorised senders and AI-`UNCLEAR` verdicts
   are persisted in `audit_log` (actions

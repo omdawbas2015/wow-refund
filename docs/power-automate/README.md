@@ -278,7 +278,12 @@ v2/docs/power-automate/
 │   ├── outbound-request-schema.json  Trigger schema for the outbound flow
 │   ├── outbound-flow-definition.json Full Code-view JSON for outbound
 │   ├── inbound-flow-definition.json  Full Code-view JSON for inbound
+│   ├── ai-inbound-flow-definition.json Full Code-view JSON for the AI inbound flow
 │   └── ai-parsed-reply-schema.json   Parse JSON schema for the AI Builder output
+├── packages/
+│   ├── wow-outbound-mailer.zip       Importable Solution ZIP (outbound)
+│   ├── wow-inbound-listener.zip      Importable Solution ZIP (basic inbound)
+│   └── wow-ai-inbound-listener.zip   Importable Solution ZIP (AI inbound)
 └── sample-payloads/
     ├── outbound-approval-email.json  Example app→PA outbound POST
     ├── inbound-approval-reply.json   Example PA→app inbound POST (manager reply)
