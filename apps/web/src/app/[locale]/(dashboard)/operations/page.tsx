@@ -198,18 +198,24 @@ export default async function OperationsPage({
   const totalKnetReady = pendingKnetComponents.length;
   const totalPendingAura = pendingAuraCases.length;
 
-  // Fetch the pool: every case that is APPROVED / IN_EXECUTION /
-  // PARTIALLY_REFUNDED so the refund agent has a single canvas to work
-  // through. Includes components, the approval batch that signed it off,
-  // contact-attempt activity logs, and recent timeline events.
+  // Fetch the pool: every case that still has an operator action to
+  // take — the three active statuses plus REFUNDED cases whose customer
+  // call is still PENDING (surface CALL_CUSTOMER cases). REFUNDED cases
+  // whose call is already resolved (ANSWERED / NO_ANSWER / NOT_NEEDED /
+  // NOT_APPLICABLE) are DONE and would otherwise accumulate unboundedly,
+  // eventually starving the take: 80 limit of active work.
   const poolCases = await prisma.refundCase.findMany({
     where: {
       deletedAt: null,
-      status: { in: ['APPROVED', 'IN_EXECUTION', 'PARTIALLY_REFUNDED'] },
+      OR: [
+        { status: { in: ['APPROVED', 'IN_EXECUTION', 'PARTIALLY_REFUNDED'] } },
+        { status: 'REFUNDED', customerCallStatus: 'PENDING' },
+      ],
     },
     include: {
       country: { include: { registry: true } },
       brand: true,
+      branch: { select: { name: true, code: true } },
       approvedBy: { select: { name: true, email: true } },
       approvalBatch: {
         select: { batchNumber: true, recipientEmails: true, responseRawBody: true },
@@ -225,13 +231,44 @@ export default async function OperationsPage({
         orderBy: { createdAt: 'desc' },
         take: 12,
       },
+      notes: {
+        where: { deletedAt: null },
+        include: { author: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      },
     },
-    orderBy: [{ approvedAt: 'desc' }, { createdAt: 'desc' }],
-    take: 50,
+    // Oldest approved first — SLA-driven queue for the refund operator.
+    orderBy: [{ approvedAt: 'asc' }, { createdAt: 'asc' }],
+    take: 80,
   });
+
+  // Refund agents + admins can execute ARN entry / complete refund /
+  // call follow-up. Mirrors EXECUTE_ROLES on the server (cases.ts).
+  const role = session.user.role ?? '';
+  const canExecute = role === 'ADMIN' || role === 'OPERATIONS' || role === 'REFUND_AGENT';
 
   const poolData: PoolCase[] = poolCases.map((c) => {
     const contactLogs = c.activityLogs.filter((a) => a.kind === 'case.contact_attempt');
+    const approvedAtMs = c.approvedAt ? c.approvedAt.getTime() : c.createdAt.getTime();
+    const ageHours = Math.max(0, Math.round((Date.now() - approvedAtMs) / 3_600_000));
+    const components = c.components;
+    const allArnsIn = components.length > 0 && components.every((cmp) => !!cmp.arn);
+    const pendingArns = components.filter((cmp) => !cmp.arn).length;
+    const awaitingBatch = components.some(
+      (cmp) => !cmp.arn && !!cmp.batch && cmp.status !== 'REFUNDED',
+    );
+    // "What the operator should do next" — single highest-priority action.
+    const nextAction: PoolCase['nextAction'] =
+      c.status === 'REFUNDED' && c.customerCallStatus === 'PENDING'
+        ? 'CALL_CUSTOMER'
+        : c.status === 'REFUNDED'
+          ? 'DONE'
+          : allArnsIn
+            ? 'COMPLETE'
+            : awaitingBatch
+              ? 'AWAIT_BATCH'
+              : 'ENTER_ARN';
     return {
       id: c.id,
       caseNumber: c.caseNumber,
@@ -245,11 +282,20 @@ export default async function OperationsPage({
       customerName: c.customerName,
       customerEmail: c.customerEmail,
       customerPhone: c.customerPhone,
+      branchName: c.branch?.name ?? null,
+      branchCode: c.branch?.code ?? null,
       orderNumber: c.orderNumber,
       orderAmount: c.orderAmount,
       refundAmount: c.totalRefundAmount,
+      // Use the DB's persisted `isPartial` flag so this matches the case
+      // detail view exactly. It's computed by createCaseAction with a
+      // 0.001 tolerance that is correct for KWD (3-decimal fils) as well
+      // as the 2-decimal currencies used in the other countries.
+      isPartialRefund: c.isPartial,
       currency: c.orderCurrency,
       approvedAt: c.approvedAt ? formatRelative(c.approvedAt) : null,
+      approvedAtIso: c.approvedAt ? c.approvedAt.toISOString() : null,
+      ageHours,
       approvedByLabel: c.approvedBy?.name ?? c.approvedBy?.email ?? null,
       approvalBatchNumber: c.approvalBatch?.batchNumber ?? null,
       approvalBatchManagerEmails: c.approvalBatch?.recipientEmails ?? null,
@@ -257,7 +303,14 @@ export default async function OperationsPage({
       rootCauseSummary: c.rootCauseNotes ?? c.customerNotes ?? null,
       auraPoints: c.auraPoints,
       auraStatus: c.auraStatus,
-      components: c.components.map((cmp) => ({
+      customerCallStatus: c.customerCallStatus,
+      customerCallUpdatedAt: c.customerCallUpdatedAt
+        ? c.customerCallUpdatedAt.toISOString()
+        : null,
+      pendingArns,
+      allArnsIn,
+      nextAction,
+      components: components.map((cmp) => ({
         id: cmp.id,
         paymentLabel: cmp.paymentMethod.label,
         paymentKey: cmp.paymentMethod.key,
@@ -290,6 +343,12 @@ export default async function OperationsPage({
           agent: l.actorLabel,
         };
       }),
+      notes: c.notes.map((n) => ({
+        id: n.id,
+        body: n.body,
+        authorName: n.author?.name ?? 'Unknown',
+        whenLabel: formatRelative(n.createdAt) ?? '',
+      })),
       timeline: c.activityLogs.map((l) => ({
         id: l.id,
         kind: l.kind,
@@ -376,7 +435,9 @@ export default async function OperationsPage({
         </div>
       </div>
 
-      {activeTab === 'pool' ? <RefundPoolPanel cases={poolData} /> : null}
+      {activeTab === 'pool' ? (
+        <RefundPoolPanel cases={poolData} canExecute={canExecute} />
+      ) : null}
 
       {activeTab === 'approvals' ? (
         <div className="space-y-3">

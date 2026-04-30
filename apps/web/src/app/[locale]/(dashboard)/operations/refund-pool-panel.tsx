@@ -1,22 +1,38 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
-  Phone,
-  Mail,
-  MessageCircle,
+  addCaseNoteAction,
+  completeRefundAction,
+  markCustomerCallAction,
+  setComponentArnAction,
+} from '@/app/actions/cases';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ComponentStatusBadge } from '@/components/ui/case-status-badge';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CopyButton } from '@/components/ui/copy-button';
+import { Input } from '@/components/ui/input';
+import { PaymentMethodIcons } from '@/components/ui/payment-method-icons';
+import { Textarea } from '@/components/ui/textarea';
+import { AuraPointsBadge } from '@/components/ui/aura-logo';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
   ExternalLink,
+  Hash,
+  PhoneCall,
+  PhoneOff,
   Search as SearchIcon,
-  SlidersHorizontal,
-  Wallet,
-  CreditCard,
-  Coins,
+  Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatMoney } from '@/lib/format';
 
 export interface PoolCaseComponent {
   id: string;
@@ -32,6 +48,13 @@ export interface PoolCaseComponent {
   batchNumber: string | null;
 }
 
+export type NextAction =
+  | 'ENTER_ARN'
+  | 'AWAIT_BATCH'
+  | 'COMPLETE'
+  | 'CALL_CUSTOMER'
+  | 'DONE';
+
 export interface PoolCase {
   id: string;
   caseNumber: string;
@@ -45,11 +68,16 @@ export interface PoolCase {
   customerName: string;
   customerEmail: string;
   customerPhone: string | null;
+  branchName: string | null;
+  branchCode: string | null;
   orderNumber: string;
   orderAmount: number;
   refundAmount: number;
+  isPartialRefund: boolean;
   currency: string;
   approvedAt: string | null;
+  approvedAtIso: string | null;
+  ageHours: number;
   approvedByLabel: string | null;
   approvalBatchNumber: string | null;
   approvalBatchManagerEmails: string | null;
@@ -57,6 +85,11 @@ export interface PoolCase {
   rootCauseSummary: string | null;
   auraPoints: number | null;
   auraStatus: string;
+  customerCallStatus: 'NOT_APPLICABLE' | 'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED';
+  customerCallUpdatedAt: string | null;
+  pendingArns: number;
+  allArnsIn: boolean;
+  nextAction: NextAction;
   components: PoolCaseComponent[];
   contactLog: {
     id: string;
@@ -64,6 +97,12 @@ export interface PoolCase {
     outcome: string;
     whenLabel: string;
     agent: string | null;
+  }[];
+  notes: {
+    id: string;
+    body: string;
+    authorName: string;
+    whenLabel: string;
   }[];
   timeline: {
     id: string;
@@ -76,44 +115,89 @@ export interface PoolCase {
 
 export interface RefundPoolPanelProps {
   cases: PoolCase[];
+  canExecute: boolean;
 }
 
-const PAYMENT_ICON: Record<string, typeof Wallet> = {
-  KNET: Wallet,
-  APPLE_PAY: CreditCard,
-  VISA: CreditCard,
-  MASTERCARD: CreditCard,
-};
+// ---------------------------------------------------------------------------
+// Display helpers
+// ---------------------------------------------------------------------------
 
-function paymentIcon(key: string) {
-  return PAYMENT_ICON[key] ?? CreditCard;
+// Delegate to the shared `formatMoney` helper so the Pool renders
+// currency with the same decimals + grouping as the rest of the app
+// (KWD / BHD at 3 decimals, 2 decimals everywhere else).
+function money(amount: number, currency: string) {
+  return formatMoney(amount, currency);
 }
 
-function statusTone(status: string) {
-  switch (status) {
-    case 'APPROVED':
-      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    case 'IN_EXECUTION':
-      return 'bg-blue-50 text-blue-700 border-blue-200';
-    case 'PARTIALLY_REFUNDED':
-      return 'bg-amber-50 text-amber-700 border-amber-200';
-    case 'REFUNDED':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-300';
-    case 'PENDING_APPROVAL':
-      return 'bg-amber-50 text-amber-700 border-amber-200';
-    default:
-      return 'bg-muted text-foreground border-border';
+function nextActionMeta(a: NextAction): { label: string; tone: string } {
+  switch (a) {
+    case 'ENTER_ARN':
+      return { label: 'Enter ARN', tone: 'bg-amber-50 text-amber-700 border-amber-200' };
+    case 'AWAIT_BATCH':
+      return { label: 'Awaiting batch', tone: 'bg-sky-50 text-sky-700 border-sky-200' };
+    case 'COMPLETE':
+      return {
+        label: 'Ready to complete',
+        tone: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      };
+    case 'CALL_CUSTOMER':
+      return { label: 'Call customer', tone: 'bg-violet-50 text-violet-700 border-violet-200' };
+    case 'DONE':
+      return { label: 'Done', tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
   }
 }
 
-export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
+function ageBadge(hours: number) {
+  if (hours < 1) return { label: 'just now', tone: 'text-muted-foreground' };
+  if (hours < 24) return { label: `${hours}h`, tone: 'text-muted-foreground' };
+  const days = Math.round(hours / 24);
+  if (days >= 3) {
+    return { label: `${days}d`, tone: 'text-rose-600 font-semibold' };
+  }
+  return { label: `${days}d`, tone: 'text-muted-foreground' };
+}
+
+// The pool only loads cases that still have an operator action. DONE
+// cases are filtered out by the server query, so a 'Done' chip here
+// would always show zero — use the Cases tab to browse completed work.
+type QuickFilter = 'all' | 'ENTER_ARN' | 'CALL_CUSTOMER' | 'COMPLETE' | 'AWAIT_BATCH';
+
+const QUICK_FILTERS: { key: QuickFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'ENTER_ARN', label: 'Awaiting ARN' },
+  { key: 'COMPLETE', label: 'Ready to complete' },
+  { key: 'CALL_CUSTOMER', label: 'Awaiting call' },
+  { key: 'AWAIT_BATCH', label: 'In batch' },
+];
+
+// ---------------------------------------------------------------------------
+// Panel — split view: prioritized queue + operator workbench
+// ---------------------------------------------------------------------------
+
+export function RefundPoolPanel({ cases, canExecute }: RefundPoolPanelProps) {
   const [search, setSearch] = useState('');
+  const [quick, setQuick] = useState<QuickFilter>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [selectedId, setSelectedId] = useState<string | null>(cases[0]?.id ?? null);
 
+  const countryOptions = useMemo(() => {
+    const set = new Map<string, { code: string; flag: string; name: string }>();
+    cases.forEach((c) =>
+      set.set(c.countryCode, { code: c.countryCode, flag: c.countryFlag, name: c.countryName }),
+    );
+    return [...set.values()];
+  }, [cases]);
+
+  const paymentOptions = useMemo(() => {
+    const set = new Map<string, string>();
+    cases.forEach((c) => c.components.forEach((cmp) => set.set(cmp.paymentKey, cmp.paymentLabel)));
+    return [...set.entries()].map(([key, label]) => ({ key, label }));
+  }, [cases]);
+
   const filtered = useMemo(() => {
     return cases.filter((c) => {
+      if (quick !== 'all' && c.nextAction !== quick) return false;
       if (paymentFilter !== 'all') {
         const has = c.components.some((cmp) => cmp.paymentKey === paymentFilter);
         if (!has) return false;
@@ -139,31 +223,33 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
       }
       return true;
     });
-  }, [cases, paymentFilter, countryFilter, search]);
+  }, [cases, quick, paymentFilter, countryFilter, search]);
+
+  // Keep selection within the filtered set so the inspector always reflects
+  // what's visible in the list.
+  useEffect(() => {
+    if (!filtered.find((c) => c.id === selectedId)) {
+      setSelectedId(filtered[0]?.id ?? null);
+    }
+  }, [filtered, selectedId]);
 
   const selected = useMemo(
     () => filtered.find((c) => c.id === selectedId) ?? filtered[0] ?? null,
     [filtered, selectedId],
   );
 
-  const countryOptions = useMemo(() => {
-    const set = new Map<string, { code: string; flag: string; name: string }>();
-    cases.forEach((c) =>
-      set.set(c.countryCode, { code: c.countryCode, flag: c.countryFlag, name: c.countryName }),
-    );
-    return [...set.values()];
+  // Counters on the quick-filter chips so the operator immediately sees
+  // how many tickets each action has.
+  const counts = useMemo(() => {
+    // DONE cases are filtered out server-side but the type still includes
+    // them; track the bucket so the counter stays type-safe even though
+    // no chip surfaces it.
+    const c = { ENTER_ARN: 0, AWAIT_BATCH: 0, COMPLETE: 0, CALL_CUSTOMER: 0, DONE: 0 };
+    cases.forEach((x) => {
+      c[x.nextAction] += 1;
+    });
+    return c;
   }, [cases]);
-
-  const paymentOptions = useMemo(() => {
-    const set = new Map<string, string>();
-    cases.forEach((c) => c.components.forEach((cmp) => set.set(cmp.paymentKey, cmp.paymentLabel)));
-    return [...set.entries()].map(([key, label]) => ({ key, label }));
-  }, [cases]);
-
-  const selectedComponents = selected?.components.length ?? 0;
-  const selectedRefundLabel = selected
-    ? `${selected.refundAmount.toFixed(2)} ${selected.currency}`
-    : '—';
 
   if (cases.length === 0) {
     return (
@@ -179,131 +265,118 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
     );
   }
 
+  const showMoreFilters = paymentOptions.length > 1 || countryOptions.length > 1;
+
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-border p-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="grid gap-2 sm:grid-cols-[minmax(260px,1fr)_auto_auto] sm:items-center">
-          <div className="relative">
-            <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* Toolbar */}
+      <div className="border-b border-border px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full max-w-sm flex-1 min-w-[220px]">
+            <SearchIcon className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tickets"
-              className="h-9 min-w-0 pl-8 sm:w-[360px]"
+              placeholder="Search ticket, customer, ARN…"
+              className="h-9 min-w-0 ps-8"
             />
           </div>
-          <div className="flex items-center gap-1.5">
-            <FilterChip active={paymentFilter === 'all'} onClick={() => setPaymentFilter('all')}>
-              All
-            </FilterChip>
-            {paymentOptions.map((p) => (
-              <FilterChip
-                key={p.key}
-                active={paymentFilter === p.key}
-                onClick={() => setPaymentFilter(p.key)}
-              >
-                {p.label}
-              </FilterChip>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <FilterChip active={countryFilter === 'all'} onClick={() => setCountryFilter('all')}>
-              Countries
-            </FilterChip>
-            {countryOptions.map((c) => (
-              <FilterChip
-                key={c.code}
-                active={countryFilter === c.code}
-                onClick={() => setCountryFilter(c.code)}
-              >
-                {c.flag} {c.code}
-              </FilterChip>
-            ))}
+          <div className="ms-auto text-[11px] text-muted-foreground tabular-nums">
+            {filtered.length} / {cases.length}
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          <span>
-            {filtered.length} / {cases.length} tickets
-          </span>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {QUICK_FILTERS.map((f) => (
+            <FilterChip key={f.key} active={quick === f.key} onClick={() => setQuick(f.key)}>
+              {f.label}
+              {f.key !== 'all' && (
+                <span
+                  className={cn(
+                    'ms-1.5 inline-block rounded-full px-1.5 text-[10px] font-semibold tabular-nums',
+                    quick === f.key ? 'bg-white/25' : 'bg-surface-subtle',
+                  )}
+                >
+                  {counts[f.key as keyof typeof counts]}
+                </span>
+              )}
+            </FilterChip>
+          ))}
+          {showMoreFilters && (
+            <>
+              <span className="mx-1 h-4 w-px bg-border" />
+              {paymentOptions.length > 1 && (
+                <>
+                  <FilterChip
+                    active={paymentFilter === 'all'}
+                    onClick={() => setPaymentFilter('all')}
+                  >
+                    Any rail
+                  </FilterChip>
+                  {paymentOptions.map((p) => (
+                    <FilterChip
+                      key={p.key}
+                      active={paymentFilter === p.key}
+                      onClick={() => setPaymentFilter(p.key)}
+                    >
+                      {p.label}
+                    </FilterChip>
+                  ))}
+                </>
+              )}
+              {countryOptions.length > 1 && (
+                <>
+                  <span className="mx-1 h-4 w-px bg-border" />
+                  <FilterChip
+                    active={countryFilter === 'all'}
+                    onClick={() => setCountryFilter('all')}
+                  >
+                    Any country
+                  </FilterChip>
+                  {countryOptions.map((c) => (
+                    <FilterChip
+                      key={c.code}
+                      active={countryFilter === c.code}
+                      onClick={() => setCountryFilter(c.code)}
+                    >
+                      {c.flag} {c.code}
+                    </FilterChip>
+                  ))}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      <div className="grid min-h-[640px] lg:grid-cols-[minmax(520px,1fr)_440px]">
-        <div className="border-b border-border lg:border-b-0 lg:border-e">
-          <div className="grid grid-cols-[1.35fr_1fr_0.9fr_0.8fr_0.9fr] gap-3 border-b border-border bg-surface-subtle px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            <span>Ticket</span>
-            <span>Customer</span>
-            <span>Rail</span>
-            <span className="text-end">Amount</span>
-            <span className="text-end">Status</span>
-          </div>
-          <div className="max-h-[calc(100vh-265px)] overflow-y-auto">
+      {/* Split: queue | workbench. Single column on mobile, two columns
+          from md (768px) upward so the operator can always see both the
+          queue and the workbench on a normal laptop. */}
+      <div className="grid min-h-[640px] md:grid-cols-[minmax(300px,360px)_1fr]">
+        <div className="border-b border-border md:border-b-0 md:border-e">
+          <div className="max-h-[calc(100vh-220px)] overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="px-2 py-3 text-sm text-muted-foreground">
+              <p className="px-4 py-6 text-sm text-muted-foreground">
                 No cases match your filters.
               </p>
             ) : (
-              filtered.map((c) => {
-                const isActive = selected?.id === c.id;
-                const Icon = paymentIcon(c.components[0]?.paymentKey ?? '');
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setSelectedId(c.id)}
-                    className={cn(
-                      'grid w-full grid-cols-[1.35fr_1fr_0.9fr_0.8fr_0.9fr] items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0',
-                      isActive ? 'bg-primary/5' : 'bg-card hover:bg-surface-subtle',
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">{c.countryFlag}</span>
-                        <span className="truncate font-mono text-sm font-semibold text-heading">
-                          {c.externalCaseNumber || c.caseNumber}
-                        </span>
-                      </div>
-                      <div className="mt-1 truncate text-xs text-muted-foreground">
-                        {c.brandName} · {c.orderNumber}
-                      </div>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{c.customerName}</div>
-                      <div className="truncate text-xs text-muted-foreground">
-                        {c.customerEmail}
-                      </div>
-                    </div>
-                    <div className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
-                      <Icon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">
-                        {c.components.map((cmp) => cmp.paymentLabel).join(' + ') || '—'}
-                      </span>
-                    </div>
-                    <div className="text-end text-sm font-semibold tabular-nums">
-                      {c.refundAmount.toFixed(2)} {c.currency}
-                    </div>
-                    <div className="flex justify-end">
-                      <Badge variant="outline" className={cn('text-[10px]', statusTone(c.status))}>
-                        {c.status.replace(/_/g, ' ')}
-                      </Badge>
-                    </div>
-                  </button>
-                );
-              })
+              filtered.map((c) => (
+                <QueueRow
+                  key={c.id}
+                  c={c}
+                  active={selected?.id === c.id}
+                  onClick={() => setSelectedId(c.id)}
+                />
+              ))
             )}
           </div>
         </div>
 
-        <div className="bg-surface-subtle/40">
+        <div>
           {selected ? (
-            <TicketInspector
-              c={selected}
-              selectedComponents={selectedComponents}
-              selectedRefundLabel={selectedRefundLabel}
-            />
+            <TicketWorkbench key={selected.id} c={selected} canExecute={canExecute} />
           ) : (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              Select a case from the list to see details.
+              Select a ticket to work on it.
             </div>
           )}
         </div>
@@ -311,6 +384,779 @@ export function RefundPoolPanel({ cases }: RefundPoolPanelProps) {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Queue row — dense, SLA-aware, scan-friendly
+// ---------------------------------------------------------------------------
+
+function QueueRow({
+  c,
+  active,
+  onClick,
+}: {
+  c: PoolCase;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const next = nextActionMeta(c.nextAction);
+  const age = ageBadge(c.ageHours);
+  const isAged = c.ageHours >= 72;
+  const methods = c.components.map((cmp) => ({
+    key: cmp.paymentKey,
+    label: cmp.paymentLabel,
+  }));
+  const uniqMethods = methods.filter(
+    (m, i, arr) => arr.findIndex((x) => x.key === m.key) === i,
+  );
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'block w-full border-b border-border px-4 py-3 text-start transition-colors last:border-b-0',
+        active ? 'bg-primary/5' : 'bg-card hover:bg-surface-subtle',
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-base leading-none">{c.countryFlag}</span>
+            <span className="truncate font-mono text-sm font-semibold text-heading">
+              {c.externalCaseNumber || c.caseNumber}
+            </span>
+            {isAged && (
+              <AlertTriangle className="h-3.5 w-3.5 flex-none text-rose-500" aria-hidden />
+            )}
+          </div>
+          <div className="mt-0.5 truncate text-xs text-muted-foreground">
+            {c.customerName} · {c.brandName}
+          </div>
+        </div>
+        <div className="text-end">
+          <div className="text-sm font-semibold tabular-nums text-heading">
+            {money(c.refundAmount, c.currency)}
+          </div>
+          <div className={cn('mt-0.5 flex items-center justify-end gap-1 text-[11px]', age.tone)}>
+            <Clock className="h-3 w-3" />
+            {age.label}
+          </div>
+        </div>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <PaymentMethodIcons methods={uniqMethods} size="sm" showLabel={false} />
+        </div>
+        <span
+          className={cn(
+            'whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium',
+            next.tone,
+          )}
+        >
+          {next.label}
+          {c.nextAction === 'ENTER_ARN' && c.pendingArns > 1 ? ` (${c.pendingArns})` : ''}
+          <ChevronRight className="ms-0.5 inline-block h-3 w-3" />
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Workbench — every case-detail action, inline
+// ---------------------------------------------------------------------------
+
+function TicketWorkbench({ c, canExecute }: { c: PoolCase; canExecute: boolean }) {
+  const next = nextActionMeta(c.nextAction);
+  const age = ageBadge(c.ageHours);
+  const inExecutionStage =
+    c.status === 'APPROVED' || c.status === 'IN_EXECUTION' || c.status === 'PARTIALLY_REFUNDED';
+  const arnsDone = c.components.length - c.pendingArns;
+  const branchLabel = c.branchName
+    ? c.branchCode
+      ? `${c.branchName} (${c.branchCode})`
+      : c.branchName
+    : null;
+  const orderTotal = money(c.orderAmount, c.currency);
+  const refundTotal = money(c.refundAmount, c.currency);
+
+  return (
+    <aside className="max-h-[calc(100vh-220px)] overflow-y-auto">
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <header className="space-y-2 px-6 pb-5 pt-5">
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="text-sm leading-none">{c.countryFlag}</span>
+          <span>{c.countryName}</span>
+          <span>·</span>
+          <span>{c.brandName}</span>
+          {branchLabel && (
+            <>
+              <span>·</span>
+              <span className="truncate">{branchLabel}</span>
+            </>
+          )}
+          <span>·</span>
+          <span>Order {c.orderNumber}</span>
+          <Link
+            href={`/cases/${c.id}`}
+            className="ms-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            <ExternalLink className="h-3 w-3" /> Open full case
+          </Link>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <h2 className="truncate font-mono text-xl font-semibold text-heading">
+              {c.externalCaseNumber || c.caseNumber}
+            </h2>
+            <CopyButton
+              value={c.externalCaseNumber || c.caseNumber}
+              size="sm"
+              label="Copy case number"
+            />
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                next.tone,
+              )}
+            >
+              {next.label}
+            </span>
+            {/* Partial vs Full refund badge — one of the first things an
+                operator needs to confirm when they talk to the customer. */}
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                c.isPartialRefund
+                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700',
+              )}
+            >
+              {c.isPartialRefund ? 'Partial refund' : 'Full refund'}
+            </span>
+          </div>
+          <div className="text-end">
+            <div className="font-mono text-lg font-semibold tabular-nums text-heading">
+              {refundTotal}
+            </div>
+            <div className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
+              of {orderTotal} order
+            </div>
+          </div>
+        </div>
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]',
+            age.tone,
+          )}
+        >
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3" /> approved {c.approvedAt ?? '—'}
+          </span>
+          {c.approvedByLabel && <span className="text-muted-foreground">· by {c.approvedByLabel}</span>}
+        </div>
+        {c.rootCauseSummary && (
+          <div className="rounded-md border border-dashed border-border bg-surface-subtle/40 px-3 py-2 text-xs">
+            <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Refund reason
+            </div>
+            <p className="text-foreground">{c.rootCauseSummary}</p>
+          </div>
+        )}
+      </header>
+
+      {/* ── Customer & order identifiers ─────────────────────────
+          These four fields are the ones the operator copy-pastes
+          constantly into the external refund system. Keep Case # and
+          Order # at the top — large, monospace, one-click copy — so
+          they're always the first thing under the eye. */}
+      <Section title="Customer & order">
+        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+          <DataField
+            label="Case #"
+            value={c.externalCaseNumber || c.caseNumber}
+            mono
+            copy
+            emphasised
+          />
+          <DataField label="Order #" value={c.orderNumber} mono copy emphasised />
+          <DataField label="Customer name" value={c.customerName} />
+          <DataField label="Email" value={c.customerEmail} copy />
+          <DataField
+            label="Phone"
+            value={c.customerPhone ?? ''}
+            mono
+            copy={!!c.customerPhone}
+            fallback="No phone on file"
+          />
+          {branchLabel && <DataField label="Branch" value={branchLabel} />}
+        </dl>
+      </Section>
+
+      {/* ── Refund rails ──────────────────────────────────────── */}
+      <Section
+        title="Refund rails"
+        aside={
+          <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+            {arnsDone} / {c.components.length} ARN
+          </span>
+        }
+      >
+        <div className="divide-y divide-border">
+          {c.components.length === 0 ? (
+            <p className="py-1 text-sm text-muted-foreground">No payment components.</p>
+          ) : (
+            c.components.map((cmp) => (
+              <RailRow
+                key={cmp.id}
+                caseId={c.id}
+                component={cmp}
+                canExecute={canExecute && inExecutionStage}
+              />
+            ))
+          )}
+          {c.auraPoints ? (
+            <div className="flex flex-wrap items-center gap-2 py-3">
+              <AuraPointsBadge points={c.auraPoints} />
+              <Badge variant="outline" className="text-[10px]">
+                {c.auraStatus.replace(/_/g, ' ')}
+              </Badge>
+            </div>
+          ) : null}
+        </div>
+        {canExecute && c.status !== 'REFUNDED' && (
+          <div className="mt-3">
+            <CompleteRefundButton
+              caseId={c.id}
+              allArnsIn={c.allArnsIn}
+              pendingArns={c.pendingArns}
+            />
+          </div>
+        )}
+      </Section>
+
+      {/* ── Call the customer ─────────────────────────────────────
+          Operators call externally, then record the outcome here.
+          • Answered → closes the case.
+          • No answer → dispatches the follow-up email automatically. */}
+      {(c.status === 'REFUNDED' || c.status === 'PARTIALLY_REFUNDED') &&
+        c.customerCallStatus !== 'NOT_APPLICABLE' && (
+          <Section title="Call the customer">
+            <CallFollowUp
+              caseId={c.id}
+              status={c.customerCallStatus}
+              updatedAt={c.customerCallUpdatedAt}
+              canExecute={canExecute}
+            />
+          </Section>
+        )}
+
+      {/* ── Notes ─────────────────────────────────────────────── */}
+      <Section
+        title="Notes"
+        aside={
+          <Link
+            href={`/cases/${c.id}?tab=notes`}
+            className="text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            View all
+          </Link>
+        }
+      >
+        {c.notes.length > 0 && (
+          <ul className="mb-3 space-y-3">
+            {c.notes.map((n) => (
+              <li key={n.id}>
+                <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground">{n.authorName}</span>
+                  <span>{n.whenLabel}</span>
+                </div>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm text-foreground">{n.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <AddNoteForm caseId={c.id} />
+      </Section>
+
+      {/* ── Context ───────────────────────────────────────────── */}
+      {(c.approvalBatchNumber || c.timeline[0] || c.contactLog[0]) && (
+        <Section title="Context" last>
+          <dl className="grid gap-y-2 text-xs sm:grid-cols-2 sm:gap-x-6">
+            {c.approvalBatchNumber && (
+              <Fact label="Approval batch" value={c.approvalBatchNumber} mono />
+            )}
+            {c.timeline[0] && (
+              <Fact
+                label="Last activity"
+                value={`${c.timeline[0].message} · ${c.timeline[0].whenLabel}`}
+              />
+            )}
+            {c.contactLog[0] && (
+              <Fact
+                label="Last contact"
+                value={`${c.contactLog[0].channel}: ${c.contactLog[0].outcome} · ${c.contactLog[0].whenLabel}`}
+              />
+            )}
+          </dl>
+        </Section>
+      )}
+    </aside>
+  );
+}
+
+/**
+ * Flat workbench section: a single horizontal divider above, a small
+ * uppercase label, and the body. No nested cards — the whole workbench
+ * reads as one continuous pane with section breaks, which keeps the
+ * UI calm even when every section is shown at once.
+ */
+function Section({
+  title,
+  aside,
+  last,
+  children,
+}: {
+  title: string;
+  aside?: React.ReactNode;
+  last?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={cn(
+        'border-t border-border px-6 py-5',
+        last ? '' : '',
+      )}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          {title}
+        </h3>
+        {aside ? <div>{aside}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// Small label-over-value block used throughout the workbench. Pass `copy`
+// to render a copy button next to the value, `mono` to render the value
+// in a monospace face (good for case #, order #, phone), and
+// `emphasised` to bump the value to heading size — meant for identifiers
+// the operator copy-pastes most often into the external refund tool.
+function DataField({
+  label,
+  value,
+  mono,
+  copy,
+  emphasised,
+  fallback,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  copy?: boolean;
+  emphasised?: boolean;
+  fallback?: string;
+}) {
+  const hasValue = value !== '';
+  const valueClass = cn(
+    'inline-flex min-w-0 items-center gap-1.5',
+    hasValue ? 'text-heading' : 'text-muted-foreground',
+    emphasised ? 'text-base font-semibold leading-tight' : 'font-medium',
+    mono ? 'font-mono' : '',
+  );
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
+      <dd className={valueClass}>
+        <span className="truncate">{hasValue ? value : (fallback ?? '—')}</span>
+        {copy && hasValue && <CopyButton value={value} size="xs" label={`Copy ${label}`} />}
+      </dd>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Rail row — inline ARN entry, matches /cases/{id} PaymentComponentRow
+// ---------------------------------------------------------------------------
+
+function RailRow({
+  caseId,
+  component,
+  canExecute,
+}: {
+  caseId: string;
+  component: PoolCaseComponent;
+  canExecute: boolean;
+}) {
+  const router = useRouter();
+  const [arnDraft, setArnDraft] = useState(component.arn ?? '');
+  const [editing, setEditing] = useState(!component.arn);
+  const [isPending, startTransition] = useTransition();
+
+  // Reset the draft whenever the underlying component changes (e.g. the
+  // operator picked a different ticket in the list).
+  useEffect(() => {
+    setArnDraft(component.arn ?? '');
+    setEditing(!component.arn);
+  }, [component.id, component.arn]);
+
+  function save(e: React.FormEvent) {
+    e.preventDefault();
+    const arn = arnDraft.trim();
+    if (arn.length < 3) {
+      toast.error('Please enter a valid ARN.');
+      return;
+    }
+    startTransition(async () => {
+      const result = await setComponentArnAction({
+        caseId,
+        componentId: component.id,
+        arn,
+      });
+      if (result.ok) {
+        toast.success('ARN saved');
+        setEditing(false);
+        router.refresh();
+      } else {
+        toast.error(result.error ?? 'Could not save ARN');
+      }
+    });
+  }
+
+  return (
+    <div className="py-3 first:pt-0 last:pb-0">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <PaymentMethodIcons
+          methods={[{ key: component.paymentKey, label: component.paymentLabel }]}
+          size="sm"
+        />
+        <div className="font-mono text-sm font-medium tabular-nums text-heading">
+          {money(component.amount, component.currency)}
+        </div>
+        {component.authCode && (
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <span>Auth</span>
+            <span className="font-mono text-foreground">{component.authCode}</span>
+            <CopyButton value={component.authCode} size="xs" label="Copy auth" />
+          </div>
+        )}
+        {component.last4 && (
+          <div className="text-[11px] text-muted-foreground">•••• {component.last4}</div>
+        )}
+        {component.batchNumber && (
+          <Link
+            href={`/operations/knet/${component.batchId}`}
+            className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 font-mono text-[11px] text-sky-700 hover:bg-sky-100"
+          >
+            <Hash className="h-3 w-3" />
+            {component.batchNumber}
+          </Link>
+        )}
+        <div className="ms-auto">
+          <ComponentStatusBadge status={component.status} />
+        </div>
+      </div>
+
+      {component.arn && !editing ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+            ARN
+          </span>
+          <span className="font-mono font-medium text-foreground">{component.arn}</span>
+          <CopyButton value={component.arn} size="xs" label="Copy ARN" />
+          {canExecute && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="ms-1 text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+      ) : canExecute ? (
+        <form
+          onSubmit={save}
+          className="mt-2 flex flex-wrap items-center gap-2"
+        >
+          <label
+            htmlFor={`pool-arn-${component.id}`}
+            className="text-xs font-medium text-muted-foreground"
+          >
+            ARN
+          </label>
+          <input
+            id={`pool-arn-${component.id}`}
+            value={arnDraft}
+            onChange={(e) => setArnDraft(e.target.value)}
+            placeholder={
+              component.batchNumber
+                ? `Enter ARN received from ${component.paymentLabel} batch`
+                : `Enter ${component.paymentLabel} ARN`
+            }
+            className="min-w-[14rem] flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            autoComplete="off"
+          />
+          <Button type="submit" size="sm" disabled={isPending}>
+            {isPending ? 'Saving…' : 'Save ARN'}
+          </Button>
+          {component.arn && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setArnDraft(component.arn ?? '');
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+        </form>
+      ) : (
+        <div className="mt-2 text-xs text-muted-foreground">
+          No ARN yet. {component.batchNumber ? 'Waiting on batch response.' : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Complete refund — becomes the primary CTA once every ARN is entered
+// ---------------------------------------------------------------------------
+
+function CompleteRefundButton({
+  caseId,
+  allArnsIn,
+  pendingArns,
+}: {
+  caseId: string;
+  allArnsIn: boolean;
+  pendingArns: number;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function run() {
+    startTransition(async () => {
+      const result = await completeRefundAction({ caseId });
+      if (result.ok) {
+        toast.success('Refund completed and customer notified');
+        router.refresh();
+      } else {
+        toast.error(result.error ?? 'Could not complete the refund');
+      }
+    });
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="text-xs text-muted-foreground">
+        {allArnsIn
+          ? 'All ARNs recorded — notify the customer and mark the case refunded.'
+          : `${pendingArns} rail(s) still need an ARN before the refund can be completed.`}
+      </div>
+      <Button
+        size="sm"
+        variant={allArnsIn ? 'default' : 'outline'}
+        disabled={!allArnsIn || isPending}
+        onClick={run}
+        className="gap-1.5"
+      >
+        <CheckCircle2 className="h-4 w-4" />
+        {isPending ? 'Completing…' : 'Complete refund'}
+      </Button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Customer call follow-up — identical widget to /cases/{id}
+// ---------------------------------------------------------------------------
+
+function CallFollowUp({
+  caseId,
+  status,
+  updatedAt,
+  canExecute,
+}: {
+  caseId: string;
+  status: 'NOT_APPLICABLE' | 'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED';
+  updatedAt: string | null;
+  canExecute: boolean;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const showButtons = canExecute && (status === 'PENDING' || editing);
+
+  function record(outcome: 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED') {
+    startTransition(async () => {
+      const result = await markCustomerCallAction({ caseId, outcome });
+      if (result.ok) {
+        toast.success('Call outcome recorded');
+        setEditing(false);
+        router.refresh();
+      } else {
+        toast.error(result.error ?? 'Could not record the outcome');
+      }
+    });
+  }
+
+  if (showButtons) {
+    return (
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-3 dark:border-amber-500/20 dark:bg-amber-500/5">
+        <PhoneCall className="h-4 w-4 flex-none text-amber-600 dark:text-amber-400" />
+        <div className="flex-1 min-w-0 text-sm text-foreground">
+          Confirm the refund with the customer by phone.
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button size="sm" variant="success" disabled={isPending} onClick={() => record('ANSWERED')}>
+            <PhoneCall className="h-4 w-4" /> Answered
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => record('NO_ANSWER')}
+          >
+            <PhoneOff className="h-4 w-4" /> No answer
+          </Button>
+          {editing && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={isPending}
+              onClick={() => setEditing(false)}
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // `status === 'PENDING'` also lands here for viewers who can't execute
+  // (e.g. MANAGER). Render a neutral "call pending" banner instead of
+  // falling through to NOT_NEEDED, which would be misleading.
+  const meta: Record<
+    'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED',
+    { tone: string; Icon: typeof PhoneCall; title: string; detail: string }
+  > = {
+    PENDING: {
+      tone: 'border-amber-200 bg-amber-50/60 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-300',
+      Icon: PhoneCall,
+      title: 'Call pending',
+      detail: 'Waiting for an agent to confirm the refund with the customer.',
+    },
+    ANSWERED: {
+      tone: 'border-emerald-200 bg-emerald-50/60 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:text-emerald-300',
+      Icon: CheckCircle2,
+      title: 'Customer answered',
+      detail: 'Refund confirmed by phone.',
+    },
+    NO_ANSWER: {
+      tone: 'border-amber-200 bg-amber-50/60 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-300',
+      Icon: PhoneOff,
+      title: 'No answer',
+      detail: 'Confirmation email sent to the customer.',
+    },
+    NOT_NEEDED: {
+      tone: 'border-muted bg-surface-subtle text-muted-foreground',
+      Icon: PhoneCall,
+      title: 'Follow-up skipped',
+      detail: 'No call was needed.',
+    },
+  };
+  const m =
+    meta[status as 'PENDING' | 'ANSWERED' | 'NO_ANSWER' | 'NOT_NEEDED'] ?? meta.NOT_NEEDED;
+
+  return (
+    <div className={cn('flex flex-wrap items-center gap-3 rounded-xl border px-3 py-3', m.tone)}>
+      <m.Icon className="h-4 w-4 flex-none" />
+      <div className="flex-1 min-w-0 text-sm">
+        <div className="font-medium text-foreground">{m.title}</div>
+        <div className="text-xs text-muted-foreground">
+          {m.detail}
+          {updatedAt ? ` · ${new Date(updatedAt).toLocaleString()}` : ''}
+        </div>
+      </div>
+      {canExecute && (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={isPending}
+          onClick={() => setEditing(true)}
+          className="text-xs"
+        >
+          Change
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Inline note composer — calls addCaseNoteAction without mentions so the
+// pool stays a keyboard-friendly quick log.
+// ---------------------------------------------------------------------------
+
+function AddNoteForm({ caseId }: { caseId: string }) {
+  const router = useRouter();
+  const [body, setBody] = useState('');
+  const [isPending, startTransition] = useTransition();
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = body.trim();
+    if (trimmed.length === 0) return;
+    startTransition(async () => {
+      const result = await addCaseNoteAction({
+        caseId,
+        body: trimmed,
+        mentionedUserIds: [],
+      });
+      if (result.ok) {
+        toast.success('Note added');
+        setBody('');
+        router.refresh();
+      } else {
+        toast.error(result.error ?? 'Could not add the note');
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={submit} className="flex items-start gap-2">
+      <Textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="Log a quick note (call outcome, escalation…)"
+        className="min-h-[52px] flex-1 resize-y text-sm"
+      />
+      <Button
+        type="submit"
+        size="sm"
+        disabled={isPending || body.trim().length === 0}
+        className="mt-0.5 gap-1.5"
+      >
+        <Send className="h-3.5 w-3.5" />
+        {isPending ? 'Saving…' : 'Save'}
+      </Button>
+    </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Small helpers
+// ---------------------------------------------------------------------------
 
 function FilterChip({
   active,
@@ -337,183 +1183,14 @@ function FilterChip({
   );
 }
 
-function TicketInspector({
-  c,
-  selectedComponents,
-  selectedRefundLabel,
-}: {
-  c: PoolCase;
-  selectedComponents: number;
-  selectedRefundLabel: string;
-}) {
-  const firstContact = c.contactLog[0] ?? null;
-  const lastEvent = c.timeline[0] ?? null;
-
+function Fact({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <aside className="sticky top-0 max-h-[calc(100vh-150px)] overflow-y-auto p-4">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>
-              {c.countryFlag} {c.countryName}
-            </span>
-            <span>·</span>
-            <span>{c.brandName}</span>
-          </div>
-          <h2 className="mt-1 truncate text-lg font-semibold text-heading">
-            {c.externalCaseNumber || c.caseNumber}
-          </h2>
-          <p className="line-clamp-2 text-xs text-muted-foreground">{c.rootCauseSummary ?? '—'}</p>
-        </div>
-        <Link
-          href={`/cases/${c.id}`}
-          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs font-medium hover:bg-surface-subtle"
-        >
-          <ExternalLink className="h-3 w-3" /> Open
-        </Link>
+    <div className="min-w-0">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
       </div>
-
-      <div className="mb-4 grid grid-cols-3 gap-2">
-        <MiniMetric label="Refund" value={selectedRefundLabel} />
-        <MiniMetric label="Rails" value={`${selectedComponents}`} />
-        <MiniMetric label="Approved" value={c.approvedAt ?? '—'} />
-      </div>
-
-      <section className="mb-4 rounded-xl border border-border bg-card p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Customer
-        </div>
-        <div className="text-sm font-medium">{c.customerName}</div>
-        <div className="truncate text-xs text-muted-foreground">{c.customerEmail}</div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {c.customerPhone ? (
-            <>
-              <a
-                href={`tel:${c.customerPhone}`}
-                className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs hover:bg-surface-subtle"
-              >
-                <Phone className="h-3 w-3" /> Call
-              </a>
-              <a
-                href={`https://wa.me/${c.customerPhone.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs hover:bg-surface-subtle"
-              >
-                <MessageCircle className="h-3 w-3" /> WhatsApp
-              </a>
-            </>
-          ) : null}
-          <a
-            href={`mailto:${c.customerEmail}`}
-            className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-card px-2 text-xs hover:bg-surface-subtle"
-          >
-            <Mail className="h-3 w-3" /> Email
-          </a>
-        </div>
-      </section>
-
-      <section className="mb-4 rounded-xl border border-border bg-card p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Refund rails
-        </div>
-        <div className="space-y-2">
-          {c.components.map((cmp) => {
-            const Icon = paymentIcon(cmp.paymentKey);
-            return (
-              <div key={cmp.id} className="rounded-lg border border-border p-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{cmp.paymentLabel}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {cmp.amount.toFixed(2)} {cmp.currency}
-                        {cmp.authCode ? ` · auth ${cmp.authCode}` : ''}
-                      </div>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-[10px]">
-                    {cmp.status.replace(/_/g, ' ')}
-                  </Badge>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{cmp.arn ? `ARN ${cmp.arn}` : 'No ARN yet'}</span>
-                  {cmp.batchNumber ? (
-                    <Link
-                      href={`/operations/knet/${cmp.batchId}`}
-                      className="underline-offset-2 hover:underline"
-                    >
-                      {cmp.batchNumber}
-                    </Link>
-                  ) : (
-                    <span>Not batched</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          {c.auraPoints ? (
-            <div className="flex items-center justify-between rounded-lg border border-border p-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Coins className="h-4 w-4 text-muted-foreground" />
-                <span>{c.auraPoints} Aura points</span>
-              </div>
-              <Badge variant="outline" className="text-[10px]">
-                {c.auraStatus}
-              </Badge>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-border bg-card p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Latest context
-        </div>
-        <div className="space-y-3 text-xs">
-          <div>
-            <div className="text-muted-foreground">Contact</div>
-            <div className="text-foreground">
-              {firstContact
-                ? `${firstContact.channel}: ${firstContact.outcome}`
-                : 'No contact logged yet'}
-            </div>
-            {firstContact ? (
-              <div className="text-muted-foreground">{firstContact.whenLabel}</div>
-            ) : null}
-          </div>
-          <div>
-            <div className="text-muted-foreground">Timeline</div>
-            <div className="text-foreground">{lastEvent?.message ?? 'No activity logged'}</div>
-            {lastEvent ? <div className="text-muted-foreground">{lastEvent.whenLabel}</div> : null}
-          </div>
-          {c.approvalReply ? (
-            <div>
-              <div className="text-muted-foreground">Approval reply</div>
-              <div className="line-clamp-2 text-foreground">{c.approvalReply}</div>
-            </div>
-          ) : null}
-        </div>
-      </section>
-    </aside>
-  );
-}
-
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-2">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-1 truncate text-sm font-semibold text-heading">{value}</div>
+      <div className={cn('truncate text-sm text-foreground', mono ? 'font-mono' : '')}>{value}</div>
     </div>
   );
 }
 
-function Fact({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div>
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={cn('text-sm', highlight ? 'font-semibold' : '')}>{value}</div>
-    </div>
-  );
-}

@@ -570,9 +570,11 @@ export async function markAllNotificationsReadAction(): Promise<ActionResult> {
  * Roles that may execute the post-approval refund — set the ARN on each
  * payment component, send the customer the ARN email, and progress the
  * case to REFUNDED. Mirrors the Refund-Operations team in the operating
- * model: ADMIN for break-glass, OPERATIONS for the actual day-to-day.
+ * model: ADMIN for break-glass, REFUND_AGENT for the actual day-to-day
+ * (seeded role key); OPERATIONS stays accepted as a legacy alias for any
+ * older user records that still carry it.
  */
-const EXECUTE_ROLES = new Set(['ADMIN', 'OPERATIONS']);
+const EXECUTE_ROLES = new Set(['ADMIN', 'REFUND_AGENT', 'OPERATIONS']);
 
 /**
  * Set the ARN on a single payment component. Only allowed once the case
@@ -724,9 +726,19 @@ export async function completeRefundAction(input: {
       };
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.refundCase.update({
-        where: { id: caseId },
+    // Optimistic-concurrency guard: updateMany WHERE status still allows
+    // completion. If two operators click "Complete refund" at once, only
+    // the first transaction flips the row from a pre-execution status to
+    // REFUNDED; the second sees count=0 and bails out BEFORE we dispatch
+    // the customer email or write the audit rows, preventing duplicate
+    // emails. Mirrors the pattern used by `deleteCaseAction`.
+    const applied = await prisma.$transaction(async (tx) => {
+      const res = await tx.refundCase.updateMany({
+        where: {
+          id: caseId,
+          deletedAt: null,
+          status: { in: ['APPROVED', 'IN_EXECUTION', 'PARTIALLY_REFUNDED'] },
+        },
         data: {
           status: 'REFUNDED',
           customerNotifiedAt: new Date(),
@@ -734,6 +746,9 @@ export async function completeRefundAction(input: {
           customerCallUpdatedAt: new Date(),
         },
       });
+      if (res.count === 0) {
+        return false;
+      }
       await tx.activityLog.create({
         data: {
           caseId,
@@ -754,7 +769,20 @@ export async function completeRefundAction(input: {
           afterData: JSON.stringify({ status: 'REFUNDED' }),
         },
       });
+      return true;
     });
+
+    if (!applied) {
+      // Another operator won the race — the case is already REFUNDED (or
+      // moved to another terminal state). Refresh the UI and surface a
+      // friendly error rather than double-sending the customer email.
+      revalidatePath(`/cases/${caseId}`);
+      revalidatePath('/cases');
+      return {
+        ok: false,
+        error: 'This case is already being completed by another operator.',
+      };
+    }
 
     // Send the ARN email outside the transaction. EmailLog already records
     // its own audit row so we don't lose visibility on failure.
@@ -805,6 +833,9 @@ export async function markCustomerCallAction(input: {
 }): Promise<ActionResult> {
   try {
     const user = await requireSession();
+    if (!EXECUTE_ROLES.has(user.role ?? '')) {
+      return { ok: false, error: 'Only Refund Operations can record the customer call.' };
+    }
     const caseId = String(input.caseId ?? '').trim();
     const outcome = input.outcome;
     if (!caseId) return { ok: false, error: 'Missing case id.' };

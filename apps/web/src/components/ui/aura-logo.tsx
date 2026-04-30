@@ -1,19 +1,17 @@
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 /**
- * Aura partner-brand chip — magenta circle icon + 'AURA' wordmark in
- * the official Aura magenta (#ee0677) on a white field. Composed in
- * CSS rather than reusing the full bitmap lockup so the chip can sit
- * at the same h-9 / w-14 footprint as the Apple Pay / KNET / Mastercard
- * chips without the white halo the bitmap wordmark introduced.
+ * Aura brand mark — compact "Aura" wordmark + small rose gradient dot.
  *
- * `size` controls the chip height; the chip is laid out at a fixed
- * 14:9 ratio (matches the payment chips). `className` is merged onto
- * the outer chip span — pass `ring-...` here to add a border.
+ * Previously this rendered the large `aura-mark.png` lockup, which
+ * operators found oversized, mis-aligned and visually dominant in the
+ * workbench + case-detail views. This redesign is a lightweight,
+ * CSS-only chip: a tiny pink-to-magenta gradient dot + "Aura" wordmark
+ * in the brand's rose colour. Much smaller footprint, scales crisply
+ * at every DPI, and matches the aesthetic of the rest of the app.
  */
 export function AuraLogo({
-  size = 20,
+  size = 14,
   className,
   title = 'Aura',
 }: {
@@ -21,12 +19,8 @@ export function AuraLogo({
   className?: string;
   title?: string;
 }) {
-  // 14:9 aspect — tracks the payment chip dimensions so AuraLogo can
-  // sit on the payment row without throwing off vertical rhythm.
-  const width = Math.round((size * 14) / 9);
-  const radius = Math.max(2, Math.round(size * 0.18));
-  const iconSize = Math.round(size * 0.78);
-  const wordmarkSize = Math.round(size * 0.6);
+  // Wordmark height matches `size`; the dot sits flush with the cap height.
+  const dotPx = Math.max(6, Math.round(size * 0.6));
 
   return (
     <span
@@ -34,29 +28,54 @@ export function AuraLogo({
       aria-label={title}
       title={title}
       className={cn(
-        'inline-flex flex-none items-center justify-center gap-[3px] overflow-hidden bg-white px-1 ring-1 ring-inset ring-black/10',
+        'inline-flex flex-none items-center gap-1 font-semibold leading-none',
         className,
       )}
-      style={{
-        height: `${size}px`,
-        width: `${width}px`,
-        borderRadius: `${radius}px`,
-      }}
+      style={{ fontSize: `${size}px`, color: '#C0006C' }}
     >
-      <Image
-        src="/brand/aura-icon.png"
-        alt=""
-        width={iconSize * 2}
-        height={iconSize * 2}
-        className="object-contain"
-        style={{ height: `${iconSize}px`, width: `${iconSize}px` }}
-        priority={false}
-      />
       <span
-        className="font-semibold leading-none tracking-[0.04em] text-[#ee0677]"
-        style={{ fontSize: `${wordmarkSize}px` }}
-      >
-        AURA
+        aria-hidden="true"
+        className="rounded-full bg-gradient-to-br from-[#F6339A] to-[#C0006C]"
+        style={{ width: `${dotPx}px`, height: `${dotPx}px` }}
+      />
+      <span className="tracking-tight">Aura</span>
+    </span>
+  );
+}
+
+/**
+ * Aura points badge — compact pink pill that combines the Aura brand
+ * mark with a formatted points value. Use this instead of rendering
+ * AuraLogo + a separate points counter side-by-side: it keeps every
+ * Aura points display visually identical across the Pool, case
+ * details, and the new-case form.
+ */
+export function AuraPointsBadge({
+  points,
+  className,
+  suffix = 'pts',
+}: {
+  points: number;
+  className?: string;
+  suffix?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border border-[#E6007E]/20 bg-[#FFF2F8] px-2.5 py-0.5 text-xs font-medium text-[#C0006C]',
+        className,
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-[#F6339A] to-[#C0006C]"
+      />
+      <span className="font-semibold tracking-tight">Aura</span>
+      <span aria-hidden="true" className="opacity-40">
+        ·
+      </span>
+      <span className="font-mono tabular-nums">
+        {points.toLocaleString()} {suffix}
       </span>
     </span>
   );

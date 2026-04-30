@@ -54,7 +54,7 @@ export default async function CaseDetailsPage({
   const canApprove = role === 'ADMIN' || role === 'MANAGER';
   // Refund-Operations workflow (record ARN, complete refund, customer
   // call follow-up). Mirrors EXECUTE_ROLES on the server.
-  const canExecute = role === 'ADMIN' || role === 'OPERATIONS';
+  const canExecute = role === 'ADMIN' || role === 'REFUND_AGENT' || role === 'OPERATIONS';
   const isDeleted = !!refundCase.deletedAt;
 
   // For @mention picker: list active users
