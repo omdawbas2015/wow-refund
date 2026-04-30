@@ -1,121 +1,135 @@
 # DESIGN.md — WOW Refund
 
-> Design language for the WOW Refund workspace. Light-mode only,
-> Linear / Stripe / Notion / Vercel inspired. Calm, professional,
-> non-decorative — every visual choice is in service of the data.
+> Soft, friendly, dashboard-first design language. Cream surfaces, a warm
+> yellow accent, and pastel-tinted icon chips for navigation and KPIs.
+> The reference is a Dribbble-style admin dashboard — not Linear, not
+> Stripe; the goal is approachable and unmistakably human.
 
 ---
 
 ## 1. Principles
 
-1. **Information first.** Every pixel either renders data or supports it.
-   We never use decorative gradients, aurora washes, or glow halos.
-2. **One accent.** A single deep indigo (`231 64% 48%`) is used for active
-   states, links, and primary CTAs. No multi-stop brand gradient. No
-   gradient avatars or logos.
-3. **Restrained motion.** Hover transitions are colour changes only — no
-   translate, no scale, no glow. The only entrance animation is a 200 ms
-   `fade-in`. `prefers-reduced-motion` disables everything.
-4. **Hairline + flat.** Surfaces are flat white panels with a 1 px border
-   and at most a single subtle shadow. No `rounded-2xl` cards stacked on
-   blurred backgrounds.
-5. **Tight scale.** 4 px grid; 8 px corner radius default; 13 px body
-   text; 12 px UI labels; tabular numerics on every metric.
+1. **Warm cream over white.** The page background is a near-cream
+   (`#FBFAF6`), and panels lift to pure white. We never sit white on
+   white.
+2. **One accent — butter yellow.** `hsl(46 88% 62%)` is used on the
+   primary CTA, hero KPI card, sidebar brand, avatar, and active nav
+   chip. Hover deepens to `hsl(42 92% 56%)`.
+3. **Pastel icon chips.** Every nav item, KPI card, and pending-task
+   row has its icon inside a soft tinted square (mint / lavender /
+   peach / sky / rose / butter). The chip carries colour so the rest
+   of the surface stays calm.
+4. **Generous radius.** 12 px default, 18–28 px on cards, pill on
+   buttons / chips / avatars. Nothing is square.
+5. **Restrained motion.** Hover transitions are colour changes only —
+   no translate, no scale, no glow. Only `fade-in` (200 ms) and
+   `fade-in-up` (240 ms) on first paint. `prefers-reduced-motion`
+   disables everything.
 
 ---
 
 ## 2. Tokens
 
 ### Colour
-- **Surfaces** are white (`--neutral-0`) on a near-white background
-  (`--neutral-50`).
-- **Text** uses three weights: `--heading` (almost black), `--foreground`
-  (zinc-900), `--body` / `--muted-foreground` (zinc-600 / zinc-500).
-- **Borders** are `--neutral-200` everywhere; rare `--border-strong`
-  (`--neutral-300`) for emphasised dividers.
-- **Single accent** (`--primary`): `hsl(231 64% 48%)`. Hover deepens to
-  `hsl(231 68% 42%)`.
-- **Status** colours (success / warning / destructive / info) are used
-  only as small pill backings (50-tone bg + 700-tone text). Never as
-  full surfaces.
+- **Background**: cream `--neutral-50` (`#FBFAF6`-ish).
+- **Surfaces**: pure white (`--neutral-0`) for panels and cards;
+  `--surface-subtle` cream wash for input backgrounds.
+- **Text**: `--heading` (near black), `--foreground` (zinc-900),
+  `--muted-foreground` (zinc-500).
+- **Border**: warm hairline `--neutral-150`.
+- **Primary**: butter yellow `hsl(46 88% 62%)` with deep cocoa
+  foreground for AAA contrast.
+- **Status**: `success` mint, `warning` amber, `destructive` rose,
+  `info` sky — all at low chroma.
+
+### Pastel chips
+`--chip-butter`, `--chip-mint`, `--chip-lavender`, `--chip-peach`,
+`--chip-sky`, `--chip-rose`. Each has a low-saturation background +
+saturated foreground. Use the matching utility class
+(`chip-butter`, `chip-mint`, …) on a 28 × 28 rounded-xl square that
+contains the icon.
 
 ### Type
 - **Family**: Inter Variable, with `cv11, ss01, ss03` features.
-- **Scale**: `display-lg` 32 / `display-md` 26 / `display-sm` 22 /
-  `heading-lg` 18 / `heading-md` 15 / body 14 / caption 11.5.
-- **Weights**: 400 (body), 500 (UI), 600 (headings). No light weights.
+- **Scale**: `display-md` 28 / `heading-md` 15 / body 14 / caption
+  11.5.
+- **Weights**: 400 body, 500 UI, 600 headings.
 
 ### Shape
-- **Radius**: 8 px default, 6 px on small chips, 10 px on large panels.
-- **Shadows**: only `shadow-card` (single 1 px ambient) and `shadow-md`
-  (used sparingly for floating elements like dropdowns). No glow or
-  brand-tinted shadows anywhere.
+- **Radius**: 12 px default, 14 / 18 / 22 / 28 px ladder; `pill`
+  (9999 px) for buttons and chips.
+- **Shadows**: `shadow-xs` ambient on selected sidebar row only — no
+  glow, no brand-tinted shadows.
 
 ### Motion
-- `transition-colors` 150 ms is the default hover. No translate, no scale.
-- `animate-fade-in` and `animate-fade-in-up` are 200–240 ms one-shot
-  fades for first paint. There are no infinite animations
-  (no `pulse-ring`, no `gradient-pan`, no `shimmer`).
+- `transition-colors` 150 ms is the default hover.
+- `animate-fade-in` and `animate-fade-in-up` for first paint.
+- No infinite loops. No translate / scale on hover.
 
 ---
 
 ## 3. Layout
 
-### Sidebar
-- 228 px wide, light surface (`--neutral-50`), single hairline border.
-- Brand: 24 × 24 dark square with white "W" — no gradient, no glow.
-- Section labels in 10.5 px uppercase muted text.
-- Nav items: 32 px tall, 12.5 px label, 14 × 14 px icon.
-- Active state: `--neutral-150` background fill with near-black text;
-  no gradient rail, no shadow.
+### Sidebar (244 px)
+- Cream surface, no left-border separation, soft hairline on the
+  right.
+- **Brand**: 32 × 32 yellow rounded-2xl chip with a bold "W".
+- **Search**: rounded-pill input with `⌘K` kbd.
+- **Nav rows**: 40 px tall, 28 × 28 pastel chip on the left, label,
+  optional badge on the right.
+- **Active state**: white card under the row with a subtle ambient
+  shadow; the chip flips from pastel to solid butter yellow.
+- **Footer**: Profile, Settings, Sign out (rose chip).
 
 ### Top bar
-- 48 px tall, solid white, single hairline border, no glass blur.
-- Breadcrumb (12.5 px), search (`⌘K`), notifications, avatar.
-- Avatar is a flat 24 × 24 dark circle with the user's initial.
+- 56 px tall, transparent over the cream background (no border).
+- Breadcrumb on the left, pill-shaped search, notification bell, and a
+  pill avatar chip with a yellow circle + initial.
 
-### Content
+### Auth
+- Full-screen cream wash, header (logo + name), centred white
+  rounded-3xl card holding the form.
+
+### Page content
 - 24 px page padding.
-- Page header: title (display-md) + one-line subtitle + period chip.
-- Section panels: hairline border, no hover lift, divider rows for
-  data tables.
+- KPI hero (yellow card) sits beside white side cards.
+- Section panels are rounded-3xl white cards with hairline border.
 
 ---
 
 ## 4. Components
 
 ### Button
-Solid filled (`primary`) or outline. Hover = single colour change. No
-gradient, no translate, no glow. `h-9` default; `h-10` for `size="lg"`.
+- `rounded-pill`, h-9 default. Filled = butter yellow with cocoa text.
+  Outline / ghost / link variants stay neutral. No translate, no glow.
 
 ### Card
-Flat: hairline border, single ambient shadow, no hover-lift, 8–10 px
-corners. Section headers sit inside a hairline-bottom strip.
+- `rounded-2xl`, hairline border. No hover-lift.
 
 ### Badge
-Compact rectangular pill (`rounded-md`, no uppercase). Status variants
-use 50-tone background + 700-tone text. Default = neutral surface.
+- `rounded-pill`, 11 px text. Status variants use 50-tone background
+  + 700-tone text.
 
 ### Input
-`h-9`, 13 px text, hairline border, 2 px focus ring at 30 % opacity.
-No drop shadow, no gradient on focus.
+- `rounded-xl`, h-10, cream-tinted background; switches to white on
+  focus with a 2 px butter ring.
 
 ### Skeleton
-`animate-pulse` on `--surface-muted`. No shimmer keyframe.
+- `animate-pulse` on `--surface-muted`. No shimmer keyframe.
 
 ---
 
 ## 5. What this design *isn't*
 
-To stay aligned with the principles above, do **not** introduce any of
-the following without a strong reason:
+To stay aligned with the reference, do **not** introduce any of the
+following without a strong reason:
 
-- Multi-stop brand gradients on logos, buttons, or avatars.
-- Aurora / radial-gradient backgrounds behind cards or pages.
+- Multi-stop indigo/violet/magenta brand gradients.
+- Aurora / radial-gradient backgrounds.
 - Hover translate / scale / glow effects.
 - Infinite-loop animations (`pulse-ring`, `gradient-pan`, `shimmer`).
-- `rounded-2xl` floating cards.
+- Square panels (`rounded-md` cards, `rounded-md` chips).
 - Glass / backdrop-blur surfaces.
-- Decorative tagline pills ("✨ New · Live · World-class …").
+- Decorative tagline pills ("✨ Live · World-class …").
 
-When in doubt: prefer the duller option.
+When in doubt: keep it warm, soft, and quiet.

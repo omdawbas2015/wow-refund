@@ -34,7 +34,7 @@ export function BackLink() {
         href={parentHref}
         className="group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ChevronLeft className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-x-0.5" />
+        <ChevronLeft className="h-3.5 w-3.5" />
         <span>Back to {label}</span>
       </Link>
     </div>

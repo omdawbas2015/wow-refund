@@ -4,20 +4,22 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Top bar */}
-      <header className="flex h-12 items-center px-6 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-neutral-900 text-[11px] font-bold text-white">
+      <header className="flex h-14 items-center px-6">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-2xl surface-butter text-[13px] font-bold tracking-tight">
             W
           </div>
-          <span className="text-[13px] font-semibold tracking-tight text-heading">
+          <span className="text-[13.5px] font-semibold tracking-tight text-heading">
             WOW Refund
           </span>
         </div>
       </header>
 
       {/* Form */}
-      <main className="flex flex-1 items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[360px]">{children}</div>
+      <main className="flex flex-1 items-center justify-center px-6 py-8">
+        <div className="w-full max-w-[380px] rounded-3xl border border-border bg-surface p-7">
+          {children}
+        </div>
       </main>
 
       {/* Footer */}

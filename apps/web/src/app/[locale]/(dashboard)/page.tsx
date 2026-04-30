@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { prisma } from '@wow/db';
 import { Badge } from '@/components/ui/badge';
 import { Link } from '@/i18n/routing';
+import { cn } from '@/lib/utils';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -181,9 +182,16 @@ export default async function DashboardHome() {
 
   const greeting = `${greetingFor(now)}, ${session?.user.name ?? ''}`.trim();
 
+  const heroStat = stats[0]!;
+  const sideStats = stats.slice(1);
+  const heroPositive = heroStat.delta >= 0;
+  const HeroDeltaIcon = heroPositive ? ArrowUpRight : ArrowDownRight;
+
+  const taskTones = ['mint', 'lavender', 'peach'] as const;
+
   return (
     <div className="px-6 py-6">
-      {/* Page header — flat, no aurora, no live pill. */}
+      {/* Page header */}
       <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-display-md text-heading">{greeting}</h1>
@@ -197,23 +205,52 @@ export default async function DashboardHome() {
         </div>
       </div>
 
-      {/* KPI strip — flat, single-row, divider-separated. */}
-      <div className="grid divide-x divide-border overflow-hidden rounded-lg border border-border bg-surface sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
+      {/* KPI row — yellow hero card + soft white side cards. */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="surface-butter rounded-3xl p-5">
+          <div className="flex items-center gap-2 text-[12px] font-medium text-primary-foreground/70">
+            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/40">
+              <heroStat.icon className="h-3.5 w-3.5" />
+            </span>
+            <span>{heroStat.label}</span>
+          </div>
+          <div className="mt-4 text-[34px] font-semibold tabular leading-none text-primary-foreground">
+            {heroStat.value.toLocaleString()}
+          </div>
+          {heroStat.delta !== 0 && (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-pill bg-white/40 px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+              <HeroDeltaIcon className="h-3 w-3" />
+              {Math.abs(heroStat.delta)}% vs previous {SPARK_DAYS}d
+            </div>
+          )}
+        </div>
+
+        {sideStats.map((stat, idx) => {
           const positive = stat.delta >= 0;
           const DeltaIcon = positive ? ArrowUpRight : ArrowDownRight;
           const Icon = stat.icon;
+          const tone = (['mint', 'lavender', 'sky'] as const)[idx % 3];
           return (
-            <div key={stat.label} className="px-5 py-4">
+            <div
+              key={stat.label}
+              className="rounded-3xl border border-border bg-surface p-5"
+            >
               <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                <Icon className="h-3.5 w-3.5" />
+                <span
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded-xl',
+                    `chip-${tone}`,
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
                 <span>{stat.label}</span>
               </div>
-              <div className="mt-2 text-[26px] font-semibold tabular text-heading">
+              <div className="mt-4 text-[28px] font-semibold tabular leading-none text-heading">
                 {stat.value.toLocaleString()}
               </div>
               {stat.delta !== 0 && (
-                <div className="mt-1 flex items-center gap-1 text-[11.5px]">
+                <div className="mt-2 flex items-center gap-1 text-[11.5px]">
                   <span
                     className={
                       positive
@@ -234,8 +271,8 @@ export default async function DashboardHome() {
 
       {/* Chart + Pending */}
       <div className="mt-5 grid gap-5 lg:grid-cols-5">
-        <div className="rounded-lg border border-border bg-surface lg:col-span-3">
-          <div className="flex items-center justify-between border-b border-border px-5 py-3">
+        <div className="rounded-3xl border border-border bg-surface lg:col-span-3">
+          <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <div>
               <h2 className="text-heading-md text-heading">Refund volume</h2>
               <p className="mt-0.5 text-[12px] text-muted-foreground">
@@ -243,31 +280,34 @@ export default async function DashboardHome() {
               </p>
             </div>
           </div>
-          <div className="h-56 w-full px-3 py-3">
+          <div className="h-56 w-full px-3 pb-4">
             <RefundVolumeChart data={trendCreated} />
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface lg:col-span-2">
-          <div className="border-b border-border px-5 py-3">
+        <div className="rounded-3xl border border-border bg-surface lg:col-span-2">
+          <div className="px-5 pt-4">
             <h2 className="text-heading-md text-heading">Pending tasks</h2>
             <p className="mt-0.5 text-[12px] text-muted-foreground">Items needing your attention</p>
           </div>
-          <ul className="divide-y divide-border">
+          <ul className="px-3 py-3 space-y-1">
             <PendingTask
               icon={FileCheck2}
+              tone={taskTones[0]}
               label="Cases pending approval"
               count={pendingCases}
               href="/cases?status=PENDING_APPROVAL"
             />
             <PendingTask
               icon={UserPlus}
+              tone={taskTones[1]}
               label="User access requests"
               count={pendingApprovals}
               href="/admin/pending-approvals"
             />
             <PendingTask
               icon={Clock}
+              tone={taskTones[2]}
               label="Awaiting payment"
               count={awaitingPaymentCases}
               href="/operations"
@@ -277,7 +317,7 @@ export default async function DashboardHome() {
       </div>
 
       {/* Recent Cases */}
-      <div className="mt-5 overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="mt-5 overflow-hidden rounded-3xl border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-5 py-3">
           <div>
             <h2 className="text-heading-md text-heading">Recent cases</h2>
@@ -363,11 +403,13 @@ export default async function DashboardHome() {
 
 function PendingTask({
   icon: Icon,
+  tone,
   label,
   count,
   href,
 }: {
   icon: React.ComponentType<{ className?: string }>;
+  tone: 'mint' | 'lavender' | 'peach' | 'sky' | 'rose' | 'butter';
   label: string;
   count: number;
   href: string;
@@ -376,9 +418,16 @@ function PendingTask({
     <li>
       <Link
         href={href}
-        className="flex items-center gap-3 px-5 py-3 text-[13px] transition-colors hover:bg-surface-subtle"
+        className="flex items-center gap-3 rounded-2xl px-2 py-2 text-[13px] transition-colors hover:bg-surface-subtle"
       >
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span
+          className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-xl',
+            `chip-${tone}`,
+          )}
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </span>
         <span className="flex-1 text-foreground">{label}</span>
         <span className="tabular text-[14px] font-semibold text-heading">{count}</span>
       </Link>

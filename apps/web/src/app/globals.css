@@ -4,33 +4,36 @@
 
 /* ═══════════════════════════════════════════════════════════════════
    WOW Refund — design tokens
-   Inspired by Linear / Stripe Dashboard / Notion / Vercel.
-   Goals: light-mode only, calm neutral surfaces, a SINGLE accent
-   colour (no gradient logos, no aurora glows), strict 4px spacing,
-   tight typographic scale, hover-only motion.
+   Soft cream-and-pastel admin dashboard. Light, friendly, rounded.
+   - Warm cream background (#FBFAF6)
+   - Yellow primary accent (#F4D44C → deeper for hover)
+   - Pastel chip backings for icons (mint, lavender, peach, sky, butter)
+   - Generous rounded surfaces (12-20px)
+   - Single subtle shadow; no glow, no aurora.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    /* ── Neutral scale (zinc-leaning slate) ───────────────────────── */
-    --neutral-0:   0 0% 100%;
-    --neutral-50:  220 20% 98.5%;
-    --neutral-100: 220 16% 96%;
-    --neutral-150: 220 14% 94%;
-    --neutral-200: 220 14% 91%;
-    --neutral-300: 220 12% 86%;
-    --neutral-400: 220 10% 70%;
-    --neutral-500: 220 9% 55%;
-    --neutral-600: 220 10% 42%;
-    --neutral-700: 220 12% 30%;
-    --neutral-800: 220 18% 18%;
-    --neutral-900: 220 22% 11%;
-    --neutral-950: 220 28% 6%;
+    /* ── Cream / neutral scale ────────────────────────────────────── */
+    --neutral-0:   0 0% 100%;          /* pure white card */
+    --neutral-25:  44 33% 98%;         /* cream wash */
+    --neutral-50:  44 28% 96.5%;       /* page background */
+    --neutral-100: 40 20% 94%;
+    --neutral-150: 36 16% 91%;
+    --neutral-200: 32 14% 88%;
+    --neutral-300: 30 12% 82%;
+    --neutral-400: 28 10% 65%;
+    --neutral-500: 30 9% 50%;
+    --neutral-600: 28 10% 38%;
+    --neutral-700: 28 14% 26%;
+    --neutral-800: 28 18% 16%;
+    --neutral-900: 30 22% 10%;
+    --neutral-950: 30 28% 6%;
 
     /* ── Surfaces ─────────────────────────────────────────────────── */
     --background:          var(--neutral-50);
     --surface:             var(--neutral-0);
-    --surface-subtle:      var(--neutral-50);
+    --surface-subtle:      var(--neutral-25);
     --surface-muted:       var(--neutral-100);
     --surface-elevated:    var(--neutral-0);
 
@@ -43,17 +46,17 @@
     --muted-foreground:    var(--neutral-500);
 
     /* ── Borders ──────────────────────────────────────────────────── */
-    --border:              var(--neutral-200);
-    --border-strong:       var(--neutral-300);
+    --border:              var(--neutral-150);
+    --border-strong:       var(--neutral-200);
     --input:               var(--neutral-200);
 
-    /* ── Single accent — deep, refined indigo (Linear/Vercel feel) ── */
-    --primary:             231 64% 48%;
-    --primary-foreground:  0 0% 100%;
-    --primary-hover:       231 68% 42%;
-    --primary-deep:        231 70% 36%;
-    --primary-subtle:      231 100% 97%;
-    --ring:                231 64% 48%;
+    /* ── Single accent — warm butter yellow ───────────────────────── */
+    --primary:             46 88% 62%;          /* #F4D44C-ish */
+    --primary-foreground:  30 28% 12%;          /* deep cocoa text on yellow */
+    --primary-hover:       42 92% 56%;
+    --primary-deep:        38 92% 48%;
+    --primary-subtle:      48 94% 92%;
+    --ring:                42 92% 56%;
 
     --card:                var(--neutral-0);
     --card-foreground:     var(--neutral-900);
@@ -63,37 +66,52 @@
     --secondary:           var(--neutral-100);
     --secondary-foreground: var(--neutral-900);
 
-    --accent:              231 64% 48%;
-    --accent-foreground:   0 0% 100%;
+    --accent:              46 88% 62%;
+    --accent-foreground:   30 28% 12%;
 
     /* ── Status — muted, never neon ───────────────────────────────── */
-    --destructive:         358 70% 50%;
+    --destructive:         358 70% 56%;
     --destructive-foreground: 0 0% 100%;
-    --success:             152 56% 36%;
+    --success:             152 50% 42%;
     --success-foreground:  0 0% 100%;
-    --warning:             32 88% 44%;
+    --warning:             32 88% 50%;
     --warning-foreground:  0 0% 100%;
-    --info:                217 78% 50%;
+    --info:                206 70% 52%;
     --info-foreground:     0 0% 100%;
 
-    /* ── Shape ────────────────────────────────────────────────────── */
-    --radius: 0.5rem;     /* 8px — Linear/Vercel default */
-    --radius-sm: 0.375rem;
-    --radius-lg: 0.625rem;
+    /* ── Pastel chip palette (icon backings, category accents) ────── */
+    --chip-butter:    48 94% 86%;   /* warm yellow */
+    --chip-butter-fg: 36 70% 32%;
+    --chip-mint:     152 50% 88%;
+    --chip-mint-fg:  152 50% 28%;
+    --chip-lavender: 252 60% 92%;
+    --chip-lavender-fg: 252 40% 38%;
+    --chip-peach:     20 90% 90%;
+    --chip-peach-fg:  18 60% 36%;
+    --chip-sky:      206 80% 90%;
+    --chip-sky-fg:   206 60% 32%;
+    --chip-rose:     350 80% 92%;
+    --chip-rose-fg:  350 50% 38%;
 
-    /* ── Sidebar (light, denser) ──────────────────────────────────── */
+    /* ── Shape ────────────────────────────────────────────────────── */
+    --radius:    0.875rem;   /* 14px — soft rounded */
+    --radius-sm: 0.625rem;
+    --radius-lg: 1.125rem;   /* 18px */
+    --radius-xl: 1.5rem;     /* 24px */
+
+    /* ── Sidebar — narrow icon rail ───────────────────────────────── */
     --sidebar-bg:          var(--neutral-50);
     --sidebar-fg:          var(--neutral-700);
     --sidebar-muted:       var(--neutral-500);
     --sidebar-active:      var(--neutral-950);
-    --sidebar-active-bg:   var(--neutral-150);
+    --sidebar-active-bg:   var(--primary);
     --sidebar-hover:       var(--neutral-100);
-    --sidebar-border:      var(--neutral-200);
+    --sidebar-border:      var(--neutral-150);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Typography — single Inter face, tight scale, no decorative weights.
+   Typography — Inter, calm scale.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
@@ -118,13 +136,12 @@
   }
   h1 { letter-spacing: -0.02em; }
 
-  /* Tabular numerics for data-heavy tables and KPI numbers. */
   .tabular, [data-tabular='true'] {
     font-variant-numeric: tabular-nums;
   }
 
   ::selection {
-    background-color: hsl(var(--primary) / 0.15);
+    background-color: hsl(var(--primary) / 0.5);
     color: hsl(var(--foreground));
   }
 
@@ -136,7 +153,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Scrollbar — thin, neutral, never blue.
+   Scrollbar — thin, neutral.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
@@ -168,25 +185,24 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Surfaces & utility helpers — minimal, functional.
+   Soft surface helpers.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
-  /* Tight 1px hairline divider for sectioning panels. */
   .hairline-b { box-shadow: inset 0 -1px 0 hsl(var(--border)); }
   .hairline-t { box-shadow: inset 0 1px 0 hsl(var(--border)); }
 
-  /* Surface variants. */
-  .surface-1 { background-color: hsl(var(--surface)); }
-  .surface-2 { background-color: hsl(var(--surface-subtle)); }
+  /* Pastel chips — for menu / KPI icons. */
+  .chip-butter   { background-color: hsl(var(--chip-butter));   color: hsl(var(--chip-butter-fg)); }
+  .chip-mint     { background-color: hsl(var(--chip-mint));     color: hsl(var(--chip-mint-fg)); }
+  .chip-lavender { background-color: hsl(var(--chip-lavender)); color: hsl(var(--chip-lavender-fg)); }
+  .chip-peach    { background-color: hsl(var(--chip-peach));    color: hsl(var(--chip-peach-fg)); }
+  .chip-sky      { background-color: hsl(var(--chip-sky));      color: hsl(var(--chip-sky-fg)); }
+  .chip-rose     { background-color: hsl(var(--chip-rose));     color: hsl(var(--chip-rose-fg)); }
 
-  /* Sticky top nav — solid white, hairline border, no glass blur. */
-  .nav-surface {
-    background-color: hsl(var(--surface));
-    border-color: hsl(var(--border));
-  }
+  /* Soft solid surface used by hero KPI / featured card. */
+  .surface-butter { background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
 
-  /* Subtle keyboard hint pill */
   .kbd {
     @apply inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 text-[10.5px] font-medium;
     border-color: hsl(var(--border));
@@ -197,9 +213,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Motion — Linear-style restraint: hover transitions and a single
-   short fade-in for first paint. No infinite loops, no gradients
-   panning, no glow pulses. Honors prefers-reduced-motion.
+   Motion — restrained: hover colour transitions + 1 short fade-in.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
@@ -217,7 +231,6 @@
   .animate-fade-in-up { animation: fade-in-up 240ms ease-out both; }
 }
 
-/* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

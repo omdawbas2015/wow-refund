@@ -4,10 +4,10 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  // Base — restrained, professional. Single colour-change on hover, no
-  // translate, no glow. Active state is a subtle press.
+  // Soft, friendly button — rounded-pill shape, single colour-change on
+  // hover. No translate, no glow.
   [
-    'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-[13px] font-medium',
+    'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-pill text-[13px] font-medium',
     'transition-colors duration-150',
     'disabled:pointer-events-none disabled:opacity-50',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background',

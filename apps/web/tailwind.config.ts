@@ -110,12 +110,14 @@ const config: Config = {
         'caption': ['11.5px', { lineHeight: '1.3', letterSpacing: '0.04em', fontWeight: '500' }],
       },
       borderRadius: {
-        sm: '6px',
-        DEFAULT: '8px',
-        md: '8px',
-        lg: '10px',
-        xl: '12px',
-        '2xl': '14px',
+        sm: '8px',
+        DEFAULT: '12px',
+        md: '12px',
+        lg: '14px',
+        xl: '18px',
+        '2xl': '22px',
+        '3xl': '28px',
+        pill: '9999px',
       },
       boxShadow: {
         // Restrained, functional shadows — no glow, no brand-tinted shadows.
