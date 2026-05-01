@@ -3,7 +3,7 @@ import { prisma } from '@wow/db';
 import { caseListFiltersSchema } from '@wow/validators';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, FileText } from 'lucide-react';
+import { Plus, FileText, Download } from 'lucide-react';
 import { CaseFiltersBar } from './case-filters-bar';
 import { STATUS_BUCKETS } from './case-status-buckets';
 import { CasesTable, type CaseRow } from './cases-table';
@@ -135,6 +135,7 @@ export default async function CasesPage({
   const rows: CaseRow[] = cases.map((c) => ({
     id: c.id,
     caseNumber: c.caseNumber,
+    externalCaseNumber: c.externalCaseNumber ?? null,
     status: c.status as CaseStatus,
     customerName: c.customerName,
     customerEmail: c.customerEmail,
@@ -172,12 +173,29 @@ export default async function CasesPage({
             Manage and track all refund requests across brands.
           </p>
         </div>
-        <Button asChild size="default">
-          <Link href={`/${locale}/cases/new`}>
-            <Plus className="h-4 w-4" />
-            New case
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild size="default" variant="outline">
+            <a
+              href={`/api/export/cases?${new URLSearchParams(
+                Object.entries({
+                  q: filters.q ?? '',
+                  countryId: filters.countryId ?? '',
+                  brandId: filters.brandId ?? '',
+                  status: filters.status ?? '',
+                }).filter(([, v]) => v !== ''),
+              ).toString()}`}
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </a>
+          </Button>
+          <Button asChild size="default">
+            <Link href={`/${locale}/cases/new`}>
+              <Plus className="h-4 w-4" />
+              New case
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <CaseFiltersBar

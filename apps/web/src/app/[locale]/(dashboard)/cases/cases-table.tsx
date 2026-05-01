@@ -13,6 +13,7 @@ import { ArrowUpRight, Trash2 } from 'lucide-react';
 export type CaseRow = {
   id: string;
   caseNumber: string;
+  externalCaseNumber: string | null;
   status: CaseStatus;
   customerName: string;
   customerEmail: string;
@@ -59,8 +60,8 @@ export function CasesTable({
   return (
     <>
       {/* Desktop — clean data table */}
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[920px] text-xs">
+      <div className="hidden md:block">
+        <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border/50">
               <Th>Case</Th>
@@ -90,22 +91,27 @@ export function CasesTable({
                       href={`/${locale}/cases/${c.id}`}
                       onClick={(e) => e.stopPropagation()}
                       className={cn(
-                        'font-mono text-[11px] font-semibold tracking-tight',
+                        'font-mono text-[12px] font-semibold tracking-tight',
                         c.isDeleted
                           ? 'text-muted-foreground line-through'
                           : 'text-primary hover:underline',
                       )}
                     >
-                      {c.caseNumber}
+                      {c.externalCaseNumber || c.caseNumber}
                     </Link>
                     <span className="opacity-0 transition-opacity group-hover:opacity-100">
                       <CopyButton
-                        value={c.caseNumber}
+                        value={c.externalCaseNumber || c.caseNumber}
                         size="xs"
                         label="Copy case number"
                       />
                     </span>
                   </div>
+                  {c.externalCaseNumber && (
+                    <div className="mt-0.5 font-mono text-[10px] text-muted-foreground/70">
+                      {c.caseNumber}
+                    </div>
+                  )}
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="max-w-[180px] truncate text-xs font-medium text-heading">
@@ -180,14 +186,21 @@ export function CasesTable({
               className="block px-4 py-3.5 transition-colors hover:bg-surface-subtle/50"
             >
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span
-                  className={cn(
-                    'font-mono text-xs font-semibold',
-                    c.isDeleted ? 'text-muted-foreground line-through' : 'text-primary',
+                <div className="flex min-w-0 flex-col">
+                  <span
+                    className={cn(
+                      'font-mono text-xs font-semibold',
+                      c.isDeleted ? 'text-muted-foreground line-through' : 'text-primary',
+                    )}
+                  >
+                    {c.externalCaseNumber || c.caseNumber}
+                  </span>
+                  {c.externalCaseNumber && (
+                    <span className="font-mono text-[10px] text-muted-foreground/70">
+                      {c.caseNumber}
+                    </span>
                   )}
-                >
-                  {c.caseNumber}
-                </span>
+                </div>
                 {c.isDeleted ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
                     <Trash2 className="h-3 w-3" />

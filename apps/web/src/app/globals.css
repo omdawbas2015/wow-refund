@@ -15,23 +15,23 @@
 @layer base {
   :root {
     /* ── Cool neutral scale ───────────────────────────────────────────
-       Page background + cards are pure white. The 25/100 steps stay just
-       perceptibly cool so input fills, hover wash, and muted headers are
-       still distinguishable on a white surface. */
+       Page background + cards are pure white. Muted steps lean slightly
+       cooler so table headers, hover, and input fills sit just off the
+       canvas without looking dim. */
     --neutral-0:   0 0% 100%;          /* pure white card / surface */
-    --neutral-25:  214 14% 97.8%;      /* near-white wash (input bg, hover) */
+    --neutral-25:  220 20% 98.5%;      /* airy near-white wash */
     --neutral-50:  0 0% 100%;          /* pure white page background */
-    --neutral-100: 214 16% 95.5%;      /* muted (table headers, chips) */
-    --neutral-150: 214 18% 92%;        /* hairline borders */
-    --neutral-200: 214 16% 88%;
-    --neutral-300: 214 14% 80%;
-    --neutral-400: 214 12% 60%;
-    --neutral-500: 215 14% 46%;
-    --neutral-600: 215 18% 34%;
-    --neutral-700: 215 22% 24%;
-    --neutral-800: 215 26% 16%;
-    --neutral-900: 215 30% 10%;
-    --neutral-950: 215 34% 6%;
+    --neutral-100: 220 22% 96.5%;      /* muted chip / table header */
+    --neutral-150: 220 20% 93.5%;      /* hairline borders */
+    --neutral-200: 220 18% 89%;
+    --neutral-300: 220 15% 80%;
+    --neutral-400: 220 12% 60%;
+    --neutral-500: 220 14% 42%;        /* tighter contrast for "muted" text */
+    --neutral-600: 220 18% 30%;
+    --neutral-700: 220 22% 22%;
+    --neutral-800: 220 26% 15%;
+    --neutral-900: 220 30% 10%;
+    --neutral-950: 220 34% 6%;
 
     /* ── Surfaces ─────────────────────────────────────────────────── */
     --background:          var(--neutral-50);
@@ -53,13 +53,15 @@
     --border-strong:       var(--neutral-200);
     --input:               var(--neutral-200);
 
-    /* ── Single accent — Alshaya-inspired deep navy ───────────────── */
-    --primary:             215 70% 30%;          /* deep corporate navy */
-    --primary-foreground:  0 0% 100%;            /* white on navy */
-    --primary-hover:       215 76% 24%;
-    --primary-deep:        215 84% 18%;
-    --primary-subtle:      215 70% 95%;
-    --ring:                215 70% 40%;
+    /* ── Single accent — modern Alshaya blue ──────────────────────────
+       Lightened from deep navy (215 70% 30%) to a fresher mid-blue so
+       the UI feels less heavy while still reading as enterprise. */
+    --primary:             216 78% 42%;          /* modern professional blue */
+    --primary-foreground:  0 0% 100%;            /* white on blue */
+    --primary-hover:       216 84% 36%;
+    --primary-deep:        216 88% 28%;
+    --primary-subtle:      216 80% 96%;
+    --ring:                216 80% 52%;
 
     --card:                var(--neutral-0);
     --card-foreground:     var(--neutral-900);
@@ -69,7 +71,7 @@
     --secondary:           var(--neutral-100);
     --secondary-foreground: var(--neutral-900);
 
-    --accent:              215 70% 30%;
+    --accent:              216 78% 42%;
     --accent-foreground:   0 0% 100%;
 
     /* ── Status — muted, never neon ───────────────────────────────── */
@@ -83,18 +85,18 @@
     --info-foreground:     0 0% 100%;
 
     /* ── Chip palette — readable accents on pure white ────────────── */
-    --chip-butter:    214 80% 90%;   /* bright light navy */
-    --chip-butter-fg: 215 80% 28%;
-    --chip-mint:     172 60% 84%;    /* lively teal */
-    --chip-mint-fg:  178 70% 22%;
-    --chip-lavender: 248 70% 91%;    /* richer periwinkle */
-    --chip-lavender-fg: 248 50% 38%;
-    --chip-peach:     22 90% 88%;    /* warm peach */
-    --chip-peach-fg:  18 70% 36%;
-    --chip-sky:      200 92% 86%;    /* punchy sky */
-    --chip-sky-fg:   205 70% 28%;
-    --chip-rose:     342 78% 90%;    /* clearer rose */
-    --chip-rose-fg:  342 50% 36%;
+    --chip-butter:    216 88% 92%;   /* bright primary-tinted blue */
+    --chip-butter-fg: 216 80% 32%;
+    --chip-mint:     168 62% 86%;    /* fresh teal */
+    --chip-mint-fg:  174 72% 26%;
+    --chip-lavender: 248 78% 93%;    /* richer periwinkle */
+    --chip-lavender-fg: 248 54% 44%;
+    --chip-peach:     22 92% 90%;    /* warm peach */
+    --chip-peach-fg:  18 74% 40%;
+    --chip-sky:      200 96% 88%;    /* clear sky */
+    --chip-sky-fg:   206 76% 32%;
+    --chip-rose:     342 82% 92%;    /* clean rose */
+    --chip-rose-fg:  342 56% 40%;
 
     /* ── Shape ────────────────────────────────────────────────────── */
     --radius:    0.875rem;   /* 14px — soft rounded */

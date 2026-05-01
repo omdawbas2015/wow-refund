@@ -79,12 +79,23 @@ export async function GET(req: NextRequest) {
       country: { select: { registryCode: true } },
       brand: { select: { name: true } },
       branch: { select: { name: true } },
+      rootCause: { select: { label: true } },
+      createdBy: { select: { name: true, email: true } },
+      assignedTo: { select: { name: true, email: true } },
+      components: {
+        select: {
+          amount: true,
+          authCode: true,
+          paymentMethod: { select: { key: true, label: true } },
+        },
+      },
     },
   });
 
   interface Row {
     createdAt: Date;
     caseNumber: string;
+    externalCaseNumber: string;
     status: string;
     countryCode: string;
     brand: string;
@@ -94,8 +105,17 @@ export async function GET(req: NextRequest) {
     customerPhone: string;
     orderNumber: string;
     orderDate: Date;
+    orderAmount: number;
     totalAmount: number;
+    refundType: string;
     currency: string;
+    paymentMethods: string;
+    authCodes: string;
+    rootCause: string;
+    rootCauseNotes: string;
+    customerNotes: string;
+    createdBy: string;
+    assignedTo: string;
     auraPoints: number;
     auraStatus: string;
   }
@@ -103,6 +123,7 @@ export async function GET(req: NextRequest) {
   const rows: Row[] = cases.map((c) => ({
     createdAt: c.createdAt,
     caseNumber: c.caseNumber,
+    externalCaseNumber: c.externalCaseNumber ?? '',
     status: c.status,
     countryCode: c.country.registryCode,
     brand: c.brand.name,
@@ -112,8 +133,20 @@ export async function GET(req: NextRequest) {
     customerPhone: c.customerPhone ?? '',
     orderNumber: c.orderNumber,
     orderDate: c.orderDate,
+    orderAmount: c.orderAmount,
     totalAmount: c.totalRefundAmount,
+    refundType: c.isPartial ? 'Partial' : 'Full',
     currency: c.orderCurrency,
+    paymentMethods: c.components.map((cc) => cc.paymentMethod.label).join(', '),
+    authCodes: c.components
+      .map((cc) => cc.authCode ?? '')
+      .filter(Boolean)
+      .join(', '),
+    rootCause: c.rootCause?.label ?? '',
+    rootCauseNotes: c.rootCauseNotes ?? '',
+    customerNotes: c.customerNotes ?? '',
+    createdBy: c.createdBy?.name ?? c.createdBy?.email ?? '',
+    assignedTo: c.assignedTo?.name ?? c.assignedTo?.email ?? '',
     auraPoints: c.auraPoints ?? 0,
     auraStatus: c.auraStatus,
   }));
@@ -122,7 +155,8 @@ export async function GET(req: NextRequest) {
     name: 'Cases',
     columns: [
       { header: 'Created', key: 'createdAt', width: 18, numFmt: 'yyyy-mm-dd hh:mm' },
-      { header: 'Case', key: 'caseNumber', width: 22 },
+      { header: 'Agent case #', key: 'externalCaseNumber', width: 20 },
+      { header: 'System ref', key: 'caseNumber', width: 22 },
       { header: 'Status', key: 'status', width: 18 },
       { header: 'Country', key: 'countryCode', width: 8 },
       { header: 'Brand', key: 'brand', width: 16 },
@@ -132,8 +166,17 @@ export async function GET(req: NextRequest) {
       { header: 'Phone', key: 'customerPhone', width: 18 },
       { header: 'Order', key: 'orderNumber', width: 18 },
       { header: 'Order date', key: 'orderDate', width: 14, numFmt: 'yyyy-mm-dd' },
-      { header: 'Total amount', key: 'totalAmount', width: 14, numFmt: '#,##0.000' },
+      { header: 'Order amount', key: 'orderAmount', width: 14, numFmt: '#,##0.000' },
+      { header: 'Refund amount', key: 'totalAmount', width: 14, numFmt: '#,##0.000' },
+      { header: 'Refund type', key: 'refundType', width: 10 },
       { header: 'Currency', key: 'currency', width: 8 },
+      { header: 'Payment methods', key: 'paymentMethods', width: 24 },
+      { header: 'Auth codes', key: 'authCodes', width: 20 },
+      { header: 'Root cause', key: 'rootCause', width: 20 },
+      { header: 'Root cause notes', key: 'rootCauseNotes', width: 30 },
+      { header: 'Customer notes', key: 'customerNotes', width: 30 },
+      { header: 'Created by', key: 'createdBy', width: 18 },
+      { header: 'Assigned to', key: 'assignedTo', width: 18 },
       { header: 'Aura points', key: 'auraPoints', width: 12 },
       { header: 'Aura status', key: 'auraStatus', width: 12 },
     ],
