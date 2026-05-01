@@ -59,13 +59,16 @@ export async function GET(req: NextRequest) {
     });
   }
   if (q) {
+    const isPg = (process.env.DATABASE_URL ?? '').startsWith('postgres');
+    const ciContains = (value: string) =>
+      isPg ? { contains: value, mode: 'insensitive' as const } : { contains: value };
     andConditions.push({
       OR: [
-        { caseNumber: { contains: q } },
-        { externalCaseNumber: { contains: q } },
-        { orderNumber: { contains: q } },
-        { customerEmail: { contains: q } },
-        { customerName: { contains: q } },
+        { caseNumber: ciContains(q) },
+        { externalCaseNumber: ciContains(q) },
+        { orderNumber: ciContains(q) },
+        { customerEmail: ciContains(q) },
+        { customerName: ciContains(q) },
       ],
     });
   }
