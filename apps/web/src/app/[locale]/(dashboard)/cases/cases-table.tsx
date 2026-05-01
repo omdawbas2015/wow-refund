@@ -92,7 +92,7 @@ export function CasesTable({
                         : 'text-primary hover:underline',
                     )}
                   >
-                    {c.externalCaseNumber || '—'}
+                    {c.externalCaseNumber || c.caseNumber}
                   </Link>
                   <div className="mt-0.5 text-[10.5px] text-muted-foreground">
                     <span className="uppercase tracking-wider">Order</span>{' '}
@@ -179,7 +179,7 @@ export function CasesTable({
                       c.isDeleted ? 'text-muted-foreground line-through' : 'text-primary',
                     )}
                   >
-                    {c.externalCaseNumber || '—'}
+                    {c.externalCaseNumber || c.caseNumber}
                   </span>
                   <span className="text-[10px] text-muted-foreground/80">
                     <span className="uppercase tracking-wider">Order</span>{' '}
