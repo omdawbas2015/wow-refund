@@ -178,13 +178,13 @@ export default async function CasesPage({
   ).toString();
 
   return (
-    <div className="mx-auto max-w-[1480px] px-6 py-5">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+    <div className="mx-auto max-w-[1480px] px-4 py-3">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-display-md font-semibold tracking-tight text-heading">
+          <h1 className="text-display-sm font-semibold tracking-tight text-heading">
             Refund cases
           </h1>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
             {total.toLocaleString()} {total === 1 ? 'case' : 'cases'} · Manage
             and track all refund requests across brands.
           </p>

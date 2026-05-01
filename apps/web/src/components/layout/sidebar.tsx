@@ -169,23 +169,23 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
+    <aside className="flex h-full w-[184px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
       {/* Brand — Alshaya mark + name, links to dashboard. */}
-      <Link href="/" className="flex h-12 items-center gap-2.5 px-4 transition-opacity hover:opacity-80">
+      <Link href="/" className="flex h-10 items-center gap-2 px-3 transition-opacity hover:opacity-80">
         <Image
           src="/brand/alshaya-mark.png"
           alt="Alshaya Group"
-          width={28}
-          height={28}
-          className="h-7 w-7 shrink-0 object-contain"
+          width={24}
+          height={24}
+          className="h-6 w-6 shrink-0 object-contain"
           priority
         />
-        <span className="text-[12px] font-semibold tracking-tight text-heading">
+        <span className="text-[11.5px] font-semibold tracking-tight text-heading">
           Alshaya Group
         </span>
       </Link>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-2 pb-2">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 pt-1.5 pb-1.5">
         {/* Dashboard */}
         <ul className="space-y-0.5">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
@@ -200,7 +200,7 @@ export function Sidebar({
           if (items.length === 0) return null;
           return (
             <div key={i}>
-              <div className="mt-5 mb-1.5 px-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-sidebar-muted">
+              <div className="mt-3 mb-1 px-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-sidebar-muted">
                 {section.label}
               </div>
               <ul className="space-y-0.5">
@@ -217,7 +217,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border px-3 py-2.5">
+      <div className="border-t border-sidebar-border px-2 py-1.5">
         <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
@@ -232,9 +232,9 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="flex h-9 items-center gap-2.5 rounded-xl px-2 text-[11.5px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
+              className="flex h-7 items-center gap-2 rounded-xl px-2 text-[11px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg chip-rose">
+              <span className="flex h-5 w-5 items-center justify-center rounded-lg chip-rose">
                 <LogOut className="h-3 w-3" />
               </span>
               <span className="flex-1 truncate">Sign out</span>
@@ -254,7 +254,7 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group flex h-9 items-center gap-2.5 rounded-xl px-2 text-[11.5px] font-medium transition-colors',
+          'group flex h-7 items-center gap-2 rounded-xl px-2 text-[11px] font-medium transition-colors',
           isActive
             ? 'bg-surface text-heading shadow-xs'
             : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-heading',
@@ -262,7 +262,7 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       >
         <span
           className={cn(
-            'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg',
+            'flex h-5 w-5 shrink-0 items-center justify-center rounded-lg',
             isActive ? 'surface-butter' : CHIP_CLASS[item.tone],
           )}
         >

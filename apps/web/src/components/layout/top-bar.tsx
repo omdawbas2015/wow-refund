@@ -24,7 +24,7 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
 
   return (
     <header className="sticky top-0 z-30 bg-background">
-      <div className="mx-auto flex h-12 w-full max-w-[1440px] items-center gap-2.5 px-5">
+      <div className="mx-auto flex h-9 w-full max-w-[1440px] items-center gap-2 px-4">
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 text-[11px]">
         {crumbs.map((c, i) => {
           const isLast = i === crumbs.length - 1;

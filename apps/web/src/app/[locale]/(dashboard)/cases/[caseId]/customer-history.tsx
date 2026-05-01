@@ -10,6 +10,7 @@ import { History, Ticket, Mail } from 'lucide-react';
 type HistoryPriorCase = {
   id: string;
   caseNumber: string;
+  externalCaseNumber: string | null;
   status: string;
   createdAt: string;
   totalRefundAmount: number;
@@ -115,7 +116,7 @@ export function CustomerHistory({
                         href={`/${locale}/cases/${pc.id}`}
                         className="font-mono font-medium text-primary hover:underline"
                       >
-                        {pc.caseNumber}
+                        {pc.externalCaseNumber || pc.caseNumber}
                       </Link>
                       <CaseStatusBadge status={pc.status} />
                     </div>

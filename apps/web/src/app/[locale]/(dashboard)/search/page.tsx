@@ -56,6 +56,7 @@ export default async function GlobalSearchPage({
         deletedAt: null,
         OR: [
           { caseNumber: { contains: q } },
+          { externalCaseNumber: { contains: q } },
           { orderNumber: { contains: q } },
           { customerEmail: { contains: q } },
           { customerName: { contains: q } },
@@ -67,6 +68,7 @@ export default async function GlobalSearchPage({
       select: {
         id: true,
         caseNumber: true,
+        externalCaseNumber: true,
         status: true,
         customerName: true,
         customerEmail: true,
@@ -211,7 +213,7 @@ export default async function GlobalSearchPage({
                   <tr key={c.id} className="hover:bg-surface-subtle/40">
                     <td className="p-3">
                       <Link href={`/cases/${c.id}`} className="font-medium text-primary hover:underline">
-                        {c.caseNumber}
+                        {c.externalCaseNumber || c.caseNumber}
                       </Link>
                       <div className="text-xs text-muted-foreground">
                         {c.country.registryCode} · {c.brand.name}

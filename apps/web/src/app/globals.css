@@ -129,6 +129,11 @@
 
 @layer base {
   html {
+    /* 14px root shrinks every rem-based Tailwind unit (spacing, gap,
+       text-sm/base/lg, etc.) by 12.5% vs the browser default 16px,
+       letting the entire app fit one viewport without a manual
+       browser zoom-out. Explicit-px overrides remain unchanged. */
+    font-size: 14px;
     font-family: var(--font-sans), 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-feature-settings: 'cv11', 'ss01', 'ss03';
     -webkit-font-smoothing: antialiased;
@@ -138,8 +143,8 @@
 
   body {
     @apply bg-background text-foreground;
-    font-size: 13px;
-    line-height: 1.5;
+    font-size: 12.5px;
+    line-height: 1.45;
   }
 
   h1, h2, h3, h4, h5, h6 {
