@@ -79,7 +79,13 @@ export async function GET(req: NextRequest) {
   if (fromDate || toDate) {
     const createdAt: Record<string, Date> = {};
     if (fromDate) createdAt['gte'] = new Date(fromDate);
-    if (toDate) createdAt['lte'] = new Date(toDate);
+    if (toDate) {
+      const td = new Date(toDate);
+      if (td.getHours() === 0 && td.getMinutes() === 0 && td.getSeconds() === 0 && td.getMilliseconds() === 0) {
+        td.setHours(23, 59, 59, 999);
+      }
+      createdAt['lte'] = td;
+    }
     andConditions.push({ createdAt });
   }
 
