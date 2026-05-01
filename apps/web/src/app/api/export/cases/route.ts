@@ -83,8 +83,8 @@ export async function GET(req: NextRequest) {
   let statusFilter: Prisma.RefundCaseWhereInput = {};
   if (status && VALID_STATUSES.has(status)) {
     statusFilter = { status: status as CaseStatus };
-  } else if (bucket && bucket in STATUS_BUCKETS) {
-    statusFilter = { status: { in: [...STATUS_BUCKETS[bucket as keyof typeof STATUS_BUCKETS]] as CaseStatus[] } };
+  } else if (bucket === 'active' || bucket === 'refunded' || bucket === 'closed') {
+    statusFilter = { status: { in: [...STATUS_BUCKETS[bucket]] as CaseStatus[] } };
   }
 
   const where: Prisma.RefundCaseWhereInput = {
