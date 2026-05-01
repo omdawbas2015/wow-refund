@@ -29,6 +29,15 @@ function channel(userId: string) {
 }
 
 /**
+ * Topic name for the shared broadcast channel — used by features where
+ * every open viewer cares about the same event (e.g. the Branded
+ * Solutions pool updating live for the whole team). Kept distinct from
+ * the per-user notifications channel so subscribers can opt in
+ * independently.
+ */
+const BROADCAST_CHANNEL = 'broadcast:wow';
+
+/**
  * Publish an event to all subscribers for a user. Currently only fires
  * the in-process EventEmitter; Upstash bridge is the next addition
  * once REST creds land.
@@ -53,5 +62,28 @@ export function subscribe(
   emitter.on(ch, handler);
   return () => {
     emitter.off(ch, handler);
+  };
+}
+
+/**
+ * Broadcast an event to every subscriber listening to the global
+ * broadcast channel. Intended for shared queues / pool views where the
+ * payload is identical for every viewer (no per-user filtering at
+ * dispatch time — the receiver decides what to render).
+ */
+export function broadcast(payload: EventPayload): void {
+  emitter.emit(BROADCAST_CHANNEL, payload);
+}
+
+/**
+ * Subscribe to the global broadcast channel. Returns an unsubscribe
+ * function.
+ */
+export function subscribeBroadcast(
+  handler: (p: EventPayload) => void,
+): () => void {
+  emitter.on(BROADCAST_CHANNEL, handler);
+  return () => {
+    emitter.off(BROADCAST_CHANNEL, handler);
   };
 }

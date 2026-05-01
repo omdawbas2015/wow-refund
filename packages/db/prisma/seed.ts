@@ -320,6 +320,59 @@ async function seedDefaultAdmin() {
   console.log(`→ Created default admin: ${email} / ${password}`);
 }
 
+async function seedMaintenanceCountrySupervisors() {
+  const seeds = [
+    { countryName: 'Kuwait',       name: 'KW Maintenance Lead', email: 'maintenance.kw@wow.local' },
+    { countryName: 'Saudi Arabia', name: 'SA Maintenance Lead', email: 'maintenance.sa@wow.local' },
+    { countryName: 'KSA',          name: 'SA Maintenance Lead', email: 'maintenance.sa@wow.local' },
+    { countryName: 'UAE',          name: 'UAE Maintenance Lead', email: 'maintenance.uae@wow.local' },
+    { countryName: 'Egypt',        name: 'EG Maintenance Lead', email: 'maintenance.eg@wow.local' },
+  ];
+  for (const s of seeds) {
+    await prisma.maintenanceCountrySupervisor.upsert({
+      where: { countryName_email: { countryName: s.countryName, email: s.email } },
+      create: { ...s, isActive: true },
+      update: { name: s.name, isActive: true },
+    });
+  }
+  console.log(`→ Seeded ${seeds.length} maintenance country supervisors.`);
+}
+
+async function seedDemoMaintenanceRequests() {
+  if (process.env['SEED_DEMO_CASES'] !== '1') return;
+  const existing = await prisma.maintenanceRequest.count();
+  if (existing > 0) {
+    console.log(`→ Demo maintenance requests skipped (${existing} already exist)`);
+    return;
+  }
+  const samples = [
+    {
+      ticketRef: 'MR-2026-000001',
+      countryName: 'KSA', cityName: 'Riyadh',
+      customerName: 'Nestlé Saudi',
+      storeName: 'ninja shbra', location: 'https://maps.app.goo.gl/9zQBftYGnhmk5Dce6',
+      submitterName: 'hassan', contactNumber: '0562606750', email: 'hassan@nestle.com',
+      machineModel: 'thermoplan', issueType: 'coffee machine not working after clean',
+      status: 'PENDING' as const,
+    },
+    {
+      ticketRef: 'MR-2026-000002',
+      countryName: 'Egypt', cityName: 'Cairo',
+      customerName: 'Nestle',
+      storeName: 'Hilton Heliopolis hotel', location: 'Hilton Heliopolis',
+      submitterName: 'Mohamed Debeikyy', contactNumber: '01127409870', email: 'mohamed.debeiky@eg.nestle.com',
+      machineModel: 'FrankeFM850', issueType: 'Machine not working',
+      status: 'IN_PROGRESS' as const,
+    },
+  ];
+  for (const s of samples) {
+    await prisma.maintenanceRequest.create({
+      data: { ...s, source: 'MS_FORM' },
+    });
+  }
+  console.log(`→ Seeded ${samples.length} demo maintenance requests.`);
+}
+
 async function seedDemoCases() {
   // Only seed demo cases when explicitly requested.
   if (process.env['SEED_DEMO_CASES'] !== '1') {
@@ -908,6 +961,8 @@ async function main() {
   await seedPromos();
   await seedDefaultAdmin();
   await seedFeatureFlags();
+  await seedMaintenanceCountrySupervisors();
+  await seedDemoMaintenanceRequests();
   await seedDemoCases();
   await seedRefundPoolScenario();
 

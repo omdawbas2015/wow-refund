@@ -145,4 +145,35 @@ export const emailTemplates: readonly EmailTemplateSeed[] = [
     placeholders: ['customerName', 'brandName', 'promoCode', 'value', 'currency', 'expiresAt'],
     description: 'Sent with a customer compensation promo code.',
   },
+  // ─── Branded Solutions (Help Desk / Maintenance pool) ───
+  {
+    key: 'MAINT_CUSTOMER_CONFIRMATION',
+    category: 'Maintenance',
+    locale: 'en',
+    subject: 'Facilities Work Request Confirmation {{mrNumber}}',
+    body:
+      'Dear Valued Customer,\n\nWe are pleased to confirm that your maintenance request has been successfully submitted. Our support team is reviewing the details and will proceed with the necessary actions promptly.\n\nWORK REQUEST NUMBER\n{{mrNumber}}\n\nMachine Model: {{machineModel}}\nStore: {{storeName}}\nLocation: {{location}}\nIssue: {{issueType}}\n\nPlease keep this reference number for future communication.\n\nKind regards,\nALSHAYA TECHNICAL SERVICES',
+    placeholders: ['mrNumber', 'machineModel', 'storeName', 'location', 'issueType'],
+    description: 'Confirmation email sent to the external customer once the agent raises the Archibus MR and closes the maintenance ticket.',
+  },
+  {
+    key: 'MAINT_CUSTOMER_CLARIFY',
+    category: 'Maintenance',
+    locale: 'en',
+    subject: 'Need More Information About Your Maintenance Request',
+    body:
+      'Dear {{customerName}},\n\nThank you for reaching out to Alshaya Technical Services. To proceed with your request for {{machineModel}} at {{storeName}}, we need a bit more information:\n\n{{questions}}\n\nKindly reply to this email with the missing details so we can raise the work order.\n\nKind regards,\nALSHAYA TECHNICAL SERVICES',
+    placeholders: ['customerName', 'machineModel', 'storeName', 'questions'],
+    description: 'Sent to the external customer when the agent needs clarification on location / model / etc. before raising the MR.',
+  },
+  {
+    key: 'MAINT_SUPERVISOR_LOCATION_VERIFY',
+    category: 'Maintenance',
+    locale: 'en',
+    subject: 'Maintenance Location Verification Required — {{ticketRef}}',
+    body:
+      'Dear {{supervisorName}},\n\nWe received a maintenance request for your country ({{countryName}}) but the submitted location is unclear.\n\nTicket: {{ticketRef}}\nStore: {{storeName}}\nLocation as submitted: {{location}}\nMachine: {{machineModel}}\nIssue: {{issueType}}\nCustomer: {{customerName}} ({{contactNumber}})\nSubmitted by: {{submitterName}}\n\nKindly advise the correct location / branch reference so we can raise the Archibus work order.\n\nKind regards,\nALSHAYA TECHNICAL SERVICES',
+    placeholders: ['supervisorName', 'countryName', 'ticketRef', 'storeName', 'location', 'machineModel', 'issueType', 'customerName', 'contactNumber', 'submitterName'],
+    description: 'Sent to the country supervisor when the agent flips a maintenance request to WAITING_FOR_SUPERVISOR because the location is unclear.',
+  },
 ];

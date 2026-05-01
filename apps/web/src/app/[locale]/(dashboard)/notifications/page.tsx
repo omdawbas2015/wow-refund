@@ -46,6 +46,10 @@ const TYPE_TONE: Record<NotificationType, 'success' | 'secondary' | 'destructive
   FRAUD_SIGNAL: 'destructive',
   USER_PENDING_APPROVAL: 'outline',
   SYSTEM: 'outline',
+  MAINT_REQUEST_NEW: 'secondary',
+  MAINT_REQUEST_ASSIGNED: 'secondary',
+  MAINT_SUPERVISOR_REPLY: 'success',
+  MAINT_CUSTOMER_REPLY: 'success',
 };
 
 export default async function NotificationsPage({ searchParams }: PageProps) {

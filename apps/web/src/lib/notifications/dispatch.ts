@@ -15,7 +15,11 @@ export type NotificationKind =
   | 'SLA_BREACHED'
   | 'FRAUD_SIGNAL'
   | 'USER_PENDING_APPROVAL'
-  | 'SYSTEM';
+  | 'SYSTEM'
+  | 'MAINT_REQUEST_NEW'
+  | 'MAINT_REQUEST_ASSIGNED'
+  | 'MAINT_SUPERVISOR_REPLY'
+  | 'MAINT_CUSTOMER_REPLY';
 
 interface DispatchInput {
   userIds: string[];

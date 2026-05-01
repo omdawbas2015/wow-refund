@@ -24,8 +24,6 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_DATABASE_URL")
-}
-
 // ═══════════════════════════════════════════════════════════════════════
 //  SECTION 1 — IMMUTABLE WORLD REGISTRIES (seeded once)
 // ═══════════════════════════════════════════════════════════════════════
@@ -209,6 +207,18 @@ model User {
   // muted. Notifications of those kinds are skipped at dispatch time.
   mutedNotificationKinds String     @default("")
 
+  // Agent presence & round-robin queue state.
+  // `isAvailable` gates whether the user receives auto-assignments and
+  // is allowed to perform outbound actions (refund/promo/maintenance).
+  // `availableSince` is the start of the current presence-window so the
+  // UI can show a running timer beside the user's name.
+  // `lastAutoAssignedAt` is updated whenever the round-robin scheduler
+  // hands a maintenance request to this user — the next assignment goes
+  // to whoever has the oldest value among available users.
+  isAvailable           Boolean    @default(false)
+  availableSince        DateTime?
+  lastAutoAssignedAt    DateTime?
+
   deletedAt             DateTime? // soft delete
 
   createdAt             DateTime   @default(now())
@@ -232,10 +242,15 @@ model User {
   storeMessages         StoreMessageLog[]
   savedViews            SavedView[]
   activityLogs          ActivityLog[]
+  maintenanceAssigned   MaintenanceRequest[]      @relation("MaintenanceAssignedTo")
+  maintenanceClosed     MaintenanceRequest[]      @relation("MaintenanceClosedBy")
+  maintenanceHistory    MaintenanceStatusHistory[] @relation("MaintenanceHistoryActor")
+  presenceLogs          AgentPresenceLog[]
 
   @@index([status])
   @@index([roleId])
   @@index([primaryCountryId])
+  @@index([isAvailable, lastAutoAssignedAt])
   @@map("user")
 }
 
@@ -972,6 +987,10 @@ enum NotificationType {
   FRAUD_SIGNAL
   USER_PENDING_APPROVAL
   SYSTEM
+  MAINT_REQUEST_NEW
+  MAINT_REQUEST_ASSIGNED
+  MAINT_SUPERVISOR_REPLY
+  MAINT_CUSTOMER_REPLY
 }
 
 model Notification {
@@ -1247,4 +1266,155 @@ model ScheduledReport {
 
   @@index([isActive])
   @@map("scheduled_report")
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SECTION 18 — BRANDED SOLUTIONS (Help Desk: external maintenance pool)
+// ═══════════════════════════════════════════════════════════════════════
+//
+// External customers (Nestlé, hotels, airlines, etc.) submit a Microsoft
+// Form when their on-site coffee/equipment needs maintenance. Power
+// Automate forwards the form payload to our webhook, we persist it as a
+// MaintenanceRequest, round-robin it onto the next available agent, and
+// the agent works the case in the in-app pool: they raise a work order
+// in Archibus and paste the resulting MR number back here. Closing a
+// case sends the customer a confirmation email with the MR number — we
+// keep an audit trail in MaintenanceStatusHistory.
+//
+// The country supervisor mapping (CountrySupervisor) lets the agent
+// punt unclear locations to the right local lead via email instead of
+// guessing.
+
+enum MaintenanceStatus {
+  PENDING                  // freshly arrived, possibly unassigned
+  IN_PROGRESS              // agent claimed it / round-robin assigned
+  WAITING_FOR_SUPERVISOR   // emailed country supervisor for clarification
+  WAITING_FOR_CUSTOMER     // emailed customer for missing info
+  CLOSED                   // MR raised in Archibus + customer notified
+  CANCELLED                // duplicate or junk
+}
+
+/// A single maintenance request received from the external Microsoft
+/// Form. One row per submission; the agent enriches it during work and
+/// closes it once the Archibus MR number is in hand.
+model MaintenanceRequest {
+  id            String   @id @default(cuid())
+  // Internal short reference shown in the pool list, e.g. "MR-2026-000147".
+  // Generated server-side at insert time.
+  ticketRef     String   @unique
+
+  // ─── Submitted form fields ───────────────────────────────────────────
+  countryName   String
+  cityName      String?
+  customerName  String
+  storeName     String
+  // The location field the form captures is often a Google-Maps URL or
+  // a free-text address; agents flip to WAITING_FOR_SUPERVISOR when it's
+  // unclear.
+  location      String?
+  submitterName String
+  contactNumber String
+  email         String
+  machineModel  String
+  issueType     String
+  // Anything else from the form (Power Automate raw payload) lives here
+  // as JSON for forensic / future use without a schema migration.
+  rawPayload    String?
+
+  // ─── Workflow state ──────────────────────────────────────────────────
+  status         MaintenanceStatus @default(PENDING)
+  // Archibus work-order number, e.g. "2014475035". Required for CLOSED.
+  mrNumber       String?
+  closedAt       DateTime?
+  closedById     String?
+  closedBy       User?    @relation("MaintenanceClosedBy", fields: [closedById], references: [id])
+
+  // Round-robin assignment.
+  assignedToId   String?
+  assignedTo     User?    @relation("MaintenanceAssignedTo", fields: [assignedToId], references: [id])
+  assignedAt     DateTime?
+  // Reason text shown beneath assigned-name in the UI, e.g.
+  // "Round-robin · longest-waiting agent". Helps reduce 'why me?' chatter.
+  assignmentReason String?
+
+  // External integration metadata.
+  powerAutomateRunId String?
+  source             String  @default("MS_FORM") // MS_FORM | MANUAL | API
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  history MaintenanceStatusHistory[]
+
+  @@index([status])
+  @@index([assignedToId, status])
+  @@index([countryName])
+  @@index([createdAt])
+  @@map("maintenance_request")
+}
+
+/// Append-only log of every status / assignment / supervisor-email
+/// action on a MaintenanceRequest — used by the timeline panel and for
+/// compliance audits.
+model MaintenanceStatusHistory {
+  id          String   @id @default(cuid())
+  requestId   String
+  request     MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  fromStatus  MaintenanceStatus?
+  toStatus    MaintenanceStatus
+  // Free-text describing the event: "Sent to supervisor", "MR raised",
+  // "Reassigned (round-robin)", etc.
+  action      String
+  note        String?
+
+  actorId     String?
+  actor       User?    @relation("MaintenanceHistoryActor", fields: [actorId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@index([requestId, createdAt])
+  @@map("maintenance_status_history")
+}
+
+/// Country-level supervisor for branded-solutions: the person who
+/// receives "kindly advise correct location" emails when an agent flips
+/// a request to WAITING_FOR_SUPERVISOR. One row per (country, role).
+model MaintenanceCountrySupervisor {
+  id          String   @id @default(cuid())
+  // Free-text country label so we can map "KSA", "Saudi Arabia",
+  // "Kingdom of Saudi Arabia" all to the same supervisor without
+  // requiring a hard FK to Country (the form sends inconsistent labels).
+  countryName String
+  name        String
+  email       String
+  phone       String?
+  notes       String?
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([countryName, email])
+  @@index([countryName, isActive])
+  @@map("maintenance_country_supervisor")
+}
+
+/// Agent presence/availability log — one row per Available→Away or
+/// Away→Available toggle. Lets us calculate "online time today" and
+/// drive sensible round-robin without missing anyone who briefly
+/// flipped Away.
+model AgentPresenceLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // "AVAILABLE" or "AWAY"
+  state     String
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+  // Optional reason / note when going Away (e.g. "Lunch", "Meeting").
+  reason    String?
+
+  @@index([userId, startedAt])
+  @@map("agent_presence_log")
 }
