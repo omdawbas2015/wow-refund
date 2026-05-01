@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
     andConditions.push({
       OR: [
         { caseNumber: { contains: q } },
+        { externalCaseNumber: { contains: q } },
         { orderNumber: { contains: q } },
         { customerEmail: { contains: q } },
         { customerName: { contains: q } },
