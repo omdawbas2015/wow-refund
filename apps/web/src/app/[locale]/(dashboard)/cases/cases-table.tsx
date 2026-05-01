@@ -59,21 +59,22 @@ export function CasesTable({
 
   return (
     <>
-      {/* Desktop — clean data table. Fits 13''+ laptops without horizontal
-          scroll: country is absorbed into the Brand cell as a leading flag,
-          and Payment lives as a small icon row under the Refund amount. */}
+      {/* Desktop — airy data table with generous row spacing. Keeps Country
+          and Payment as dedicated columns (no cell-stacking) and tucks the
+          agent under the date so each cell does exactly one thing. */}
       <div className="hidden md:block">
-        <table className="w-full text-xs">
+        <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60">
+            <tr className="border-b border-border/70 bg-surface-subtle/40">
               <Th>Case</Th>
               <Th>Customer</Th>
+              <Th>Country</Th>
               <Th>Brand</Th>
               <Th align="end">Refund</Th>
+              <Th>Payment</Th>
               <Th>Status</Th>
               <Th>Created</Th>
-              <Th>Agent</Th>
-              <th className="w-6 px-1 py-3" />
+              <th className="w-6 px-1 py-3.5" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40">
@@ -82,73 +83,67 @@ export function CasesTable({
                 key={c.id}
                 onClick={() => openCase(c.id)}
                 className={cn(
-                  'group cursor-pointer transition-colors duration-150 hover:bg-primary-subtle/40',
+                  'group cursor-pointer transition-colors duration-150 hover:bg-primary-subtle/50',
                   c.isDeleted && 'opacity-50',
                 )}
               >
-                <td className="whitespace-nowrap px-3 py-2.5">
-                  <div className="inline-flex items-center gap-1">
-                    <Link
-                      href={`/${locale}/cases/${c.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className={cn(
-                        'font-mono text-[12px] font-semibold tracking-tight',
-                        c.isDeleted
-                          ? 'text-muted-foreground line-through'
-                          : 'text-primary hover:underline',
-                      )}
-                    >
-                      {c.externalCaseNumber || c.caseNumber}
-                    </Link>
-                    <span className="opacity-0 transition-opacity group-hover:opacity-100">
-                      <CopyButton
-                        value={c.externalCaseNumber || c.caseNumber}
-                        size="xs"
-                        label="Copy case number"
-                      />
-                    </span>
-                  </div>
-                  <div className="mt-0.5 max-w-[160px] truncate font-mono text-[10.5px] text-muted-foreground">
-                    Order · {c.orderNumber}
+                <td className="whitespace-nowrap px-4 py-3.5">
+                  <Link
+                    href={`/${locale}/cases/${c.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className={cn(
+                      'block font-mono text-[13px] font-semibold tracking-tight',
+                      c.isDeleted
+                        ? 'text-muted-foreground line-through'
+                        : 'text-primary hover:underline',
+                    )}
+                  >
+                    {c.externalCaseNumber || c.caseNumber}
+                  </Link>
+                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                    #{c.orderNumber}
                   </div>
                 </td>
-                <td className="px-3 py-2.5">
-                  <div className="max-w-[180px] truncate text-xs font-medium text-heading">
+                <td className="px-4 py-3.5">
+                  <div className="max-w-[200px] truncate font-medium text-heading">
                     {c.customerName}
                   </div>
-                  <div className="max-w-[180px] truncate text-[10.5px] text-muted-foreground">
+                  <div className="max-w-[200px] truncate text-[11.5px] text-muted-foreground">
                     {c.customerEmail}
                   </div>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5">
-                  <div className="inline-flex items-center gap-1.5">
-                    <span className="text-sm leading-none" aria-hidden>
+                <td className="whitespace-nowrap px-4 py-3.5">
+                  <div className="inline-flex items-center gap-2">
+                    <span className="text-base leading-none" aria-hidden>
                       {c.countryFlag || '\uD83C\uDF10'}
                     </span>
-                    <span className="text-xs font-medium text-heading">
-                      {c.brandName}
+                    <span className="text-[12.5px] text-heading">
+                      {c.countryName}
                     </span>
                   </div>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3.5">
+                  <div className="max-w-[180px] truncate font-medium text-heading">
+                    {c.brandName}
+                  </div>
                   {c.branchName && (
-                    <div className="mt-0.5 max-w-[160px] truncate text-[10.5px] text-muted-foreground">
+                    <div className="mt-1 max-w-[180px] truncate text-[11.5px] text-muted-foreground">
                       {c.branchName}
                     </div>
                   )}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-end">
-                  <div className="font-mono text-xs font-semibold tabular-nums text-heading">
-                    {formatMoney(c.totalRefundAmount, c.orderCurrency)}
-                  </div>
-                  <div className="mt-1 flex justify-end">
-                    <PaymentMethodIcons
-                      methods={c.paymentMethods}
-                      size="sm"
-                    />
-                  </div>
+                <td className="whitespace-nowrap px-4 py-3.5 text-end">
+                  <AmountCell
+                    refund={c.totalRefundAmount}
+                    currency={c.orderCurrency}
+                  />
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5">
+                <td className="whitespace-nowrap px-4 py-3.5">
+                  <PaymentMethodIcons methods={c.paymentMethods} size="sm" />
+                </td>
+                <td className="whitespace-nowrap px-4 py-3.5">
                   {c.isDeleted ? (
-                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-100 px-2.5 py-1 text-[11.5px] font-medium text-zinc-600">
                       <Trash2 className="h-3 w-3" />
                       Deleted
                     </span>
@@ -156,16 +151,16 @@ export function CasesTable({
                     <CaseStatusBadge status={c.status} />
                   )}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[10.5px] text-muted-foreground">
-                  {formatDate(new Date(c.createdAt))}
+                <td className="whitespace-nowrap px-4 py-3.5">
+                  <div className="text-[12px] text-heading">
+                    {formatDate(new Date(c.createdAt))}
+                  </div>
+                  <div className="mt-0.5 max-w-[150px] truncate text-[11px] text-muted-foreground">
+                    by {c.createdByName ?? '—'}
+                  </div>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5">
-                  <span className="inline-flex max-w-[140px] truncate text-[11px] text-heading">
-                    {c.createdByName ?? '—'}
-                  </span>
-                </td>
-                <td className="px-1 py-2.5">
-                  <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                <td className="px-1 py-3.5">
+                  <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </td>
               </tr>
             ))}
@@ -192,7 +187,7 @@ export function CasesTable({
                     {c.externalCaseNumber || c.caseNumber}
                   </span>
                   <span className="font-mono text-[10px] text-muted-foreground/80">
-                    Order · {c.orderNumber}
+                    #{c.orderNumber}
                   </span>
                 </div>
                 {c.isDeleted ? (
@@ -237,7 +232,7 @@ function Th({
   return (
     <th
       className={cn(
-        'whitespace-nowrap px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60',
+        'whitespace-nowrap px-4 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70',
         align === 'end' ? 'text-end' : 'text-start',
       )}
     >
