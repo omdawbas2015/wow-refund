@@ -94,14 +94,27 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // Reset counters on success
+        // Reset counters on success. Force isAvailable=false on
+        // every fresh login so the user has to explicitly opt in to
+        // Available before any work is auto-routed to them — this
+        // matches the "close the tab → go Offline" rule and keeps
+        // round-robin honest after a crash where sendBeacon never
+        // fired.
         await prisma.user.update({
           where: { id: user.id },
           data: {
             failedLoginAttempts: 0,
             lockedUntil: null,
             lastLoginAt: new Date(),
+            isAvailable: false,
+            availableSince: null,
           },
+        });
+        // Close any dangling presence-log row from a previous
+        // session (e.g. browser killed without clean sign-out).
+        await prisma.agentPresenceLog.updateMany({
+          where: { userId: user.id, endedAt: null },
+          data: { endedAt: new Date() },
         });
 
         return {
