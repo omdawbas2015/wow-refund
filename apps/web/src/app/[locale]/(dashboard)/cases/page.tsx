@@ -163,34 +163,35 @@ export default async function CasesPage({
 
   const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
+  const exportQuery = new URLSearchParams(
+    Object.entries({
+      q: filters.q ?? '',
+      countryId: filters.countryId ?? '',
+      brandId: filters.brandId ?? '',
+      status: filters.status ?? '',
+      bucket: bucket !== 'all' ? bucket : '',
+      assignedToId: filters.assignedToId ?? '',
+      fromDate: filters.fromDate ? filters.fromDate.toISOString() : '',
+      toDate: filters.toDate ? filters.toDate.toISOString() : '',
+    }).filter(([, v]) => v !== ''),
+  ).toString();
+
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <div>
+    <div className="mx-auto max-w-[1480px] px-6 py-5">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-display-md font-semibold tracking-tight text-heading">
             Refund cases
           </h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Manage and track all refund requests across brands.
+          <p className="mt-1 text-xs text-muted-foreground">
+            {total.toLocaleString()} {total === 1 ? 'case' : 'cases'} · Manage
+            and track all refund requests across brands.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {canExport && (
             <Button asChild size="default" variant="outline">
-              <a
-                href={`/api/export/cases?${new URLSearchParams(
-                  Object.entries({
-                    q: filters.q ?? '',
-                    countryId: filters.countryId ?? '',
-                    brandId: filters.brandId ?? '',
-                    status: filters.status ?? '',
-                    bucket: bucket !== 'all' ? bucket : '',
-                    assignedToId: filters.assignedToId ?? '',
-                    fromDate: filters.fromDate ? filters.fromDate.toISOString() : '',
-                    toDate: filters.toDate ? filters.toDate.toISOString() : '',
-                  }).filter(([, v]) => v !== ''),
-                ).toString()}`}
-              >
+              <a href={`/api/export/cases?${exportQuery}`}>
                 <Download className="h-4 w-4" />
                 Export
               </a>

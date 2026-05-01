@@ -59,20 +59,21 @@ export function CasesTable({
 
   return (
     <>
-      {/* Desktop — clean data table */}
+      {/* Desktop — clean data table. Fits 13''+ laptops without horizontal
+          scroll: country is absorbed into the Brand cell as a leading flag,
+          and Payment lives as a small icon row under the Refund amount. */}
       <div className="hidden md:block">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-border/50">
+            <tr className="border-b border-border/60">
               <Th>Case</Th>
               <Th>Customer</Th>
-              <Th>Country</Th>
               <Th>Brand</Th>
               <Th align="end">Refund</Th>
-              <Th>Payment</Th>
               <Th>Status</Th>
               <Th>Created</Th>
-              <th className="w-8 px-2 py-3" />
+              <Th>Agent</Th>
+              <th className="w-6 px-1 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40">
@@ -81,7 +82,7 @@ export function CasesTable({
                 key={c.id}
                 onClick={() => openCase(c.id)}
                 className={cn(
-                  'group cursor-pointer transition-all duration-150 hover:bg-surface-subtle/60',
+                  'group cursor-pointer transition-colors duration-150 hover:bg-primary-subtle/40',
                   c.isDeleted && 'opacity-50',
                 )}
               >
@@ -107,25 +108,16 @@ export function CasesTable({
                       />
                     </span>
                   </div>
-                  {c.externalCaseNumber && (
-                    <div className="mt-0.5 font-mono text-[10px] text-muted-foreground/70">
-                      {c.caseNumber}
-                    </div>
-                  )}
+                  <div className="mt-0.5 max-w-[160px] truncate font-mono text-[10.5px] text-muted-foreground">
+                    Order · {c.orderNumber}
+                  </div>
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="max-w-[180px] truncate text-xs font-medium text-heading">
                     {c.customerName}
                   </div>
-                  <div className="group/email mt-0.5 inline-flex max-w-[180px] items-center gap-1 text-[10.5px] text-muted-foreground">
-                    <span className="truncate">{c.customerEmail}</span>
-                    <span className="shrink-0 opacity-0 transition-opacity group-hover/email:opacity-100">
-                      <CopyButton
-                        value={c.customerEmail}
-                        size="xs"
-                        label="Copy email"
-                      />
-                    </span>
+                  <div className="max-w-[180px] truncate text-[10.5px] text-muted-foreground">
+                    {c.customerEmail}
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5">
@@ -133,12 +125,9 @@ export function CasesTable({
                     <span className="text-sm leading-none" aria-hidden>
                       {c.countryFlag || '\uD83C\uDF10'}
                     </span>
-                    <span className="text-xs text-heading">{c.countryName}</span>
-                  </div>
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5">
-                  <div className="text-xs font-medium text-heading">
-                    {c.brandName}
+                    <span className="text-xs font-medium text-heading">
+                      {c.brandName}
+                    </span>
                   </div>
                   {c.branchName && (
                     <div className="mt-0.5 max-w-[160px] truncate text-[10.5px] text-muted-foreground">
@@ -147,13 +136,15 @@ export function CasesTable({
                   )}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-end">
-                  <AmountCell
-                    refund={c.totalRefundAmount}
-                    currency={c.orderCurrency}
-                  />
-                </td>
-                <td className="px-3 py-2.5">
-                  <PaymentMethodIcons methods={c.paymentMethods} size="sm" />
+                  <div className="font-mono text-xs font-semibold tabular-nums text-heading">
+                    {formatMoney(c.totalRefundAmount, c.orderCurrency)}
+                  </div>
+                  <div className="mt-1 flex justify-end">
+                    <PaymentMethodIcons
+                      methods={c.paymentMethods}
+                      size="sm"
+                    />
+                  </div>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5">
                   {c.isDeleted ? (
@@ -168,7 +159,12 @@ export function CasesTable({
                 <td className="whitespace-nowrap px-3 py-2.5 text-[10.5px] text-muted-foreground">
                   {formatDate(new Date(c.createdAt))}
                 </td>
-                <td className="px-2 py-2.5">
+                <td className="whitespace-nowrap px-3 py-2.5">
+                  <span className="inline-flex max-w-[140px] truncate text-[11px] text-heading">
+                    {c.createdByName ?? '—'}
+                  </span>
+                </td>
+                <td className="px-1 py-2.5">
                   <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </td>
               </tr>
@@ -195,11 +191,9 @@ export function CasesTable({
                   >
                     {c.externalCaseNumber || c.caseNumber}
                   </span>
-                  {c.externalCaseNumber && (
-                    <span className="font-mono text-[10px] text-muted-foreground/70">
-                      {c.caseNumber}
-                    </span>
-                  )}
+                  <span className="font-mono text-[10px] text-muted-foreground/80">
+                    Order · {c.orderNumber}
+                  </span>
                 </div>
                 {c.isDeleted ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
