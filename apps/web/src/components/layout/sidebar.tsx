@@ -17,6 +17,7 @@ import {
   User as UserIcon,
   LogOut,
   Send,
+  Wrench,
 } from 'lucide-react';
 
 type ChipTone =
@@ -121,6 +122,12 @@ export function Sidebar({
           icon: Store,
           tone: 'peach',
           module: 'stores',
+        },
+        {
+          label: 'Branded Solutions',
+          href: '/help-desk/branded-solutions',
+          icon: Wrench,
+          tone: 'mint',
         },
       ],
     },
