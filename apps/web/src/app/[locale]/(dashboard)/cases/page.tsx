@@ -24,6 +24,7 @@ export default async function CasesPage({
   const session = await auth();
   const role = session?.user?.role ?? null;
   const canApprove = role === 'ADMIN' || role === 'MANAGER';
+  const canExport = role === 'ADMIN' || role === 'OPS_LEAD' || role === 'FINANCE_LEAD' || role === 'COUNTRY_MANAGER';
 
   const parsedFilters = caseListFiltersSchema.safeParse({
     q: sp['q'],
@@ -174,21 +175,27 @@ export default async function CasesPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild size="default" variant="outline">
-            <a
-              href={`/api/export/cases?${new URLSearchParams(
-                Object.entries({
-                  q: filters.q ?? '',
-                  countryId: filters.countryId ?? '',
-                  brandId: filters.brandId ?? '',
-                  status: filters.status ?? '',
-                }).filter(([, v]) => v !== ''),
-              ).toString()}`}
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </a>
-          </Button>
+          {canExport && (
+            <Button asChild size="default" variant="outline">
+              <a
+                href={`/api/export/cases?${new URLSearchParams(
+                  Object.entries({
+                    q: filters.q ?? '',
+                    countryId: filters.countryId ?? '',
+                    brandId: filters.brandId ?? '',
+                    status: filters.status ?? '',
+                    bucket: bucket !== 'all' ? bucket : '',
+                    assignedToId: filters.assignedToId ?? '',
+                    fromDate: filters.fromDate ? filters.fromDate.toISOString() : '',
+                    toDate: filters.toDate ? filters.toDate.toISOString() : '',
+                  }).filter(([, v]) => v !== ''),
+                ).toString()}`}
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </a>
+            </Button>
+          )}
           <Button asChild size="default">
             <Link href={`/${locale}/cases/new`}>
               <Plus className="h-4 w-4" />

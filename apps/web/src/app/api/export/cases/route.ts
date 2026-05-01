@@ -4,6 +4,7 @@ import type { CaseStatus } from '@wow/db';
 import { auth } from '@/auth';
 import { buildSingleSheetXlsx, attachmentDisposition, XLSX_MIME } from '@/lib/exports/xlsx';
 import { buildSlaConditions, parseSlaParam } from '@/lib/cases/sla';
+import { STATUS_BUCKETS } from '@/app/[locale]/(dashboard)/cases/case-status-buckets';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,10 @@ export async function GET(req: NextRequest) {
   const q = (sp.get('q') ?? '').trim();
   // The cases list page also accepts an `sla` filter; honor it here so the
   // exported file matches the filtered on-screen view.
+  const bucket = sp.get('bucket') ?? '';
+  const assignedToId = sp.get('assignedToId') ?? '';
+  const fromDate = sp.get('fromDate') ?? '';
+  const toDate = sp.get('toDate') ?? '';
   const sla = parseSlaParam(sp.get('sla') ?? undefined);
   const slaConditions = buildSlaConditions(sla);
   const mine = sp.get('mine') === '1' && !!session.user.id;
@@ -64,9 +69,27 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  if (assignedToId) {
+    andConditions.push({ assignedToId });
+  }
+  if (fromDate || toDate) {
+    const createdAt: Record<string, Date> = {};
+    if (fromDate) createdAt['gte'] = new Date(fromDate);
+    if (toDate) createdAt['lte'] = new Date(toDate);
+    andConditions.push({ createdAt });
+  }
+
+  // Resolve status: explicit status wins, otherwise use bucket mapping
+  let statusFilter: Prisma.RefundCaseWhereInput = {};
+  if (status && VALID_STATUSES.has(status)) {
+    statusFilter = { status: status as CaseStatus };
+  } else if (bucket && bucket in STATUS_BUCKETS) {
+    statusFilter = { status: { in: [...STATUS_BUCKETS[bucket as keyof typeof STATUS_BUCKETS]] as CaseStatus[] } };
+  }
+
   const where: Prisma.RefundCaseWhereInput = {
     deletedAt: null,
-    ...(status && VALID_STATUSES.has(status) ? { status: status as CaseStatus } : {}),
+    ...statusFilter,
     ...(countryId ? { countryId } : {}),
     ...(brandId ? { brandId } : {}),
     ...(andConditions.length > 0 ? { AND: andConditions } : {}),
