@@ -81,8 +81,8 @@ export async function GET(req: NextRequest) {
     if (fromDate) createdAt['gte'] = new Date(fromDate);
     if (toDate) {
       const td = new Date(toDate);
-      if (td.getHours() === 0 && td.getMinutes() === 0 && td.getSeconds() === 0 && td.getMilliseconds() === 0) {
-        td.setHours(23, 59, 59, 999);
+      if (td.getUTCHours() === 0 && td.getUTCMinutes() === 0 && td.getUTCSeconds() === 0 && td.getUTCMilliseconds() === 0) {
+        td.setUTCHours(23, 59, 59, 999);
       }
       createdAt['lte'] = td;
     }
