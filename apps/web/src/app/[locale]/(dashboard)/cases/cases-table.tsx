@@ -100,8 +100,9 @@ export function CasesTable({
                   >
                     {c.externalCaseNumber || c.caseNumber}
                   </Link>
-                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-                    #{c.orderNumber}
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    <span className="uppercase tracking-wider">Order</span>{' '}
+                    <span className="font-mono">#{c.orderNumber}</span>
                   </div>
                 </td>
                 <td className="px-4 py-3.5">
@@ -186,8 +187,9 @@ export function CasesTable({
                   >
                     {c.externalCaseNumber || c.caseNumber}
                   </span>
-                  <span className="font-mono text-[10px] text-muted-foreground/80">
-                    #{c.orderNumber}
+                  <span className="text-[10px] text-muted-foreground/80">
+                    <span className="uppercase tracking-wider">Order</span>{' '}
+                    <span className="font-mono">#{c.orderNumber}</span>
                   </span>
                 </div>
                 {c.isDeleted ? (
