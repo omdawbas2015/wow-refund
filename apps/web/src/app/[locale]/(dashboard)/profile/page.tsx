@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ProfileForm } from './form';
+import { AvailabilityToggle } from '@/components/availability/profile-toggle';
 import {
   MUTABLE_NOTIFICATION_KINDS,
   parseMutedKinds,
@@ -35,6 +36,8 @@ export default async function ProfilePage() {
       preferredCurrency: true,
       preferredTheme: true,
       mutedNotificationKinds: true,
+      isAvailable: true,
+      availableSince: true,
       role: { select: { key: true, name: true } },
       primaryCountryId: true,
       lastLoginAt: true,
@@ -51,6 +54,23 @@ export default async function ProfilePage() {
           Update your display name, contact info, and language / theme preferences.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Availability</CardTitle>
+          <CardDescription>
+            Toggle yourself On / Off for receiving maintenance, promo, and refund work.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AvailabilityToggle
+            initial={{
+              isAvailable: me.isAvailable,
+              availableSince: me.availableSince ? me.availableSince.toISOString() : null,
+            }}
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-2">

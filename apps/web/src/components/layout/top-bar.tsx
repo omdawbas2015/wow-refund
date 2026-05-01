@@ -4,6 +4,7 @@ import { signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import { ChevronRight, Search } from 'lucide-react';
 import { NotificationsBell } from './notifications-bell';
+import { TopBarAvailabilityPill } from '@/components/availability/topbar-pill';
 
 interface TopBarProps {
   userName: string;
@@ -58,6 +59,8 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
           <span>Search</span>
           <kbd className="kbd ml-1 text-[9px]">⌘K</kbd>
         </button>
+
+        <TopBarAvailabilityPill />
 
         <NotificationsBell locale={currentLocale} />
 
