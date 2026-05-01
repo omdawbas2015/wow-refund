@@ -152,7 +152,34 @@ export const emailTemplates: readonly EmailTemplateSeed[] = [
     locale: 'en',
     subject: 'Facilities Work Request Confirmation {{mrNumber}}',
     body:
-      'Dear Valued Customer,\n\nWe are pleased to confirm that your maintenance request has been successfully submitted. Our support team is reviewing the details and will proceed with the necessary actions promptly.\n\nWORK REQUEST NUMBER\n{{mrNumber}}\n\nMachine Model: {{machineModel}}\nStore: {{storeName}}\nLocation: {{location}}\nIssue: {{issueType}}\n\nPlease keep this reference number for future communication.\n\nKind regards,\nALSHAYA TECHNICAL SERVICES',
+      `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f7;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f5f7;padding:24px 0;">
+<tr><td align="center">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+<tr><td style="background:#0f172a;padding:18px 24px;color:#ffffff;font-size:14px;font-weight:600;letter-spacing:0.4px;">ALSHAYA TECHNICAL SERVICES</td></tr>
+<tr><td style="padding:24px 28px;">
+<p style="margin:0 0 12px;font-size:15px;">Dear Valued Customer,</p>
+<p style="margin:0 0 14px;font-size:14px;line-height:1.55;">We are pleased to confirm that your maintenance request has been successfully submitted on Archibus. Our team is reviewing the details and will proceed with the necessary actions promptly.</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:18px 0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+<tr><td style="padding:14px 16px;">
+<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:#6b7280;">Work request number</div>
+<div style="font-size:22px;font-weight:700;color:#0f172a;font-family:Consolas,Menlo,monospace;letter-spacing:1px;">{{mrNumber}}</div>
+</td></tr>
+</table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:13px;">
+<tr><td style="padding:6px 0;color:#6b7280;width:140px;">Machine Model</td><td style="padding:6px 0;font-weight:600;">{{machineModel}}</td></tr>
+<tr><td style="padding:6px 0;color:#6b7280;">Store</td><td style="padding:6px 0;font-weight:600;">{{storeName}}</td></tr>
+<tr><td style="padding:6px 0;color:#6b7280;vertical-align:top;">Location</td><td style="padding:6px 0;">{{location}}</td></tr>
+<tr><td style="padding:6px 0;color:#6b7280;vertical-align:top;">Issue</td><td style="padding:6px 0;">{{issueType}}</td></tr>
+</table>
+<p style="margin:18px 0 0;font-size:13px;color:#374151;">Please keep this reference number for future communication.</p>
+<p style="margin:18px 0 0;font-size:13px;">Kind regards,<br/><strong>ALSHAYA TECHNICAL SERVICES</strong></p>
+</td></tr>
+<tr><td style="background:#f9fafb;padding:12px 24px;font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb;">This is an automated confirmation. If you have any questions, simply reply to this email.</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
     placeholders: ['mrNumber', 'machineModel', 'storeName', 'location', 'issueType'],
     description: 'Confirmation email sent to the external customer once the agent raises the Archibus MR and closes the maintenance ticket.',
   },
@@ -160,20 +187,84 @@ export const emailTemplates: readonly EmailTemplateSeed[] = [
     key: 'MAINT_CUSTOMER_CLARIFY',
     category: 'Maintenance',
     locale: 'en',
-    subject: 'Need More Information About Your Maintenance Request',
+    subject: 'We Need a Little More Detail — Maintenance Request {{ticketRef}}',
     body:
-      'Dear {{customerName}},\n\nThank you for reaching out to Alshaya Technical Services. To proceed with your request for {{machineModel}} at {{storeName}}, we need a bit more information:\n\n{{questions}}\n\nKindly reply to this email with the missing details so we can raise the work order.\n\nKind regards,\nALSHAYA TECHNICAL SERVICES',
-    placeholders: ['customerName', 'machineModel', 'storeName', 'questions'],
+      `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f7;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f5f7;padding:24px 0;">
+<tr><td align="center">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+<tr><td style="background:#0f172a;padding:18px 24px;color:#ffffff;font-size:14px;font-weight:600;letter-spacing:0.4px;">ALSHAYA TECHNICAL SERVICES</td></tr>
+<tr><td style="padding:24px 28px;">
+<p style="margin:0 0 12px;font-size:15px;">Dear {{customerName}},</p>
+<p style="margin:0 0 14px;font-size:14px;line-height:1.55;">Thank you for reaching out regarding your <strong>{{machineModel}}</strong> at <strong>{{storeName}}</strong>. To raise the maintenance request on Archibus we need to confirm the exact site / branch.</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:18px 0;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;">
+<tr><td style="padding:14px 16px;">
+<div style="font-size:13px;color:#9a3412;line-height:1.6;">{{questions}}</div>
+</td></tr>
+</table>
+<p style="margin:0 0 14px;font-size:13px;color:#374151;">For reference, this is the request you submitted:</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:13px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+<tr><td style="padding:8px 14px;color:#6b7280;width:140px;">Reference</td><td style="padding:8px 14px;font-weight:600;font-family:Consolas,Menlo,monospace;">{{ticketRef}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;">Store</td><td style="padding:8px 14px;">{{storeName}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;vertical-align:top;">Location given</td><td style="padding:8px 14px;">{{location}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;">Machine</td><td style="padding:8px 14px;">{{machineModel}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;vertical-align:top;">Issue</td><td style="padding:8px 14px;">{{issueType}}</td></tr>
+</table>
+<p style="margin:18px 0 0;font-size:13px;">Kindly please advise on the right location on Archibus to be able to raise the request. Just reply to this email with the missing details and we will proceed.</p>
+<p style="margin:18px 0 0;font-size:13px;">Kind regards,<br/><strong>ALSHAYA TECHNICAL SERVICES</strong></p>
+</td></tr>
+<tr><td style="background:#f9fafb;padding:12px 24px;font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb;">You are receiving this email because you submitted a maintenance request via the Branded Solutions form.</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
+    placeholders: ['customerName', 'machineModel', 'storeName', 'location', 'issueType', 'ticketRef', 'questions'],
     description: 'Sent to the external customer when the agent needs clarification on location / model / etc. before raising the MR.',
   },
   {
     key: 'MAINT_SUPERVISOR_LOCATION_VERIFY',
     category: 'Maintenance',
     locale: 'en',
-    subject: 'Maintenance Location Verification Required — {{ticketRef}}',
+    subject: 'Location on Archibus — Maintenance Request {{ticketRef}}',
     body:
-      'Dear {{supervisorName}},\n\nWe received a maintenance request for your country ({{countryName}}) but the submitted location is unclear.\n\nTicket: {{ticketRef}}\nStore: {{storeName}}\nLocation as submitted: {{location}}\nMachine: {{machineModel}}\nIssue: {{issueType}}\nCustomer: {{customerName}} ({{contactNumber}})\nSubmitted by: {{submitterName}}\n\nKindly advise the correct location / branch reference so we can raise the Archibus work order.\n\nKind regards,\nALSHAYA TECHNICAL SERVICES',
-    placeholders: ['supervisorName', 'countryName', 'ticketRef', 'storeName', 'location', 'machineModel', 'issueType', 'customerName', 'contactNumber', 'submitterName'],
+      `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f7;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f5f7;padding:24px 0;">
+<tr><td align="center">
+<table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+<tr><td style="background:#0f172a;padding:18px 24px;color:#ffffff;font-size:14px;font-weight:600;letter-spacing:0.4px;">ALSHAYA TECHNICAL SERVICES — Branded Solutions</td></tr>
+<tr><td style="padding:24px 28px;">
+<p style="margin:0 0 12px;font-size:15px;">{{supervisorGreeting}},</p>
+<p style="margin:0 0 14px;font-size:14px;line-height:1.55;">A new maintenance request has been received for <strong>{{countryName}}</strong> ({{cityName}}). Before we raise it on Archibus, we kindly request your guidance on the correct site / location reference.</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:18px 0;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;">
+<tr><td style="padding:14px 16px;">
+<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:#3730a3;">Request reference</div>
+<div style="font-size:22px;font-weight:700;color:#1e1b4b;font-family:Consolas,Menlo,monospace;letter-spacing:1px;">{{ticketRef}}</div>
+</td></tr>
+</table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:13px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+<tr><td style="padding:8px 14px;color:#6b7280;width:160px;">Country / City</td><td style="padding:8px 14px;font-weight:600;">{{countryName}} · {{cityName}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;">Customer</td><td style="padding:8px 14px;">{{customerName}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;">Submitter</td><td style="padding:8px 14px;">{{submitterName}} · {{contactNumber}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;">Store</td><td style="padding:8px 14px;font-weight:600;">{{storeName}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;vertical-align:top;">Location given</td><td style="padding:8px 14px;">{{location}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;">Machine</td><td style="padding:8px 14px;">{{machineModel}}</td></tr>
+<tr><td style="padding:8px 14px;color:#6b7280;vertical-align:top;">Issue</td><td style="padding:8px 14px;">{{issueType}}</td></tr>
+</table>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:18px 0;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;">
+<tr><td style="padding:14px 16px;">
+<div style="font-size:13px;color:#78350f;font-weight:600;margin-bottom:6px;">Action requested</div>
+<div style="font-size:13px;color:#78350f;line-height:1.55;">Kindly please advise on the right location on Archibus so we can raise the work request.</div>
+</td></tr>
+</table>
+<div style="font-size:12px;color:#6b7280;margin:14px 0 0;">{{agentNote}}</div>
+<p style="margin:18px 0 0;font-size:13px;">Kind regards,<br/><strong>{{agentName}}</strong><br/><span style="color:#6b7280;">Branded Solutions Help Desk</span></p>
+</td></tr>
+<tr><td style="background:#f9fafb;padding:12px 24px;font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb;">Recipients: {{recipientsLine}}. This message was generated by the Branded Solutions Help Desk.</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
+    placeholders: ['supervisorGreeting', 'recipientsLine', 'countryName', 'cityName', 'ticketRef', 'storeName', 'location', 'machineModel', 'issueType', 'customerName', 'contactNumber', 'submitterName', 'agentName', 'agentNote'],
     description: 'Sent to the country supervisor when the agent flips a maintenance request to WAITING_FOR_SUPERVISOR because the location is unclear.',
   },
 ];
