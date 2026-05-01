@@ -77,7 +77,7 @@ export function CasesTable({
               <th className="w-6 px-1 py-3.5" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/40">
+          <tbody className="divide-y divide-border/40 [&_td]:align-top">
             {cases.map((c) => (
               <tr
                 key={c.id}
