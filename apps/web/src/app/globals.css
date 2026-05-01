@@ -15,25 +15,24 @@
 
 @layer base {
   :root {
-    /* ── Warm neutral scale ───────────────────────────────────────────
-       Pulled towards the warm cream end of the palette so surfaces don't
-       fight the #EFE3CA accent. Hue 38 (cream) at very low saturation
-       keeps whites reading as white while borders and muted chips carry
-       a faint warm undertone. */
+    /* ── Clean neutral scale — pure white surfaces ────────────────────
+       Backgrounds are pure white (#FFFFFF); borders and muted chips use
+       low-saturation cool grays so the indigo primary and teal accent
+       read cleanly on top. No warm tint on surfaces. */
     --neutral-0:   0 0% 100%;           /* pure white card / surface */
-    --neutral-25:  40 40% 98.6%;        /* airy near-white wash */
-    --neutral-50:  38 38% 98.2%;        /* faintly warm page background */
-    --neutral-100: 38 32% 95.2%;        /* muted chip / table header */
-    --neutral-150: 36 22% 91.5%;        /* hairline borders */
-    --neutral-200: 36 18% 87%;
-    --neutral-300: 34 14% 78%;
-    --neutral-400: 32 10% 58%;
-    --neutral-500: 230 10% 42%;         /* muted text — leans cool for AA */
-    --neutral-600: 240 14% 30%;
-    --neutral-700: 244 22% 20%;
-    --neutral-800: 246 30% 14%;
-    --neutral-900: 246 38% 8%;
-    --neutral-950: 246 44% 5%;
+    --neutral-25:  0 0% 100%;           /* page background — pure white */
+    --neutral-50:  0 0% 100%;           /* pure white */
+    --neutral-100: 220 14% 96%;         /* muted chip / table header */
+    --neutral-150: 220 14% 93%;         /* hairline borders */
+    --neutral-200: 220 13% 89%;
+    --neutral-300: 220 12% 80%;
+    --neutral-400: 220 10% 58%;
+    --neutral-500: 220 10% 42%;         /* muted text — AA on white */
+    --neutral-600: 222 14% 30%;
+    --neutral-700: 224 20% 20%;
+    --neutral-800: 226 28% 14%;
+    --neutral-900: 228 36% 8%;
+    --neutral-950: 230 42% 5%;
 
     /* ── Surfaces ─────────────────────────────────────────────────── */
     --background:          var(--neutral-50);
