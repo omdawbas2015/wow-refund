@@ -4,35 +4,36 @@
 
 /* ═══════════════════════════════════════════════════════════════════
    WOW Refund — design tokens
-   Alshaya-inspired professional admin dashboard.
-   - Cool near-white background
-   - Deep Alshaya navy as the single accent
-   - Tonal blue chip palette (no rainbow pastels) for icon backings
-   - Generous rounded surfaces (12-22px)
-   - Single subtle shadow; no glow, no aurora.
+   Palette (colorhunt 170c79-efe3ca-56b6c6-8acbd0):
+   - #170C79  deep indigo    → primary (buttons, links, active nav)
+   - #56B6C6  vivid teal     → accent (chips, highlights, info)
+   - #8ACBD0  soft teal      → secondary accent / subtle fills
+   - #EFE3CA  warm cream     → hero surfaces, chip butter, sidebar wash
+   Surfaces stay near-white for data readability; the cream is used as a
+   soft, premium wash on the sidebar and marketing/empty states.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
     /* ── Warm neutral scale ───────────────────────────────────────────
-       Slate-toned near-whites (hue 210, low saturation) for a calm,
-       premium surface. Headers/body text sit in the 800-900 band for
-       strong contrast; 500 is the softest "muted" step that still meets
-       WCAG AA on white. */
+       Pulled towards the warm cream end of the palette so surfaces don't
+       fight the #EFE3CA accent. Hue 38 (cream) at very low saturation
+       keeps whites reading as white while borders and muted chips carry
+       a faint warm undertone. */
     --neutral-0:   0 0% 100%;           /* pure white card / surface */
-    --neutral-25:  210 25% 98.8%;       /* airy near-white wash */
-    --neutral-50:  210 20% 99.2%;       /* faintly-tinted page background */
-    --neutral-100: 210 24% 96.8%;       /* muted chip / table header */
-    --neutral-150: 210 22% 93.5%;       /* hairline borders */
-    --neutral-200: 210 20% 89%;
-    --neutral-300: 210 16% 80%;
-    --neutral-400: 210 12% 60%;
-    --neutral-500: 210 12% 44%;         /* muted text — AA on white */
-    --neutral-600: 210 16% 32%;
-    --neutral-700: 210 20% 22%;
-    --neutral-800: 210 24% 15%;
-    --neutral-900: 210 28% 9%;
-    --neutral-950: 210 32% 5%;
+    --neutral-25:  40 40% 98.6%;        /* airy near-white wash */
+    --neutral-50:  38 38% 98.2%;        /* faintly warm page background */
+    --neutral-100: 38 32% 95.2%;        /* muted chip / table header */
+    --neutral-150: 36 22% 91.5%;        /* hairline borders */
+    --neutral-200: 36 18% 87%;
+    --neutral-300: 34 14% 78%;
+    --neutral-400: 32 10% 58%;
+    --neutral-500: 230 10% 42%;         /* muted text — leans cool for AA */
+    --neutral-600: 240 14% 30%;
+    --neutral-700: 244 22% 20%;
+    --neutral-800: 246 30% 14%;
+    --neutral-900: 246 38% 8%;
+    --neutral-950: 246 44% 5%;
 
     /* ── Surfaces ─────────────────────────────────────────────────── */
     --background:          var(--neutral-50);
@@ -54,16 +55,16 @@
     --border-strong:       var(--neutral-200);
     --input:               var(--neutral-200);
 
-    /* ── Single accent — Alshaya teal ─────────────────────────────────
-       Deep, saturated teal that aligns with the Alshaya brand mark and
-       the Aura wordmark. Sophisticated and premium without looking
-       "tech startup blue". */
-    --primary:             186 60% 28%;          /* deep Alshaya teal */
-    --primary-foreground:  0 0% 100%;            /* white on teal */
-    --primary-hover:       186 70% 22%;
-    --primary-deep:        186 78% 16%;
-    --primary-subtle:      186 50% 95%;
-    --ring:                186 58% 40%;
+    /* ── Primary — #170C79 deep indigo ─────────────────────────────────
+       The darkest member of the palette; used for CTAs, links, active
+       nav items, focused inputs. Pairs beautifully with the teal accent
+       (#56B6C6) and the warm cream (#EFE3CA) wash. */
+    --primary:             245 82% 26%;          /* #170C79 */
+    --primary-foreground:  0 0% 100%;            /* white on indigo */
+    --primary-hover:       245 86% 20%;          /* slightly deeper */
+    --primary-deep:        246 90% 14%;
+    --primary-subtle:      245 60% 96%;          /* near-white indigo tint */
+    --ring:                245 70% 48%;
 
     --card:                var(--neutral-0);
     --card-foreground:     var(--neutral-900);
@@ -73,31 +74,37 @@
     --secondary:           var(--neutral-100);
     --secondary-foreground: var(--neutral-900);
 
-    --accent:              186 60% 28%;
-    --accent-foreground:   0 0% 100%;
+    /* ── Accent — #56B6C6 vivid teal ───────────────────────────────── */
+    --accent:              188 51% 56%;          /* #56B6C6 */
+    --accent-foreground:   246 44% 5%;           /* deep indigo on teal */
+    --accent-soft:         184 42% 68%;          /* #8ACBD0 light teal */
+    --accent-cream:         42 55% 86%;          /* #EFE3CA warm cream */
+    --accent-cream-fg:     245 82% 26%;          /* deep indigo on cream */
 
     /* ── Status — muted, never neon ───────────────────────────────── */
     --destructive:         358 70% 56%;
     --destructive-foreground: 0 0% 100%;
-    --success:             152 50% 42%;
+    --success:             168 48% 38%;          /* teal-leaning green */
     --success-foreground:  0 0% 100%;
-    --warning:             32 88% 50%;
+    --warning:             32 84% 48%;
     --warning-foreground:  0 0% 100%;
-    --info:                206 70% 52%;
+    --info:                188 51% 40%;          /* darker accent teal */
     --info-foreground:     0 0% 100%;
 
-    /* ── Chip palette — calm, refined pairings on white ────────────── */
-    --chip-butter:      186 48% 92%;   /* primary-tinted teal wash */
-    --chip-butter-fg:   186 72% 22%;
-    --chip-mint:        152 38% 90%;   /* soft sage */
-    --chip-mint-fg:     152 58% 24%;
-    --chip-lavender:    232 42% 94%;   /* calm slate-violet */
-    --chip-lavender-fg: 232 44% 38%;
-    --chip-peach:        24 72% 91%;   /* warm sand */
-    --chip-peach-fg:     18 62% 36%;
-    --chip-sky:         202 62% 92%;   /* pale sky */
-    --chip-sky-fg:      206 64% 28%;
-    --chip-rose:        346 64% 93%;   /* muted rose */
+    /* ── Chip palette — derived from the 4-color set ────────────────
+       Each chip uses one of the palette tints as the background and a
+       deep indigo or saturated sibling as the foreground for AA. */
+    --chip-butter:       42 55% 88%;   /* #EFE3CA warm cream */
+    --chip-butter-fg:   245 82% 26%;   /* deep indigo */
+    --chip-mint:        184 42% 86%;   /* #8ACBD0 soft teal */
+    --chip-mint-fg:     188 62% 22%;
+    --chip-lavender:    245 60% 95%;   /* indigo subtle */
+    --chip-lavender-fg: 245 82% 30%;
+    --chip-peach:        42 70% 88%;   /* warmer cream */
+    --chip-peach-fg:     28 62% 32%;
+    --chip-sky:         188 55% 88%;   /* #56B6C6 pale wash */
+    --chip-sky-fg:      188 62% 26%;
+    --chip-rose:        346 60% 92%;   /* muted rose (destructive subtle) */
     --chip-rose-fg:     346 48% 38%;
 
     /* ── Shape ────────────────────────────────────────────────────── */
