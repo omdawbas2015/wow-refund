@@ -99,12 +99,15 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
   return (
     <div className="mx-auto max-w-4xl space-y-5 px-4 py-4">
       <PageHeader
-        eyebrow={<><Bell className="me-1 h-3 w-3" /> Inbox</>}
-        title="Notifications"
-        description={
-          unreadCount > 0
-            ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}.`
-            : 'No unread notifications.'
+        title={
+          <span className="flex items-center gap-2">
+            Notifications
+            {unreadCount > 0 && (
+              <span className="inline-flex h-5 items-center rounded-pill bg-destructive/10 px-2 text-[11px] font-semibold text-destructive">
+                {unreadCount}
+              </span>
+            )}
+          </span>
         }
         actions={<InboxActions hasUnread={unreadCount > 0} />}
       />

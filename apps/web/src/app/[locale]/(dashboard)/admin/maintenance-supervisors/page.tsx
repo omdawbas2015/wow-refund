@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@wow/db';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
-import { Wrench } from 'lucide-react';
 import { SupervisorsManager } from './manager';
 
 export const dynamic = 'force-dynamic';
@@ -24,21 +23,10 @@ export default async function MaintenanceSupervisorsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 px-4 py-4">
-      <PageHeader
-        eyebrow={<><Wrench className="me-1 h-3 w-3" /> Admin · Branded Solutions</>}
-        title="Country supervisors"
-        description="Maps a country to the maintenance lead who receives location-verification emails when an agent escalates a Branded Solutions ticket. Supervisors are matched against the form’s Country field — case-insensitive, exact match."
-      />
+      <PageHeader title="Country supervisors" />
 
       <Card>
-        <CardHeader>
-          <CardTitle>Supervisor directory</CardTitle>
-          <CardDescription>
-            Add multiple entries per country if you want fallbacks; the first active row
-            (alphabetical by name) is used as the default in the agent&apos;s drawer.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="py-4">
           <SupervisorsManager
             initialRows={rows.map((r) => ({
               id: r.id,

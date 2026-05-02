@@ -4,18 +4,15 @@ import { prisma } from '@wow/db';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { ProfileForm } from './form';
-import { AvailabilityToggle } from '@/components/availability/profile-toggle';
 import {
   MUTABLE_NOTIFICATION_KINDS,
   parseMutedKinds,
 } from '@/lib/notifications/dispatch';
-import { UserCircle2 } from 'lucide-react';
 
 /**
  * Self-service profile page. Lets the signed-in user update display fields
@@ -38,8 +35,6 @@ export default async function ProfilePage() {
       preferredCurrency: true,
       preferredTheme: true,
       mutedNotificationKinds: true,
-      isAvailable: true,
-      availableSince: true,
       role: { select: { key: true, name: true } },
       primaryCountryId: true,
       lastLoginAt: true,
@@ -49,37 +44,13 @@ export default async function ProfilePage() {
   if (!me) redirect('/login');
 
   return (
-    <div className="space-y-6 px-4 py-4">
-      <PageHeader
-        eyebrow={<><UserCircle2 className="me-1 h-3 w-3" /> Account</>}
-        title="Profile"
-        description="Update your display name, contact info, and language / theme preferences."
-      />
+    <div className="space-y-5 px-4 py-4">
+      <PageHeader title="Profile" />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Availability</CardTitle>
-          <CardDescription>
-            Toggle yourself On / Off for receiving maintenance, promo, and refund work.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AvailabilityToggle
-            initial={{
-              isAvailable: me.isAvailable,
-              availableSince: me.availableSince ? me.availableSince.toISOString() : null,
-            }}
-          />
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Personal info</CardTitle>
-            <CardDescription>
-              These fields appear in case histories, mentions, and the topbar.
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-[14px]">Personal info</CardTitle>
           </CardHeader>
           <CardContent>
             <ProfileForm
@@ -98,11 +69,10 @@ export default async function ProfilePage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Account</CardTitle>
-            <CardDescription>Read-only — managed by an admin.</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-[14px]">Account</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
+          <CardContent className="space-y-3">
             <Field label="Email" value={me.email} />
             <Field label="Role" value={me.role?.name ?? '—'} />
             <Field

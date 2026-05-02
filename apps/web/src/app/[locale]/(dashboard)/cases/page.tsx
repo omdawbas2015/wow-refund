@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Plus, FileText, Download, Inbox } from 'lucide-react';
+import { Plus, Download, Inbox } from 'lucide-react';
 import { CaseFiltersBar } from './case-filters-bar';
 import { STATUS_BUCKETS } from './case-status-buckets';
 import { CasesTable, type CaseRow } from './cases-table';
@@ -182,9 +182,14 @@ export default async function CasesPage({
   return (
     <div className="mx-auto max-w-[1480px] space-y-3 px-4 py-4">
       <PageHeader
-        eyebrow={<><FileText className="me-1 h-3 w-3" /> Operations</>}
-        title="Refund cases"
-        description={`${total.toLocaleString()} ${total === 1 ? 'case' : 'cases'} · Manage and track all refund requests across brands.`}
+        title={
+          <span className="flex items-center gap-2">
+            Refund cases
+            <span className="inline-flex h-5 items-center rounded-pill bg-[hsl(var(--accent-cream))] px-2 text-[11px] font-semibold tabular-nums text-primary">
+              {total.toLocaleString()}
+            </span>
+          </span>
+        }
         actions={
           <>
             {canExport && (
@@ -223,7 +228,6 @@ export default async function CasesPage({
               icon={Inbox}
               tone="butter"
               title="No cases match"
-              description="Try adjusting filters, or create a new refund case to get started."
               className="py-14"
               action={
                 <Button asChild>

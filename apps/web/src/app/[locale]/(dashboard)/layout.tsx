@@ -5,7 +5,6 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { TopBar } from '@/components/layout/top-bar';
 import { BackLink } from '@/components/layout/back-link';
 import { CommandPalette } from '@/components/layout/command-palette';
-import { GlobalAvailabilityBanner } from '@/components/availability/global-banner';
 import { getModuleToggleStatuses } from '@/lib/module-toggles';
 
 export default async function DashboardLayout({
@@ -30,13 +29,6 @@ export default async function DashboardLayout({
       ? await prisma.user.count({ where: { status: 'PENDING' } })
       : 0;
 
-  // Pull the live availability state for the banner so the first
-  // paint already reflects DB truth (no flicker from `false` → real).
-  const me = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { isAvailable: true, availableSince: true },
-  });
-
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar
@@ -45,12 +37,6 @@ export default async function DashboardLayout({
         pendingAccessRequestCount={pendingAccessRequestCount}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <GlobalAvailabilityBanner
-          initial={{
-            isAvailable: me?.isAvailable ?? false,
-            availableSince: me?.availableSince ? me.availableSince.toISOString() : null,
-          }}
-        />
         <TopBar
           userName={session.user.name ?? ''}
           userEmail={session.user.email ?? ''}

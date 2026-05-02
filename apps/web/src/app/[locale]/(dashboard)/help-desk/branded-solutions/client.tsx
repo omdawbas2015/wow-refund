@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Search as SearchIcon, ChevronRight, Copy as CopyIcon, Check, Mail, MessageSquare, CheckCircle2, Hand, Inbox, Wrench } from 'lucide-react';
+import { Search as SearchIcon, ChevronRight, Copy as CopyIcon, Check, Mail, MessageSquare, CheckCircle2, Hand, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -187,10 +187,13 @@ export function BrandedSolutionsClient({ initialRows, supervisors, currentUser }
   return (
     <div className="space-y-3 px-4 py-4">
       <PageHeader
-        eyebrow={<><Wrench className="me-1 h-3 w-3" /> Help Desk</>}
         title="Branded Solutions"
-        description="Live maintenance pool. New requests arrive from the Microsoft Form and are assigned round-robin to Available agents."
-        actions={<OnlineAgentsRow agents={onlineAgents} currentUserId={currentUser.id} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <OnlineAgentsRow agents={onlineAgents} currentUserId={currentUser.id} />
+            <PageAvailabilityToggle initial={{ isAvailable: currentUser.isAvailable, availableSince: currentUser.availableSince }} />
+          </div>
+        }
       />
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
@@ -264,6 +267,103 @@ export function BrandedSolutionsClient({ initialRows, supervisors, currentUser }
         </div>
       </div>
     </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Page-level availability toggle — only used on Branded Solutions.
+// Heartbeat keeps the presence row warm while the page is open;
+// pagehide / beforeunload flips the user Offline so closed tabs
+// can't hold tickets.
+// ───────────────────────────────────────────────────────────────────
+
+function PageAvailabilityToggle({
+  initial,
+}: {
+  initial: { isAvailable: boolean; availableSince: string | null };
+}) {
+  const [isAvailable, setIsAvailable] = useState(initial.isAvailable);
+  const [availableSince, setAvailableSince] = useState<string | null>(initial.availableSince);
+  const [now, setNow] = useState(Date.now());
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      void fetch('/api/me/heartbeat', { method: 'POST', cache: 'no-store' }).catch(() => {});
+    }, 25_000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    function flipAwayBeacon() {
+      try {
+        const data = new Blob([JSON.stringify({ isAvailable: false })], { type: 'application/json' });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/me/availability', data);
+        }
+      } catch {
+        // best-effort
+      }
+    }
+    window.addEventListener('pagehide', flipAwayBeacon);
+    return () => window.removeEventListener('pagehide', flipAwayBeacon);
+  }, []);
+
+  async function flip(next: boolean) {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/me/availability', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ isAvailable: next }),
+      });
+      if (!res.ok) return;
+      const j = (await res.json()) as { isAvailable: boolean; availableSince: string | null };
+      setIsAvailable(j.isAvailable);
+      setAvailableSince(j.availableSince);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  let timer = '';
+  if (isAvailable && availableSince) {
+    const ms = Math.max(0, now - new Date(availableSince).getTime());
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    timer = `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => flip(!isAvailable)}
+      title={isAvailable ? 'Click to go Offline' : 'Click to go Available'}
+      className={cn(
+        'inline-flex h-8 items-center gap-2 rounded-pill border px-2.5 text-[12px] font-semibold leading-none transition-all disabled:opacity-50',
+        isAvailable
+          ? 'border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+          : 'border-border bg-surface text-muted-foreground hover:border-border-strong hover:bg-surface-muted',
+      )}
+    >
+      <span
+        className={cn(
+          'h-1.5 w-1.5 rounded-full',
+          isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400',
+        )}
+      />
+      <span className="tabular-nums">
+        {isAvailable ? `Available · ${timer}` : 'Offline'}
+      </span>
+    </button>
   );
 }
 
@@ -528,7 +628,7 @@ function Workbench({
           <>
             {!canAct && (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
-                You are Offline. Use the banner above to go Available before sending or closing.
+                You are Offline. Click the Offline pill in the page header to go Available before sending or closing.
               </div>
             )}
 

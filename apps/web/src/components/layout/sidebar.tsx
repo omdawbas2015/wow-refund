@@ -20,28 +20,10 @@ import {
   Wrench,
 } from 'lucide-react';
 
-type ChipTone =
-  | 'butter'
-  | 'mint'
-  | 'lavender'
-  | 'peach'
-  | 'sky'
-  | 'rose';
-
-const CHIP_CLASS: Record<ChipTone, string> = {
-  butter: 'chip-butter',
-  mint: 'chip-mint',
-  lavender: 'chip-lavender',
-  peach: 'chip-peach',
-  sky: 'chip-sky',
-  rose: 'chip-rose',
-};
-
 interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  tone: ChipTone;
   adminOnly?: boolean;
   module?: string;
   badge?: number;
@@ -74,21 +56,19 @@ export function Sidebar({
     label: 'Dashboard',
     href: '/',
     icon: LayoutDashboard,
-    tone: 'butter',
   };
 
   const sections: NavSection[] = [
     {
       label: 'Refund',
       items: [
-        { label: 'Refund Cases', href: '/cases', icon: FileText, tone: 'sky' },
+        { label: 'Refund Cases', href: '/cases', icon: FileText },
         ...(opsRole
           ? [
               {
                 label: 'Refund Pool',
                 href: '/operations',
                 icon: ShieldCheck,
-                tone: 'mint' as ChipTone,
               },
             ]
           : []),
@@ -101,14 +81,12 @@ export function Sidebar({
           label: 'Promo Admin',
           href: '/promo',
           icon: Gift,
-          tone: 'rose',
           module: 'promo',
         },
         {
           label: 'Send Promo',
           href: '/promo/allocate',
           icon: Send,
-          tone: 'lavender',
           module: 'promo',
         },
       ],
@@ -120,14 +98,12 @@ export function Sidebar({
           label: 'Stores',
           href: '/help-desk/stores',
           icon: Store,
-          tone: 'peach',
           module: 'stores',
         },
         {
           label: 'Branded Solutions',
           href: '/help-desk/branded-solutions',
           icon: Wrench,
-          tone: 'mint',
         },
       ],
     },
@@ -138,10 +114,9 @@ export function Sidebar({
           label: 'Reports',
           href: '/reports',
           icon: BarChart3,
-          tone: 'mint',
           module: 'reports',
         },
-        { label: 'Notifications', href: '/notifications', icon: Bell, tone: 'peach' },
+        { label: 'Notifications', href: '/notifications', icon: Bell },
       ],
     },
     {
@@ -151,7 +126,6 @@ export function Sidebar({
           label: 'User Requests',
           href: '/admin/pending-approvals',
           icon: ClipboardList,
-          tone: 'lavender',
           adminOnly: true,
           badge: pendingAccessRequestCount,
         },
@@ -160,12 +134,11 @@ export function Sidebar({
   ];
 
   const footerItems: NavItem[] = [
-    { label: 'Profile', href: '/profile', icon: UserIcon, tone: 'sky' },
+    { label: 'Profile', href: '/profile', icon: UserIcon },
     {
       label: 'Settings',
       href: '/admin/settings',
       icon: Settings,
-      tone: 'mint',
       adminOnly: true,
     },
   ];
@@ -176,31 +149,26 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-[200px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
+    <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-[hsl(var(--accent-cream))] text-sidebar-fg">
       {/* Brand — Alshaya mark + name, links to dashboard. */}
       <Link
         href="/"
-        className="flex h-12 items-center gap-2.5 border-b border-sidebar-border px-3 transition-opacity hover:opacity-80"
+        className="flex h-14 items-center gap-2.5 px-4 transition-opacity hover:opacity-90"
       >
         <Image
           src="/brand/alshaya-mark.png"
           alt="Alshaya Group"
-          width={28}
-          height={28}
-          className="h-7 w-7 shrink-0 object-contain"
+          width={32}
+          height={32}
+          className="h-8 w-8 shrink-0 object-contain"
           priority
         />
-        <span className="flex flex-col leading-tight">
-          <span className="text-[12px] font-semibold tracking-tight text-heading">
-            Alshaya Group
-          </span>
-          <span className="text-[9.5px] font-medium uppercase tracking-[0.08em] text-sidebar-muted">
-            Operations Hub
-          </span>
+        <span className="text-[13px] font-semibold tracking-tight text-heading">
+          Alshaya
         </span>
       </Link>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 pt-2 pb-2">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pt-1 pb-2">
         {/* Dashboard */}
         <ul className="space-y-0.5">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
@@ -215,7 +183,7 @@ export function Sidebar({
           if (items.length === 0) return null;
           return (
             <div key={i}>
-              <div className="mt-3.5 mb-1 px-2 text-[9.5px] font-semibold uppercase tracking-[0.12em] text-sidebar-muted">
+              <div className="mt-4 mb-1 px-2 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--primary))/0.55] opacity-60">
                 {section.label}
               </div>
               <ul className="space-y-0.5">
@@ -232,7 +200,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border px-2 py-2">
+      <div className="px-2.5 py-2">
         <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
@@ -247,10 +215,10 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="flex h-8 items-center gap-2 rounded-xl px-2 text-[11.5px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
+              className="flex h-8 items-center gap-2 rounded-xl px-2 text-[11.5px] font-medium text-sidebar-muted transition-colors hover:bg-white/60 hover:text-heading"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-lg chip-rose">
-                <LogOut className="h-3 w-3" />
+              <span className="flex h-5 w-5 items-center justify-center text-sidebar-muted">
+                <LogOut className="h-3.5 w-3.5" />
               </span>
               <span className="flex-1 truncate">Sign out</span>
             </a>
@@ -269,30 +237,27 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group relative flex h-8 items-center gap-2 rounded-xl px-2 text-[11.5px] font-medium transition-colors',
+          'group relative flex h-8 items-center gap-2.5 rounded-xl px-2 text-[12px] font-medium transition-all',
           isActive
-            ? 'bg-surface text-heading shadow-xs ring-1 ring-border/60'
-            : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-heading',
+            ? 'bg-[hsl(var(--primary))] text-white shadow-sm'
+            : 'text-[hsl(var(--neutral-700))] hover:bg-white/70 hover:text-heading',
         )}
       >
-        {isActive && (
-          <span
-            aria-hidden
-            className="absolute -start-2 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-primary"
-          />
-        )}
-        <span
+        <Icon
           className={cn(
-            'flex h-5 w-5 shrink-0 items-center justify-center rounded-lg transition-colors',
-            isActive ? 'surface-butter' : CHIP_CLASS[item.tone],
+            'h-3.5 w-3.5 shrink-0 transition-colors',
+            isActive ? 'text-white' : 'text-[hsl(var(--neutral-500))]',
           )}
-        >
-          <Icon className="h-3 w-3" />
-        </span>
+        />
         <span className="flex-1 truncate">{item.label}</span>
         {showBadge && (
           <span
-            className="inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-destructive px-1 text-[9.5px] font-semibold leading-none text-destructive-foreground"
+            className={cn(
+              'inline-flex h-4 min-w-4 items-center justify-center rounded-pill px-1 text-[9.5px] font-semibold leading-none',
+              isActive
+                ? 'bg-white/20 text-white'
+                : 'bg-destructive text-destructive-foreground',
+            )}
             aria-label={`${item.badge} pending`}
           >
             {item.badge}
