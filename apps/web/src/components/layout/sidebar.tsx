@@ -20,10 +20,42 @@ import {
   Wrench,
 } from 'lucide-react';
 
+/**
+ * Each nav item gets its own colored icon chip — Asana / Monday / ClickUp
+ * style. The colors are derived directly from the brand palette tokens
+ * (indigo, teal, peach, mint, butter, sky) so the sidebar feels rich
+ * without introducing one-off hex values.
+ */
+type Tone =
+  | 'indigo'
+  | 'teal'
+  | 'mint'
+  | 'peach'
+  | 'butter'
+  | 'sky'
+  | 'rose'
+  | 'slate';
+
+const TONE: Record<Tone, { bg: string; fg: string }> = {
+  indigo: { bg: '#EEF0FB', fg: '#170C79' },
+  teal: { bg: '#D7F0F2', fg: '#0E6E78' },
+  mint: { bg: '#DDF2EC', fg: '#1A7864' },
+  peach: { bg: '#FCE6D8', fg: '#9C4A1F' },
+  butter: { bg: '#FDF1D7', fg: '#8C5C0E' },
+  sky: { bg: '#DBEEF6', fg: '#0E6E78' },
+  rose: { bg: '#FBE3E6', fg: '#A1142C' },
+  slate: { bg: '#EEF1F5', fg: '#3F4A5B' },
+};
+
 interface NavItem {
   label: string;
   href: string;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: React.ComponentType<{
+    className?: string;
+    strokeWidth?: number;
+    style?: React.CSSProperties;
+  }>;
+  tone: Tone;
   adminOnly?: boolean;
   module?: string;
   badge?: number;
@@ -56,19 +88,21 @@ export function Sidebar({
     label: 'Dashboard',
     href: '/',
     icon: LayoutDashboard,
+    tone: 'indigo',
   };
 
   const sections: NavSection[] = [
     {
       label: 'Refund',
       items: [
-        { label: 'Refund Cases', href: '/cases', icon: FileText },
+        { label: 'Refund Cases', href: '/cases', icon: FileText, tone: 'indigo' },
         ...(opsRole
           ? [
               {
                 label: 'Refund Pool',
                 href: '/operations',
                 icon: ShieldCheck,
+                tone: 'teal' as Tone,
               },
             ]
           : []),
@@ -81,12 +115,14 @@ export function Sidebar({
           label: 'Promo Admin',
           href: '/promo',
           icon: Gift,
+          tone: 'peach',
           module: 'promo',
         },
         {
           label: 'Send Promo',
           href: '/promo/allocate',
           icon: Send,
+          tone: 'butter',
           module: 'promo',
         },
       ],
@@ -98,12 +134,14 @@ export function Sidebar({
           label: 'Stores',
           href: '/help-desk/stores',
           icon: Store,
+          tone: 'sky',
           module: 'stores',
         },
         {
           label: 'Branded Solutions',
           href: '/help-desk/branded-solutions',
           icon: Wrench,
+          tone: 'mint',
         },
       ],
     },
@@ -114,9 +152,10 @@ export function Sidebar({
           label: 'Reports',
           href: '/reports',
           icon: BarChart3,
+          tone: 'teal',
           module: 'reports',
         },
-        { label: 'Notifications', href: '/notifications', icon: Bell },
+        { label: 'Notifications', href: '/notifications', icon: Bell, tone: 'rose' },
       ],
     },
     {
@@ -126,6 +165,7 @@ export function Sidebar({
           label: 'User Requests',
           href: '/admin/pending-approvals',
           icon: ClipboardList,
+          tone: 'slate',
           adminOnly: true,
           badge: pendingAccessRequestCount,
         },
@@ -134,11 +174,12 @@ export function Sidebar({
   ];
 
   const footerItems: NavItem[] = [
-    { label: 'Profile', href: '/profile', icon: UserIcon },
+    { label: 'Profile', href: '/profile', icon: UserIcon, tone: 'slate' },
     {
       label: 'Settings',
       href: '/admin/settings',
       icon: Settings,
+      tone: 'slate',
       adminOnly: true,
     },
   ];
@@ -149,38 +190,38 @@ export function Sidebar({
   }
 
   return (
-    <aside
-      className="flex h-full w-[224px] shrink-0 flex-col border-r border-black/40 text-white/85"
-      style={{ backgroundColor: 'hsl(var(--primary-deep))' }}
-    >
-      {/* Brand — Alshaya mark + name, links to dashboard. */}
+    <aside className="relative flex h-full w-[244px] shrink-0 flex-col bg-white">
+      {/* Brand */}
       <Link
         href="/"
-        className="flex h-16 items-center gap-3 border-b border-white/8 px-5 transition-opacity hover:opacity-90"
+        className="flex h-16 items-center gap-3 px-5 transition-opacity hover:opacity-90"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/8 ring-1 ring-white/10">
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+          style={{ backgroundColor: 'hsl(var(--primary))' }}
+        >
           <Image
             src="/brand/alshaya-mark.png"
             alt="Alshaya Group"
-            width={28}
-            height={28}
-            className="h-6 w-6 object-contain"
+            width={26}
+            height={26}
+            className="h-[22px] w-[22px] object-contain brightness-0 invert"
             priority
           />
         </span>
         <div className="min-w-0 leading-tight">
-          <div className="text-[13.5px] font-semibold tracking-tight text-white">
+          <div className="text-[14px] font-semibold tracking-tight text-heading">
             Alshaya
           </div>
-          <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             Operations
           </div>
         </div>
       </Link>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-3 pb-2">
-        {/* Dashboard */}
-        <ul className="space-y-px">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-1 pb-2">
+        {/* Dashboard sits alone, no section heading */}
+        <ul className="space-y-1">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
         </ul>
 
@@ -193,10 +234,10 @@ export function Sidebar({
           if (items.length === 0) return null;
           return (
             <div key={i}>
-              <div className="mt-5 mb-1.5 px-3 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-white/35">
+              <div className="mt-5 mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
                 {section.label}
               </div>
-              <ul className="space-y-px">
+              <ul className="space-y-1">
                 {items.map((item) => (
                   <SidebarRow
                     key={item.href}
@@ -210,8 +251,8 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-white/8 px-3 py-2.5">
-        <ul className="space-y-px">
+      <div className="px-3 pb-3 pt-1">
+        <ul className="space-y-1">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
             .map((item) => (
@@ -225,9 +266,11 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="group flex h-9 items-center gap-3 rounded-lg px-2.5 text-[12.5px] font-medium text-white/55 transition-colors hover:bg-white/8 hover:text-white"
+              className="group flex h-10 items-center gap-3 rounded-xl px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-neutral-100 hover:text-foreground"
             >
-              <LogOut className="h-4 w-4 shrink-0 text-white/45 transition-colors group-hover:text-white/90" />
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
+                <LogOut className="h-3.5 w-3.5 text-neutral-500 transition-colors group-hover:text-foreground" />
+              </span>
               <span className="flex-1 truncate">Sign out</span>
             </a>
           </li>
@@ -240,40 +283,43 @@ export function Sidebar({
 function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
   const Icon = item.icon;
   const showBadge = (item.badge ?? 0) > 0;
+  const tone = TONE[item.tone];
+
   return (
     <li>
       <Link
         href={item.href}
         className={cn(
-          'group relative flex h-9 items-center gap-3 rounded-lg px-2.5 text-[12.5px] font-medium transition-all',
+          'group relative flex h-10 items-center gap-3 rounded-xl px-2 text-[13px] font-medium transition-all',
           isActive
-            ? 'bg-white/12 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
-            : 'text-white/65 hover:bg-white/6 hover:text-white',
+            ? 'bg-[hsl(var(--primary)/0.08)] text-[hsl(var(--primary))]'
+            : 'text-foreground/75 hover:bg-neutral-100 hover:text-foreground',
         )}
       >
-        {/* Active indicator — vertical teal accent bar on the left edge */}
         <span
           aria-hidden
           className={cn(
-            'absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full transition-all',
-            isActive ? 'bg-[hsl(var(--accent))] opacity-100' : 'opacity-0',
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all',
+            isActive ? 'shadow-sm' : '',
           )}
-        />
-        <Icon
-          className={cn(
-            'h-4 w-4 shrink-0 transition-colors',
-            isActive ? 'text-white' : 'text-white/55 group-hover:text-white/90',
-          )}
-          strokeWidth={isActive ? 2.25 : 1.75}
-        />
+          style={{
+            backgroundColor: isActive ? 'hsl(var(--primary))' : tone.bg,
+          }}
+        >
+          <Icon
+            className="h-4 w-4 transition-colors"
+            style={{ color: isActive ? '#FFFFFF' : tone.fg }}
+            strokeWidth={2}
+          />
+        </span>
         <span className="flex-1 truncate">{item.label}</span>
         {showBadge && (
           <span
             className={cn(
-              'inline-flex h-4 min-w-4 items-center justify-center rounded-pill px-1 text-[9.5px] font-semibold leading-none',
+              'inline-flex h-5 min-w-5 items-center justify-center rounded-pill px-1.5 text-[10px] font-semibold leading-none',
               isActive
-                ? 'bg-white/20 text-white'
-                : 'bg-[hsl(var(--accent))] text-[hsl(var(--primary-deep))]',
+                ? 'bg-[hsl(var(--primary))] text-white'
+                : 'bg-destructive text-destructive-foreground',
             )}
             aria-label={`${item.badge} pending`}
           >
