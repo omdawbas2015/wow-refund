@@ -60,26 +60,44 @@ export function AvailabilityToggle({ initial }: Props) {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
+    <div
+      className={cn(
+        'space-y-3 rounded-2xl border p-4 transition-colors',
+        isAvailable
+          ? 'border-emerald-200 bg-emerald-50/40'
+          : 'border-amber-200 bg-amber-50/40',
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-3">
         <span
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium',
+            'inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[12px] font-semibold',
             isAvailable
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-              : 'border-zinc-200 bg-zinc-50 text-zinc-700',
+              ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+              : 'border-amber-300 bg-amber-50 text-amber-900',
           )}
         >
-          <span className={cn('h-1.5 w-1.5 rounded-full', isAvailable ? 'bg-emerald-500' : 'bg-zinc-400')} />
-          {isAvailable ? `Available · ${timer}` : 'Away'}
+          <span
+            className={cn(
+              'h-1.5 w-1.5 rounded-full',
+              isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500',
+            )}
+          />
+          {isAvailable ? `Available · ${timer}` : 'Offline'}
         </span>
-        <Button size="sm" variant={isAvailable ? 'outline' : 'default'} disabled={busy} onClick={() => flip(!isAvailable)}>
-          {isAvailable ? 'Go Away' : 'Go Available'}
+        <Button
+          size="sm"
+          variant={isAvailable ? 'outline' : 'default'}
+          disabled={busy}
+          onClick={() => flip(!isAvailable)}
+        >
+          {busy ? 'Saving…' : isAvailable ? 'Go Offline' : 'Go Available'}
         </Button>
       </div>
-      <p className="text-[12px] text-muted-foreground">
-        While Available you receive new maintenance requests in round-robin and can send Promo / Refund / Maintenance
-        emails. Going Away pauses outbound actions until you flip back.
+      <p className="text-[12px] leading-relaxed text-muted-foreground">
+        {isAvailable
+          ? 'You’re receiving new maintenance requests round-robin and can send Promo / Refund / Maintenance emails.'
+          : 'You’re paused. Tickets will queue in the pool, and outbound Promo / Refund / Maintenance actions are blocked.'}
       </p>
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-900">{error}</div>

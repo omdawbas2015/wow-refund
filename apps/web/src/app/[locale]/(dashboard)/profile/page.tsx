@@ -8,12 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
 import { ProfileForm } from './form';
 import { AvailabilityToggle } from '@/components/availability/profile-toggle';
 import {
   MUTABLE_NOTIFICATION_KINDS,
   parseMutedKinds,
 } from '@/lib/notifications/dispatch';
+import { UserCircle2 } from 'lucide-react';
 
 /**
  * Self-service profile page. Lets the signed-in user update display fields
@@ -47,13 +49,12 @@ export default async function ProfilePage() {
   if (!me) redirect('/login');
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-        <p className="text-sm text-muted-foreground">
-          Update your display name, contact info, and language / theme preferences.
-        </p>
-      </div>
+    <div className="space-y-6 px-4 py-4">
+      <PageHeader
+        eyebrow={<><UserCircle2 className="me-1 h-3 w-3" /> Account</>}
+        title="Profile"
+        description="Update your display name, contact info, and language / theme preferences."
+      />
 
       <Card>
         <CardHeader>
@@ -122,8 +123,8 @@ export default async function ProfilePage() {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-foreground">{value}</div>
+      <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
+      <div className="mt-0.5 break-words text-[12.5px] font-medium text-foreground">{value}</div>
     </div>
   );
 }

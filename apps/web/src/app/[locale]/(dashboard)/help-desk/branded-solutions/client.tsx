@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Search as SearchIcon, ChevronRight, Copy as CopyIcon, Check, Mail, MessageSquare, CheckCircle2, Hand } from 'lucide-react';
+import { Search as SearchIcon, ChevronRight, Copy as CopyIcon, Check, Mail, MessageSquare, CheckCircle2, Hand, Inbox, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type StatusKey =
   | 'PENDING'
@@ -183,42 +185,38 @@ export function BrandedSolutionsClient({ initialRows, supervisors, currentUser }
   const selected = filtered.find((r) => r.id === selectedId) ?? null;
 
   return (
-    <div className="px-4 py-3">
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-display-md font-semibold tracking-tight text-heading">Branded Solutions</h1>
-          <p className="mt-1 text-[12.5px] text-muted-foreground">
-            Maintenance requests received from customers via the Microsoft Form. Live pool — round-robin assigns
-            new tickets to Available agents.
-          </p>
-        </div>
-        <OnlineAgentsRow agents={onlineAgents} currentUserId={currentUser.id} />
-      </div>
+    <div className="space-y-3 px-4 py-4">
+      <PageHeader
+        eyebrow={<><Wrench className="me-1 h-3 w-3" /> Help Desk</>}
+        title="Branded Solutions"
+        description="Live maintenance pool. New requests arrive from the Microsoft Form and are assigned round-robin to Available agents."
+        actions={<OnlineAgentsRow agents={onlineAgents} currentUserId={currentUser.id} />}
+      />
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="border-b border-border px-4 py-3">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        <div className="border-b border-border bg-surface-subtle/40 px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative w-full max-w-sm flex-1 min-w-[220px]">
-              <SearchIcon className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <SearchIcon className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search ticket, customer, store, MR #…"
-                className="h-9 min-w-0 ps-8"
+                className="h-9 min-w-0 ps-9"
               />
             </div>
             <div className="ms-auto text-[11px] text-muted-foreground tabular-nums">
-              {filtered.length} / {rows.length}
+              <span className="font-semibold text-foreground">{filtered.length}</span> of {rows.length}
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             {QUICK_FILTERS.map((f) => (
               <FilterChip key={f.key} active={filter === f.key} onClick={() => setFilter(f.key)}>
                 {f.label}
                 <span
                   className={cn(
-                    'ms-1.5 inline-block rounded-full px-1.5 text-[10px] font-semibold tabular-nums',
-                    filter === f.key ? 'bg-white/25' : 'bg-surface-subtle',
+                    'ms-1.5 inline-flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums leading-none',
+                    filter === f.key ? 'bg-white/25 text-white' : 'bg-surface text-muted-foreground',
                   )}
                 >
                   {counts[f.key] ?? 0}
@@ -230,9 +228,15 @@ export function BrandedSolutionsClient({ initialRows, supervisors, currentUser }
 
         <div className="grid min-h-[640px] md:grid-cols-[minmax(320px,380px)_1fr]">
           <div className="border-b border-border md:border-b-0 md:border-e">
-            <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
+            <div className="scrollbar-thin max-h-[calc(100vh-260px)] overflow-y-auto">
               {filtered.length === 0 ? (
-                <p className="px-4 py-6 text-sm text-muted-foreground">No tickets match your filters.</p>
+                <EmptyState
+                  icon={Inbox}
+                  tone="neutral"
+                  title="No tickets match"
+                  description="Try a different filter chip or clear the search."
+                  className="py-10"
+                />
               ) : (
                 filtered.map((r) => (
                   <QueueRow key={r.id} r={r} active={selected?.id === r.id} onClick={() => setSelectedId(r.id)} now={now} />
@@ -250,7 +254,11 @@ export function BrandedSolutionsClient({ initialRows, supervisors, currentUser }
                 onChanged={() => refreshList()}
               />
             ) : (
-              <div className="py-12 text-center text-sm text-muted-foreground">Select a ticket to work on it.</div>
+              <EmptyState
+                icon={Inbox}
+                title="No ticket selected"
+                description="Pick a ticket from the queue on the left to view its details and act on it."
+              />
             )}
           </div>
         </div>
@@ -266,36 +274,48 @@ export function BrandedSolutionsClient({ initialRows, supervisors, currentUser }
 function OnlineAgentsRow({ agents, currentUserId }: { agents: OnlineAgent[]; currentUserId: string }) {
   if (agents.length === 0) {
     return (
-      <span className="rounded-pill border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] text-muted-foreground">
-        No agents online
+      <span className="inline-flex items-center gap-1.5 rounded-pill border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-900">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+        No agents online — tickets will queue
       </span>
     );
   }
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Online</span>
-      <div className="flex -space-x-1.5">
-        {agents.slice(0, 6).map((a) => {
-          const initial = (a.name || a.email).charAt(0).toUpperCase();
+    <div className="inline-flex items-center gap-2 rounded-pill border border-emerald-200 bg-emerald-50/70 px-2.5 py-1">
+      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold uppercase tracking-wide text-emerald-900">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+        {agents.length} online
+      </span>
+      <div className="hidden items-center gap-1 sm:flex">
+        {agents.slice(0, 5).map((a) => {
           const isMe = a.id === currentUserId;
+          const firstName = (a.name || a.email).split(/[\s@]/)[0] ?? '?';
+          const initial = firstName.charAt(0).toUpperCase();
           return (
             <span
               key={a.id}
               title={`${a.name}${isMe ? ' (you)' : ''} — Available`}
               className={cn(
-                'relative inline-flex h-7 w-7 items-center justify-center rounded-full border-2 text-[11px] font-semibold',
-                isMe ? 'border-emerald-500 bg-emerald-100 text-emerald-900' : 'border-white bg-zinc-100 text-zinc-700',
+                'inline-flex items-center gap-1 rounded-pill bg-white/80 py-0.5 pe-2 ps-0.5 text-[10.5px] font-medium ring-1',
+                isMe ? 'ring-emerald-300 text-emerald-900' : 'ring-border text-foreground',
               )}
             >
-              {initial}
-              <span className="absolute -bottom-0 -right-0 h-2 w-2 rounded-full border border-white bg-emerald-500" />
+              <span
+                className={cn(
+                  'flex h-4 w-4 items-center justify-center rounded-pill text-[9px] font-semibold leading-none',
+                  isMe ? 'bg-emerald-500 text-white' : 'bg-primary text-primary-foreground',
+                )}
+              >
+                {initial}
+              </span>
+              <span className="max-w-[80px] truncate">{firstName}{isMe ? ' (you)' : ''}</span>
             </span>
           );
         })}
+        {agents.length > 5 && (
+          <span className="text-[10.5px] font-medium text-emerald-900">+{agents.length - 5}</span>
+        )}
       </div>
-      {agents.length > 6 && (
-        <span className="text-[11px] text-muted-foreground">+{agents.length - 6}</span>
-      )}
     </div>
   );
 }
@@ -311,10 +331,18 @@ function QueueRow({ r, active, onClick, now }: { r: Row; active: boolean; onClic
       type="button"
       onClick={onClick}
       className={cn(
-        'block w-full border-b border-border px-3 py-2.5 text-start transition-colors',
-        active ? 'bg-primary/5' : 'hover:bg-surface-muted',
+        'group relative block w-full border-b border-border/70 px-3 py-2.5 text-start transition-colors',
+        active
+          ? 'bg-primary/[0.06]'
+          : 'hover:bg-surface-muted/70 focus-visible:bg-surface-muted/70',
       )}
     >
+      {active && (
+        <span
+          aria-hidden
+          className="absolute inset-y-1.5 start-0 w-0.5 rounded-r-full bg-primary"
+        />
+      )}
       <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-[11.5px] font-semibold text-heading">{r.ticketRef}</span>
         <span className={cn('inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 text-[10px] font-semibold', status.tone)}>
@@ -322,19 +350,19 @@ function QueueRow({ r, active, onClick, now }: { r: Row; active: boolean; onClic
           {status.label}
         </span>
       </div>
-      <div className="mt-1 truncate text-[12.5px] font-medium text-foreground">{r.customerName}</div>
+      <div className="mt-1 truncate text-[12.5px] font-semibold text-foreground">{r.customerName}</div>
       <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
         {r.storeName} · {r.countryName}
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-2">
-        <span className="truncate text-[10.5px] text-muted-foreground">
+        <span className="flex min-w-0 items-center gap-1 text-[10.5px] text-muted-foreground">
           {r.assignedTo ? (
             <>
-              <span className={cn('me-1 inline-block h-1.5 w-1.5 rounded-full', r.assignedTo.isAvailable ? 'bg-emerald-500' : 'bg-zinc-300')} />
-              {r.assignedTo.name}
+              <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', r.assignedTo.isAvailable ? 'bg-emerald-500' : 'bg-zinc-300')} />
+              <span className="truncate">{r.assignedTo.name}</span>
             </>
           ) : (
-            'Unassigned'
+            <span className="font-medium text-amber-700">Unassigned</span>
           )}
         </span>
         <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">{timeAgo(r.createdAt, now)}</span>
@@ -429,33 +457,43 @@ function Workbench({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+      <div className="flex items-start justify-between gap-3 border-b border-border bg-surface-subtle/30 px-4 py-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-[13px] font-semibold text-heading">{row.ticketRef}</span>
-            <span className={cn('inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 text-[10.5px] font-semibold', status.tone)}>
-              <span className={cn('h-1 w-1 rounded-full', status.dot)} />
+            <span className={cn('inline-flex items-center gap-1 rounded-pill border px-2 py-0.5 text-[10.5px] font-semibold', status.tone)}>
+              <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
               {status.label}
             </span>
             {row.mrNumber && (
               <Badge variant="outline" className="font-mono text-[10.5px]">MR #{row.mrNumber}</Badge>
             )}
           </div>
-          <div className="mt-1 truncate text-[13px] font-medium text-foreground">{row.customerName}</div>
-          <div className="text-[11.5px] text-muted-foreground">
+          <div className="mt-1.5 truncate text-[13.5px] font-semibold text-heading">{row.customerName}</div>
+          <div className="truncate text-[11.5px] text-muted-foreground">
             {row.storeName} · {row.cityName ? `${row.cityName} · ` : ''}{row.countryName}
           </div>
         </div>
-        <Button size="sm" variant="outline" onClick={copyTicket} className="shrink-0 gap-1">
-          {copied ? <Check className="h-3 w-3" /> : <CopyIcon className="h-3 w-3" />}
-          {copied ? 'Copied' : 'Copy for Archibus'}
+        <Button size="sm" variant={copied ? 'success' : 'outline'} onClick={copyTicket} className="shrink-0 gap-1.5">
+          {copied ? <Check className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
+          {copied ? 'Copied!' : 'Copy for Archibus'}
         </Button>
       </div>
 
       {/* Body */}
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {error && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-900">{error}</div>}
-        {info && <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-900">{info}</div>}
+      <div className="scrollbar-thin flex-1 space-y-4 overflow-y-auto px-4 py-4">
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-900 animate-fade-in">
+            <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+            <span>{error}</span>
+          </div>
+        )}
+        {info && (
+          <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-900 animate-fade-in">
+            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+            <span>{info}</span>
+          </div>
+        )}
 
         {/* Form data — clean 2-column grid */}
         <Card className="border-border/60 shadow-none">
@@ -636,10 +674,10 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex h-7 items-center rounded-pill border px-3 text-[11.5px] font-medium transition-colors',
+        'inline-flex h-7 items-center gap-1 rounded-pill border px-2.5 text-[11.5px] font-medium transition-colors',
         active
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-border bg-surface text-foreground hover:bg-surface-muted',
+          ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+          : 'border-border bg-surface text-foreground hover:border-border-strong hover:bg-surface-muted',
       )}
     >
       {children}

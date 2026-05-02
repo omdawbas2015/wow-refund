@@ -132,6 +132,7 @@ const config: Config = {
         // Single hairline border + tiny lift — used by Card.
         'card': '0 1px 2px rgba(15, 23, 42, 0.04)',
         'card-hover': '0 2px 6px rgba(15, 23, 42, 0.07)',
+        'popover': '0 10px 30px rgba(15, 23, 42, 0.10), 0 4px 10px rgba(15, 23, 42, 0.05)',
       },
       transitionTimingFunction: {
         'out-quart': 'cubic-bezier(0.25, 1, 0.5, 1)',
@@ -153,12 +154,21 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'translateY(4px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'bell-shake': {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '15%': { transform: 'rotate(8deg)' },
+          '30%': { transform: 'rotate(-7deg)' },
+          '45%': { transform: 'rotate(5deg)' },
+          '60%': { transform: 'rotate(-3deg)' },
+          '75%': { transform: 'rotate(2deg)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.18s ease-out',
         'accordion-up': 'accordion-up 0.18s ease-out',
         'fade-in': 'fade-in 200ms ease-out',
         'fade-in-up': 'fade-in-up 240ms ease-out',
+        'bell-shake': 'bell-shake 1.4s ease-in-out infinite',
       },
     },
   },

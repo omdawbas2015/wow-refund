@@ -3,7 +3,9 @@ import { prisma } from '@wow/db';
 import { caseListFiltersSchema } from '@wow/validators';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, FileText, Download } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Plus, FileText, Download, Inbox } from 'lucide-react';
 import { CaseFiltersBar } from './case-filters-bar';
 import { STATUS_BUCKETS } from './case-status-buckets';
 import { CasesTable, type CaseRow } from './cases-table';
@@ -178,34 +180,30 @@ export default async function CasesPage({
   ).toString();
 
   return (
-    <div className="mx-auto max-w-[1480px] px-4 py-3">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-display-sm font-semibold tracking-tight text-heading">
-            Refund cases
-          </h1>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            {total.toLocaleString()} {total === 1 ? 'case' : 'cases'} · Manage
-            and track all refund requests across brands.
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {canExport && (
-            <Button asChild size="default" variant="outline">
-              <a href={`/api/export/cases?${exportQuery}`}>
-                <Download className="h-4 w-4" />
-                Export
-              </a>
+    <div className="mx-auto max-w-[1480px] space-y-3 px-4 py-4">
+      <PageHeader
+        eyebrow={<><FileText className="me-1 h-3 w-3" /> Operations</>}
+        title="Refund cases"
+        description={`${total.toLocaleString()} ${total === 1 ? 'case' : 'cases'} · Manage and track all refund requests across brands.`}
+        actions={
+          <>
+            {canExport && (
+              <Button asChild size="default" variant="outline">
+                <a href={`/api/export/cases?${exportQuery}`}>
+                  <Download className="h-4 w-4" />
+                  Export
+                </a>
+              </Button>
+            )}
+            <Button asChild size="default">
+              <Link href={`/${locale}/cases/new`}>
+                <Plus className="h-4 w-4" />
+                New case
+              </Link>
             </Button>
-          )}
-          <Button asChild size="default">
-            <Link href={`/${locale}/cases/new`}>
-              <Plus className="h-4 w-4" />
-              New case
-            </Link>
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <CaseFiltersBar
         countries={countries.map((c) => ({
@@ -220,22 +218,22 @@ export default async function CasesPage({
 
       {cases.length === 0 ? (
         <Card>
-          <CardContent className="py-16">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-subtle">
-                <FileText className="h-7 w-7 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold text-heading">No cases found</h3>
-              <p className="max-w-md text-sm text-muted-foreground">
-                Try adjusting your filters, or create a new refund case to get started.
-              </p>
-              <Button asChild className="mt-2">
-                <Link href={`/${locale}/cases/new`}>
-                  <Plus className="h-4 w-4" />
-                  New case
-                </Link>
-              </Button>
-            </div>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={Inbox}
+              tone="butter"
+              title="No cases match"
+              description="Try adjusting filters, or create a new refund case to get started."
+              className="py-14"
+              action={
+                <Button asChild>
+                  <Link href={`/${locale}/cases/new`}>
+                    <Plus className="h-4 w-4" />
+                    New case
+                  </Link>
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       ) : (
