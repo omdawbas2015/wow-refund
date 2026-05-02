@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -9,20 +8,15 @@ interface Props {
 }
 
 /**
- * App-wide availability banner. Lives at the very top of the
- * dashboard layout so the user always sees their On/Off state and
- * has one click to flip it. The banner is **also** what enforces the
- * "close the tab → go Away" rule:
+ * App-wide availability strip. Lives at the very top of the dashboard
+ * layout so the user always sees their On/Off state and has one click
+ * to flip it. Refined visual: a slim 28-px strip with a single status
+ * pill + an inline toggle button. Never blocks content.
  *
- *   - Every 25 s it pings POST /api/me/heartbeat to extend the
- *     session.
- *   - On `pagehide` / `beforeunload` it fires
- *     navigator.sendBeacon to /api/me/availability with isAvailable=false
- *     so the moment the user closes the site they go Offline.
- *
- * Server-side, /auth signs the user in with isAvailable=false by
- * default (set in auth.config.ts events.signIn) so a brand-new
- * session always starts Away.
+ * Persistence rules:
+ *   - Heartbeat every 25 s extends the session presence row.
+ *   - On `pagehide`/`beforeunload`, navigator.sendBeacon flips the
+ *     user to Offline so closed tabs never hold work.
  */
 export function GlobalAvailabilityBanner({ initial }: Props) {
   const [isAvailable, setIsAvailable] = useState(initial.isAvailable);
@@ -32,13 +26,11 @@ export function GlobalAvailabilityBanner({ initial }: Props) {
   const [error, setError] = useState<string | null>(null);
   const dismissedRef = useRef(false);
 
-  // 1-second tick for the timer.
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // Heartbeat — every 25 s while the page is alive.
   useEffect(() => {
     const t = setInterval(() => {
       void fetch('/api/me/heartbeat', { method: 'POST', cache: 'no-store' }).catch(() => {});
@@ -46,8 +38,6 @@ export function GlobalAvailabilityBanner({ initial }: Props) {
     return () => clearInterval(t);
   }, []);
 
-  // Auto-Away on tab close. Use sendBeacon so it survives the tab
-  // teardown — fetch() in beforeunload is not guaranteed to ship.
   useEffect(() => {
     function flipAwayBeacon() {
       try {
@@ -98,38 +88,54 @@ export function GlobalAvailabilityBanner({ initial }: Props) {
 
   return (
     <div
-      className={cn(
-        'flex w-full items-center justify-between gap-3 border-b px-4 py-1.5 text-[12px]',
-        isAvailable
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-          : 'border-amber-200 bg-amber-50 text-amber-900',
-      )}
       role="status"
+      className={cn(
+        'flex h-7 w-full items-center justify-between gap-3 border-b px-4 text-[11.5px] transition-colors',
+        isAvailable
+          ? 'border-emerald-100 bg-emerald-50/60 text-emerald-900'
+          : 'border-amber-100 bg-amber-50/60 text-amber-900',
+      )}
     >
-      <div className="flex items-center gap-2">
-        <span className={cn('inline-block h-1.5 w-1.5 rounded-full', isAvailable ? 'bg-emerald-500' : 'bg-amber-500')} />
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-pill px-2 py-0.5 text-[10.5px] font-semibold leading-none',
+            isAvailable
+              ? 'bg-emerald-500/15 text-emerald-900'
+              : 'bg-amber-500/15 text-amber-900',
+          )}
+        >
+          <span
+            className={cn(
+              'h-1.5 w-1.5 rounded-full',
+              isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500',
+            )}
+          />
+          {isAvailable ? 'Available' : 'Offline'}
+        </span>
         {isAvailable ? (
-          <>
-            <strong className="font-semibold">You are Available</strong>
-            <span className="tabular-nums opacity-80">· active for {timer}</span>
-          </>
+          <span className="tabular-nums opacity-80">active for {timer}</span>
         ) : (
-          <>
-            <strong className="font-semibold">You are Offline</strong>
-            <span className="opacity-80">— go Available to receive new work and use Promo / Refund / Maintenance.</span>
-          </>
+          <span className="hidden truncate opacity-80 sm:inline">
+            go Available to receive new work and use Promo / Refund / Maintenance
+          </span>
         )}
-        {error && <span className="ms-2 text-red-700">· {error}</span>}
+        {error && <span className="ms-2 truncate text-red-700">· {error}</span>}
       </div>
-      <Button
-        size="sm"
-        variant={isAvailable ? 'outline' : 'default'}
-        disabled={busy || dismissedRef.current}
+      <button
+        type="button"
         onClick={() => flip(!isAvailable)}
-        className="h-6 px-2 text-[11px]"
+        disabled={busy || dismissedRef.current}
+        className={cn(
+          'inline-flex h-5 shrink-0 items-center rounded-pill px-2 text-[10.5px] font-semibold leading-none transition-colors',
+          'disabled:opacity-50',
+          isAvailable
+            ? 'border border-emerald-300/70 bg-white/60 text-emerald-900 hover:bg-white'
+            : 'bg-amber-600 text-white hover:bg-amber-700',
+        )}
       >
         {isAvailable ? 'Go Offline' : 'Go Available'}
-      </Button>
+      </button>
     </div>
   );
 }

@@ -176,23 +176,31 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-[184px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
+    <aside className="flex h-full w-[200px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg text-sidebar-fg">
       {/* Brand — Alshaya mark + name, links to dashboard. */}
-      <Link href="/" className="flex h-10 items-center gap-2 px-3 transition-opacity hover:opacity-80">
+      <Link
+        href="/"
+        className="flex h-12 items-center gap-2.5 border-b border-sidebar-border px-3 transition-opacity hover:opacity-80"
+      >
         <Image
           src="/brand/alshaya-mark.png"
           alt="Alshaya Group"
-          width={24}
-          height={24}
-          className="h-6 w-6 shrink-0 object-contain"
+          width={28}
+          height={28}
+          className="h-7 w-7 shrink-0 object-contain"
           priority
         />
-        <span className="text-[11.5px] font-semibold tracking-tight text-heading">
-          Alshaya Group
+        <span className="flex flex-col leading-tight">
+          <span className="text-[12px] font-semibold tracking-tight text-heading">
+            Alshaya Group
+          </span>
+          <span className="text-[9.5px] font-medium uppercase tracking-[0.08em] text-sidebar-muted">
+            Operations Hub
+          </span>
         </span>
       </Link>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 pt-1.5 pb-1.5">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 pt-2 pb-2">
         {/* Dashboard */}
         <ul className="space-y-0.5">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
@@ -207,7 +215,7 @@ export function Sidebar({
           if (items.length === 0) return null;
           return (
             <div key={i}>
-              <div className="mt-3 mb-1 px-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-sidebar-muted">
+              <div className="mt-3.5 mb-1 px-2 text-[9.5px] font-semibold uppercase tracking-[0.12em] text-sidebar-muted">
                 {section.label}
               </div>
               <ul className="space-y-0.5">
@@ -224,7 +232,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border px-2 py-1.5">
+      <div className="border-t border-sidebar-border px-2 py-2">
         <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
@@ -239,7 +247,7 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="flex h-7 items-center gap-2 rounded-xl px-2 text-[11px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
+              className="flex h-8 items-center gap-2 rounded-xl px-2 text-[11.5px] font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
             >
               <span className="flex h-5 w-5 items-center justify-center rounded-lg chip-rose">
                 <LogOut className="h-3 w-3" />
@@ -261,15 +269,21 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group flex h-7 items-center gap-2 rounded-xl px-2 text-[11px] font-medium transition-colors',
+          'group relative flex h-8 items-center gap-2 rounded-xl px-2 text-[11.5px] font-medium transition-colors',
           isActive
-            ? 'bg-surface text-heading shadow-xs'
+            ? 'bg-surface text-heading shadow-xs ring-1 ring-border/60'
             : 'text-sidebar-fg hover:bg-sidebar-hover hover:text-heading',
         )}
       >
+        {isActive && (
+          <span
+            aria-hidden
+            className="absolute -start-2 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-primary"
+          />
+        )}
         <span
           className={cn(
-            'flex h-5 w-5 shrink-0 items-center justify-center rounded-lg',
+            'flex h-5 w-5 shrink-0 items-center justify-center rounded-lg transition-colors',
             isActive ? 'surface-butter' : CHIP_CLASS[item.tone],
           )}
         >
@@ -278,7 +292,7 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
         <span className="flex-1 truncate">{item.label}</span>
         {showBadge && (
           <span
-            className="inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-neutral-900 px-1 text-[9px] font-semibold leading-none text-white"
+            className="inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-destructive px-1 text-[9.5px] font-semibold leading-none text-destructive-foreground"
             aria-label={`${item.badge} pending`}
           >
             {item.badge}

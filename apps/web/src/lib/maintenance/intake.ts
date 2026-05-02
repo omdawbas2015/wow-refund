@@ -117,13 +117,43 @@ export async function ingestMaintenanceRequest(
       select: { id: true, name: true },
     });
     if (u) assignedSummary = u;
-    // Personal in-app notification + bell badge.
+    // Personal in-app notification for the assigned agent.
     await dispatchNotifications({
       userIds: [pick.userId],
       type: 'MAINT_REQUEST_ASSIGNED',
       title: `New maintenance request assigned: ${request.ticketRef}`,
       body: `${request.customerName} · ${request.storeName} · ${request.machineModel}`,
-      href: `/help-desk/branded-solutions/${request.id}`,
+      href: `/help-desk/branded-solutions`,
+      contextType: 'MAINT',
+      contextId: request.id,
+    });
+  }
+
+  // Heads-up notification for every maintenance handler so the whole
+  // pool team sees the bell + hears the chime when a fresh ticket lands
+  // (excluding the assignee who already got the personal one above).
+  // For PENDING tickets nobody is assigned yet, so everyone gets the
+  // "new in pool" version.
+  const handlers = await prisma.user.findMany({
+    where: {
+      status: 'ACTIVE',
+      deletedAt: null,
+      role: {
+        permissions: { some: { permission: { key: 'maintenance.handle' } } },
+      },
+      ...(pick ? { id: { not: pick.userId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (handlers.length > 0) {
+    await dispatchNotifications({
+      userIds: handlers.map((h) => h.id),
+      type: 'MAINT_REQUEST_NEW',
+      title: pick
+        ? `New ticket in pool: ${request.ticketRef}`
+        : `Unassigned ticket in pool: ${request.ticketRef}`,
+      body: `${request.customerName} · ${request.storeName} · ${request.machineModel}`,
+      href: `/help-desk/branded-solutions`,
       contextType: 'MAINT',
       contextId: request.id,
     });
