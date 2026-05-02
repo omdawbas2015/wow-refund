@@ -191,24 +191,19 @@ export function Sidebar({
 
   return (
     <aside className="relative flex h-full w-[244px] shrink-0 flex-col bg-white">
-      {/* Brand */}
+      {/* Brand — original Alshaya mark + name. */}
       <Link
         href="/"
         className="flex h-16 items-center gap-3 px-5 transition-opacity hover:opacity-90"
       >
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-          style={{ backgroundColor: 'hsl(var(--primary))' }}
-        >
-          <Image
-            src="/brand/alshaya-mark.png"
-            alt="Alshaya Group"
-            width={26}
-            height={26}
-            className="h-[22px] w-[22px] object-contain brightness-0 invert"
-            priority
-          />
-        </span>
+        <Image
+          src="/brand/alshaya-mark.png"
+          alt="Alshaya Group"
+          width={36}
+          height={36}
+          className="h-9 w-9 shrink-0 object-contain"
+          priority
+        />
         <div className="min-w-0 leading-tight">
           <div className="text-[14px] font-semibold tracking-tight text-heading">
             Alshaya
@@ -219,9 +214,9 @@ export function Sidebar({
         </div>
       </Link>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-1 pb-2">
+      <nav className="flex-1 min-h-0 px-3 pt-0.5 pb-1">
         {/* Dashboard sits alone, no section heading */}
-        <ul className="space-y-1">
+        <ul className="space-y-0.5">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
         </ul>
 
@@ -234,10 +229,10 @@ export function Sidebar({
           if (items.length === 0) return null;
           return (
             <div key={i}>
-              <div className="mt-5 mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+              <div className="mt-3 mb-0.5 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
                 {section.label}
               </div>
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {items.map((item) => (
                   <SidebarRow
                     key={item.href}
@@ -251,8 +246,8 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="px-3 pb-3 pt-1">
-        <ul className="space-y-1">
+      <div className="px-3 pb-3 pt-0.5">
+        <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
             .map((item) => (
@@ -266,9 +261,9 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="group flex h-10 items-center gap-3 rounded-xl px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-neutral-100 hover:text-foreground"
+              className="group flex h-9 items-center gap-2.5 rounded-lg px-2 text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-neutral-100 hover:text-foreground"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-neutral-100">
                 <LogOut className="h-3.5 w-3.5 text-neutral-500 transition-colors group-hover:text-foreground" />
               </span>
               <span className="flex-1 truncate">Sign out</span>
@@ -290,7 +285,7 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group relative flex h-10 items-center gap-3 rounded-xl px-2 text-[13px] font-medium transition-all',
+          'group relative flex h-9 items-center gap-2.5 rounded-lg px-2 text-[12.5px] font-medium transition-all',
           isActive
             ? 'bg-[hsl(var(--primary)/0.08)] text-[hsl(var(--primary))]'
             : 'text-foreground/75 hover:bg-neutral-100 hover:text-foreground',
@@ -299,7 +294,7 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
         <span
           aria-hidden
           className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all',
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-all',
             isActive ? 'shadow-sm' : '',
           )}
           style={{
@@ -307,9 +302,9 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
           }}
         >
           <Icon
-            className="h-4 w-4 transition-colors"
+            className="h-3.5 w-3.5 transition-colors"
             style={{ color: isActive ? '#FFFFFF' : tone.fg }}
-            strokeWidth={2}
+            strokeWidth={2.25}
           />
         </span>
         <span className="flex-1 truncate">{item.label}</span>
