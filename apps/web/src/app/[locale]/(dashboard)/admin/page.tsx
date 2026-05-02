@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from '@/i18n/routing';
 import { auth } from '@/auth';
-import { Globe, Tag, CreditCard, AlertTriangle, Mail, Users, Settings, ShieldAlert, Timer, ChevronRight, Wrench } from 'lucide-react';
+import { Globe, Tag, CreditCard, AlertTriangle, Mail, Users, Settings, ShieldAlert, Timer, ChevronRight, Wrench, Cog } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
 
 const SECTIONS = [
   { href: '/admin/countries', icon: Globe, title: 'Countries', desc: 'Manager email, cutoff time, sort order' },
@@ -24,26 +25,25 @@ export default async function AdminPage() {
   if (session.user.role !== 'ADMIN') redirect('/');
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10">
-      <div className="mb-6">
-        <h1 className="text-display-md font-normal tracking-tight text-heading">Administration</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Static data, copy, and access control. Changes are audit-logged.
-        </p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="mx-auto max-w-5xl space-y-5 px-4 py-4">
+      <PageHeader
+        eyebrow={<><Cog className="me-1 h-3 w-3" /> System</>}
+        title="Administration"
+        description="Static data, copy, and access control. Changes are audit-logged."
+      />
+      <div className="grid gap-3 sm:grid-cols-2">
         {SECTIONS.map((s) => (
           <Link key={s.href} href={s.href} className="block">
-            <Card className="transition-colors hover:border-primary/40">
-              <CardHeader className="flex-row items-center gap-3 space-y-0">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Card className="group transition-all hover:-translate-y-px hover:border-primary/40 hover:shadow-card-hover">
+              <CardHeader className="flex-row items-center gap-3 space-y-0 py-3.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
                   <s.icon className="h-4 w-4" />
                 </div>
-                <div className="flex-1">
-                  <CardTitle className="text-base">{s.title}</CardTitle>
-                  <CardDescription>{s.desc}</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-[13.5px]">{s.title}</CardTitle>
+                  <CardDescription className="text-[11.5px] leading-snug">{s.desc}</CardDescription>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </CardHeader>
               <CardContent />
             </Card>

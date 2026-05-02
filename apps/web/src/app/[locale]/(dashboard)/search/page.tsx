@@ -371,15 +371,17 @@ export default async function GlobalSearchPage({
 
 function Wrapper({ q, children }: { q: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
-      <div className="mb-6">
-        <div className="text-xs uppercase text-muted-foreground">Search</div>
-        <h1 className="text-display-md font-normal tracking-tight text-heading">
+    <div className="mx-auto max-w-6xl space-y-5 px-4 py-4">
+      <div>
+        <div className="inline-flex items-center text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          Search
+        </div>
+        <h1 className="font-semibold tracking-tight text-display-sm text-heading">
           Results for &ldquo;{q}&rdquo;
         </h1>
       </div>
 
-      <form className="mb-6 flex gap-2">
+      <form className="flex gap-2">
         <Input
           name="q"
           defaultValue={q}
@@ -396,13 +398,18 @@ function Wrapper({ q, children }: { q: string; children: React.ReactNode }) {
 
 function EmptyState() {
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
-      <div className="mb-6">
-        <div className="text-xs uppercase text-muted-foreground">Search</div>
-        <h1 className="text-display-md font-normal tracking-tight text-heading">Global search</h1>
+    <div className="mx-auto max-w-6xl space-y-5 px-4 py-4">
+      <div>
+        <div className="inline-flex items-center text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          Search
+        </div>
+        <h1 className="font-semibold tracking-tight text-display-sm text-heading">Global search</h1>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+          Searches cases, customers, batches (approval / KNET / Aura), and users (admin).
+        </p>
       </div>
 
-      <form className="mb-6 flex gap-2">
+      <form className="flex gap-2">
         <Input
           name="q"
           placeholder="Case number, order, customer email, batch…"
@@ -411,10 +418,6 @@ function EmptyState() {
         />
         <Button type="submit">Search</Button>
       </form>
-
-      <p className="text-sm text-muted-foreground">
-        Searches cases, customers, batches (approval / KNET / Aura), and users (admin).
-      </p>
     </div>
   );
 }

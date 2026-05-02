@@ -3,9 +3,12 @@ import { prisma, Prisma, type NotificationType } from '@wow/db';
 import { auth } from '@/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Link } from '@/i18n/routing';
 import { formatDateTime } from '@/lib/utils';
 import { InboxActions, RowActions } from './client';
+import { Bell, BellOff } from 'lucide-react';
 
 interface PageProps {
   searchParams: Promise<{
@@ -94,47 +97,46 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-display-md font-normal tracking-tight text-heading">Inbox</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {unreadCount > 0
-              ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}.`
-              : 'No unread notifications.'}
-          </p>
-        </div>
-        <InboxActions hasUnread={unreadCount > 0} />
-      </div>
+    <div className="mx-auto max-w-4xl space-y-5 px-4 py-4">
+      <PageHeader
+        eyebrow={<><Bell className="me-1 h-3 w-3" /> Inbox</>}
+        title="Notifications"
+        description={
+          unreadCount > 0
+            ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}.`
+            : 'No unread notifications.'
+        }
+        actions={<InboxActions hasUnread={unreadCount > 0} />}
+      />
 
-      <div className="mt-6 flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
         <Link
           href={buildHref({ state: 'unread', page: 1 })}
-          className={`rounded-md border px-3 py-1.5 ${
+          className={`inline-flex h-7 items-center rounded-pill border px-2.5 font-medium transition-colors ${
             state === 'unread'
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-border hover:bg-surface-subtle'
+              ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+              : 'border-border bg-surface text-foreground hover:border-border-strong hover:bg-surface-muted'
           }`}
         >
-          Unread
+          Unread{unreadCount > 0 && state === 'unread' ? ` · ${unreadCount}` : ''}
         </Link>
         <Link
           href={buildHref({ state: 'all', page: 1 })}
-          className={`rounded-md border px-3 py-1.5 ${
+          className={`inline-flex h-7 items-center rounded-pill border px-2.5 font-medium transition-colors ${
             state === 'all'
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-border hover:bg-surface-subtle'
+              ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+              : 'border-border bg-surface text-foreground hover:border-border-strong hover:bg-surface-muted'
           }`}
         >
           All
         </Link>
-        <span className="mx-2 h-5 w-px bg-border" />
+        <span className="mx-1 h-5 w-px bg-border" />
         <form method="get" className="flex items-center gap-2">
           {state !== 'unread' ? <input type="hidden" name="state" value={state} /> : null}
           <select
             name="type"
             defaultValue={type ?? ''}
-            className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+            className="h-7 rounded-pill border border-border bg-surface px-2.5 text-[11.5px] font-medium"
           >
             <option value="">Any type</option>
             {VALID_TYPES.map((t) => (
@@ -152,77 +154,86 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
         </form>
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-[13px]">
             {total} notification{total === 1 ? '' : 's'} · page {page} of {pages}
           </CardTitle>
           <CardDescription>Most recent first.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <ul className="divide-y divide-border">
-            {items.map((n) => (
-              <li
-                key={n.id}
-                className={`flex items-start gap-3 px-4 py-3 ${
-                  n.readAt ? 'opacity-70' : ''
-                }`}
-              >
-                <span
-                  className={`mt-1 h-2 w-2 rounded-full ${
-                    n.readAt ? 'bg-muted-foreground/30' : 'bg-primary'
+          {items.length === 0 ? (
+            <EmptyState
+              icon={state === 'unread' ? BellOff : Bell}
+              tone={state === 'unread' ? 'mint' : 'neutral'}
+              title={state === 'unread' ? 'You’re all caught up' : 'No notifications match'}
+              description={
+                state === 'unread'
+                  ? 'New maintenance, case, and SLA alerts will appear here.'
+                  : 'Try a different filter or check back later.'
+              }
+              className="py-12"
+            />
+          ) : (
+            <ul className="divide-y divide-border">
+              {items.map((n) => (
+                <li
+                  key={n.id}
+                  className={`flex items-start gap-3 px-4 py-3 transition-colors ${
+                    n.readAt ? 'opacity-70' : 'bg-primary/[0.03]'
                   }`}
-                  aria-hidden
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={TYPE_TONE[n.type]}>{n.type}</Badge>
-                    <span className="font-medium text-heading">{n.title}</span>
-                    <span className="ms-auto text-xs tabular text-muted-foreground">
-                      {formatDateTime(n.createdAt, 'en-US')}
-                    </span>
+                >
+                  <span
+                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                      n.readAt ? 'bg-muted-foreground/30' : 'bg-primary'
+                    }`}
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={TYPE_TONE[n.type]}>{n.type}</Badge>
+                      <span className="text-[13px] font-semibold text-heading">{n.title}</span>
+                      <span className="ms-auto text-[10.5px] tabular-nums text-muted-foreground">
+                        {formatDateTime(n.createdAt, 'en-US')}
+                      </span>
+                    </div>
+                    {n.body ? (
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">{n.body}</p>
+                    ) : null}
+                    {n.href ? (
+                      <Link
+                        href={n.href}
+                        className="mt-1.5 inline-block text-[11.5px] font-medium text-primary hover:underline"
+                      >
+                        Open →
+                      </Link>
+                    ) : null}
                   </div>
-                  {n.body ? (
-                    <p className="mt-1 text-sm text-muted-foreground">{n.body}</p>
-                  ) : null}
-                  {n.href ? (
-                    <Link
-                      href={n.href}
-                      className="mt-1 inline-block text-xs text-primary hover:underline"
-                    >
-                      Open →
-                    </Link>
-                  ) : null}
-                </div>
-                <RowActions id={n.id} read={n.readAt !== null} />
-              </li>
-            ))}
-            {items.length === 0 ? (
-              <li className="px-4 py-10 text-center text-sm text-muted-foreground">
-                {state === 'unread' ? 'Nothing new. You are all caught up.' : 'No notifications match.'}
-              </li>
-            ) : null}
-          </ul>
+                  <RowActions id={n.id} read={n.readAt !== null} />
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 
       {pages > 1 ? (
-        <div className="mt-4 flex items-center justify-end gap-2 text-sm">
+        <div className="flex items-center justify-end gap-2 text-[12.5px]">
           {page > 1 ? (
             <Link
               href={buildHref({ page: page - 1 })}
-              className="rounded-md border border-border px-2 py-1 hover:bg-surface-subtle"
+              className="inline-flex h-7 items-center rounded-pill border border-border bg-surface px-3 font-medium hover:border-border-strong hover:bg-surface-muted"
             >
               ← Prev
             </Link>
           ) : null}
-          <span className="text-muted-foreground">
+          <span className="text-muted-foreground tabular-nums">
             {page} / {pages}
           </span>
           {page < pages ? (
             <Link
               href={buildHref({ page: page + 1 })}
-              className="rounded-md border border-border px-2 py-1 hover:bg-surface-subtle"
+              className="inline-flex h-7 items-center rounded-pill border border-border bg-surface px-3 font-medium hover:border-border-strong hover:bg-surface-muted"
             >
               Next →
             </Link>
