@@ -23,7 +23,7 @@ import {
 interface NavItem {
   label: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   adminOnly?: boolean;
   module?: string;
   badge?: number;
@@ -149,28 +149,38 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-[208px] shrink-0 flex-col border-r border-sidebar-border bg-[hsl(var(--accent-cream))] text-sidebar-fg">
+    <aside
+      className="flex h-full w-[224px] shrink-0 flex-col border-r border-black/40 text-white/85"
+      style={{ backgroundColor: 'hsl(var(--primary-deep))' }}
+    >
       {/* Brand — Alshaya mark + name, links to dashboard. */}
       <Link
         href="/"
-        className="flex h-14 items-center gap-2.5 px-4 transition-opacity hover:opacity-90"
+        className="flex h-16 items-center gap-3 border-b border-white/8 px-5 transition-opacity hover:opacity-90"
       >
-        <Image
-          src="/brand/alshaya-mark.png"
-          alt="Alshaya Group"
-          width={32}
-          height={32}
-          className="h-8 w-8 shrink-0 object-contain"
-          priority
-        />
-        <span className="text-[13px] font-semibold tracking-tight text-heading">
-          Alshaya
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/8 ring-1 ring-white/10">
+          <Image
+            src="/brand/alshaya-mark.png"
+            alt="Alshaya Group"
+            width={28}
+            height={28}
+            className="h-6 w-6 object-contain"
+            priority
+          />
         </span>
+        <div className="min-w-0 leading-tight">
+          <div className="text-[13.5px] font-semibold tracking-tight text-white">
+            Alshaya
+          </div>
+          <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
+            Operations
+          </div>
+        </div>
       </Link>
 
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pt-1 pb-2">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pt-3 pb-2">
         {/* Dashboard */}
-        <ul className="space-y-0.5">
+        <ul className="space-y-px">
           <SidebarRow item={dashboardItem} isActive={isActiveHref(dashboardItem.href)} />
         </ul>
 
@@ -183,10 +193,10 @@ export function Sidebar({
           if (items.length === 0) return null;
           return (
             <div key={i}>
-              <div className="mt-4 mb-1 px-2 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--primary))/0.55] opacity-60">
+              <div className="mt-5 mb-1.5 px-3 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-white/35">
                 {section.label}
               </div>
-              <ul className="space-y-0.5">
+              <ul className="space-y-px">
                 {items.map((item) => (
                   <SidebarRow
                     key={item.href}
@@ -200,8 +210,8 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="px-2.5 py-2">
-        <ul className="space-y-0.5">
+      <div className="border-t border-white/8 px-3 py-2.5">
+        <ul className="space-y-px">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
             .map((item) => (
@@ -215,11 +225,9 @@ export function Sidebar({
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/signout"
-              className="flex h-8 items-center gap-2 rounded-xl px-2 text-[11.5px] font-medium text-sidebar-muted transition-colors hover:bg-white/60 hover:text-heading"
+              className="group flex h-9 items-center gap-3 rounded-lg px-2.5 text-[12.5px] font-medium text-white/55 transition-colors hover:bg-white/8 hover:text-white"
             >
-              <span className="flex h-5 w-5 items-center justify-center text-sidebar-muted">
-                <LogOut className="h-3.5 w-3.5" />
-              </span>
+              <LogOut className="h-4 w-4 shrink-0 text-white/45 transition-colors group-hover:text-white/90" />
               <span className="flex-1 truncate">Sign out</span>
             </a>
           </li>
@@ -237,17 +245,26 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          'group relative flex h-8 items-center gap-2.5 rounded-xl px-2 text-[12px] font-medium transition-all',
+          'group relative flex h-9 items-center gap-3 rounded-lg px-2.5 text-[12.5px] font-medium transition-all',
           isActive
-            ? 'bg-[hsl(var(--primary))] text-white shadow-sm'
-            : 'text-[hsl(var(--neutral-700))] hover:bg-white/70 hover:text-heading',
+            ? 'bg-white/12 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+            : 'text-white/65 hover:bg-white/6 hover:text-white',
         )}
       >
+        {/* Active indicator — vertical teal accent bar on the left edge */}
+        <span
+          aria-hidden
+          className={cn(
+            'absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full transition-all',
+            isActive ? 'bg-[hsl(var(--accent))] opacity-100' : 'opacity-0',
+          )}
+        />
         <Icon
           className={cn(
-            'h-3.5 w-3.5 shrink-0 transition-colors',
-            isActive ? 'text-white' : 'text-[hsl(var(--neutral-500))]',
+            'h-4 w-4 shrink-0 transition-colors',
+            isActive ? 'text-white' : 'text-white/55 group-hover:text-white/90',
           )}
+          strokeWidth={isActive ? 2.25 : 1.75}
         />
         <span className="flex-1 truncate">{item.label}</span>
         {showBadge && (
@@ -256,7 +273,7 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
               'inline-flex h-4 min-w-4 items-center justify-center rounded-pill px-1 text-[9.5px] font-semibold leading-none',
               isActive
                 ? 'bg-white/20 text-white'
-                : 'bg-destructive text-destructive-foreground',
+                : 'bg-[hsl(var(--accent))] text-[hsl(var(--primary-deep))]',
             )}
             aria-label={`${item.badge} pending`}
           >
