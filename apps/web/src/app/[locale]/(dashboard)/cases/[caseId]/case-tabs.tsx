@@ -34,6 +34,7 @@ import { CaseStatusStepper, type CaseStatus } from '@/components/ui/case-status-
 import { PaymentMethodIcons } from '@/components/ui/payment-method-icons';
 import { AuraPointsBadge } from '@/components/ui/aura-logo';
 import { CopyButton } from '@/components/ui/copy-button';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   Dialog,
   DialogContent,
@@ -253,8 +254,19 @@ export function CaseTabs({
     canDelete;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_220px]">
-      <div className="space-y-5 lg:order-1 lg:col-start-1">
+    <div className="space-y-5">
+      {/* Horizontal status stepper — full-width band that anchors the
+          entire detail view: progress %, terminal/partial pills, and
+          the five-step refund journey are visible at a glance before
+          drilling into any tab. */}
+      <CaseStatusStepper
+        status={caseData.status as CaseStatus}
+        locale={locale}
+        deleted={isDeleted}
+        orientation="horizontal"
+      />
+
+      <div className="space-y-5">
         {/* Action bar */}
         {showActionBar && (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2.5 shadow-sm">
@@ -495,33 +507,66 @@ export function CaseTabs({
           </div>
         )}
 
-        {/* Tab bar */}
-        <div className="flex border-b border-border">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = active === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActive(tab.key)}
-                className={cn(
-                  'flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {tab.label}
-                {tab.key === 'notes' && notes.length > 0 && (
-                  <span className="rounded-full bg-surface-subtle px-1.5 py-0.5 text-xs">
-                    {notes.length}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        {/* Tab bar — pill style with active accent rail. Larger touch
+            target than a plain underline; the active state reads from
+            across the page. Counters become small badges with tone. */}
+        <div className="border-b border-border">
+          <div className="flex gap-1 -mb-px" role="tablist">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = active === tab.key;
+              const showNotesCount = tab.key === 'notes' && notes.length > 0;
+              const showActivityCount = tab.key === 'activity' && activity.length > 0;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActive(tab.key)}
+                  className={cn(
+                    'group relative inline-flex items-center gap-2 rounded-t-lg px-4 py-3 text-sm font-medium transition-all',
+                    isActive
+                      ? 'bg-primary/5 text-primary'
+                      : 'text-muted-foreground hover:bg-surface-subtle/60 hover:text-foreground',
+                  )}
+                >
+                  <Icon className={cn('h-4 w-4', isActive && 'text-primary')} />
+                  <span>{tab.label}</span>
+                  {showNotesCount && (
+                    <span
+                      className={cn(
+                        'inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums',
+                        isActive
+                          ? 'bg-primary/15 text-primary'
+                          : 'bg-surface-subtle text-muted-foreground',
+                      )}
+                    >
+                      {notes.length}
+                    </span>
+                  )}
+                  {showActivityCount && (
+                    <span
+                      className={cn(
+                        'inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums',
+                        isActive
+                          ? 'bg-primary/15 text-primary'
+                          : 'bg-surface-subtle text-muted-foreground',
+                      )}
+                    >
+                      {activity.length > 99 ? '99+' : activity.length}
+                    </span>
+                  )}
+                  {isActive && (
+                    <span
+                      aria-hidden
+                      className="absolute inset-x-2 bottom-0 h-[2px] rounded-t-full bg-primary"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {active === 'overview' && (
@@ -544,19 +589,6 @@ export function CaseTabs({
         )}
         {active === 'activity' && <ActivityTab activity={activity} />}
       </div>
-
-      {/* Right rail: vertical status stepper. The stepper renders its
-          own "Progress" header + percentage, so we don't double-up the
-          label here. */}
-      <aside className="lg:order-2 lg:col-start-2">
-        <div className="lg:sticky lg:top-24">
-          <CaseStatusStepper
-            status={caseData.status as CaseStatus}
-            locale={locale}
-            deleted={isDeleted}
-          />
-        </div>
-      </aside>
     </div>
   );
 }
@@ -582,22 +614,26 @@ function OverviewTab({
 
   return (
     <div className="space-y-5">
-      {/* Summary cards row — focused on the three numbers an operator
-          actually needs at a glance: order, refund, refund-of-order
-          ratio. Order # / Aura are present in dedicated sections so we
-          don't repeat them up top. */}
-      <div className={cn('grid gap-3 sm:grid-cols-3', enter)}>
+      {/* Summary cards — refund amount is the visual hero (2x cell with
+          stronger primary tint, large display number, and a percentage
+          chip), order amount + ratio sit as supporting metrics on the
+          right. Communicates "what got refunded vs what was owed" in a
+          single glance. */}
+      <div className={cn('grid gap-3 lg:grid-cols-3', enter)}>
+        <RefundAmountCard
+          refundAmount={caseData.totalRefundAmount}
+          orderAmount={caseData.orderAmount}
+          currency={caseData.orderCurrency}
+          isPartial={caseData.isPartial}
+          terminal={
+            caseData.status === 'REFUNDED' || caseData.status === 'PARTIALLY_REFUNDED'
+          }
+        />
         <SummaryCard
           label="Order amount"
           value={formatMoney(caseData.orderAmount, caseData.orderCurrency)}
           mono
-        />
-        <SummaryCard
-          label="Refund amount"
-          value={formatMoney(caseData.totalRefundAmount, caseData.orderCurrency)}
-          mono
-          highlight
-          badge={caseData.isPartial ? 'Partial' : undefined}
+          helperText="Original purchase total"
         />
         <SummaryCard
           label="% of order"
@@ -607,6 +643,13 @@ function OverviewTab({
               : '—'
           }
           mono
+          helperText={
+            caseData.totalRefundAmount >= caseData.orderAmount
+              ? 'Full refund'
+              : caseData.totalRefundAmount > 0
+                ? 'Partial refund'
+                : 'No amount yet'
+          }
         />
       </div>
 
@@ -721,31 +764,40 @@ function OverviewTab({
           )}
         </div>
 
-        {/* Right column — people + customer history. People is compact:
-            dense list with row labels, no avatars per design feedback. */}
+        {/* Right column — people + customer history. PersonRow now
+            carries an avatar chip so the operator can scan the team
+            assignments visually; rows stack as a single dense list. */}
         <div className="space-y-5">
           <Section title="People" className={enter}>
-            <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2 lg:grid-cols-1">
-              <PersonRow
-                label="Created by"
-                user={caseData.createdBy}
-                fallback="—"
-              />
-              <PersonRow
-                label="Assigned to"
-                user={caseData.assignedTo}
-                fallback="Unassigned"
-              />
-              <PersonRow
-                label="Approved by"
-                user={caseData.approvedBy}
-                fallback="—"
-              />
-              {caseData.approvedAt && (
-                <FieldInline
-                  label="Approved at"
-                  value={formatDateTime(caseData.approvedAt)}
+            <div className="divide-y divide-border">
+              <div className="px-4 py-3">
+                <PersonRow
+                  label="Created by"
+                  user={caseData.createdBy}
+                  fallback="—"
                 />
+              </div>
+              <div className="px-4 py-3">
+                <PersonRow
+                  label="Assigned to"
+                  user={caseData.assignedTo}
+                  fallback="Unassigned"
+                />
+              </div>
+              <div className="px-4 py-3">
+                <PersonRow
+                  label="Approved by"
+                  user={caseData.approvedBy}
+                  fallback="—"
+                />
+              </div>
+              {caseData.approvedAt && (
+                <div className="px-4 py-3">
+                  <FieldInline
+                    label="Approved at"
+                    value={formatDateTime(caseData.approvedAt)}
+                  />
+                </div>
               )}
             </div>
           </Section>
@@ -968,35 +1020,105 @@ function ActivityTab({ activity }: { activity: Activity[] }) {
 
 /* ── Shared UI helpers ── */
 
+/**
+ * Hero refund-amount card. Visually the heaviest of the three summary
+ * cards: emerald gradient when the case is in a refunded state (matches
+ * the success accent used elsewhere on the page), neutral surface
+ * otherwise. Shows the amount in display-size type with a percentage
+ * chip + a status word ("Refunded" / "Partial refund" / "Pending").
+ */
+function RefundAmountCard({
+  refundAmount,
+  orderAmount,
+  currency,
+  isPartial,
+  terminal,
+}: {
+  refundAmount: number;
+  orderAmount: number;
+  currency: string;
+  isPartial: boolean;
+  terminal: boolean;
+}) {
+  const pct =
+    orderAmount > 0 ? Math.min(100, (refundAmount / orderAmount) * 100) : 0;
+  const word = !terminal
+    ? 'In progress'
+    : isPartial
+      ? 'Partial refund'
+      : 'Refunded';
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-xl border p-5 shadow-sm transition-colors',
+        terminal
+          ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-50 via-emerald-50/40 to-surface dark:from-emerald-950/40 dark:via-emerald-950/10 dark:to-surface'
+          : 'border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-surface',
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Refund amount
+        </span>
+        <span
+          className={cn(
+            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
+            terminal
+              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+              : 'bg-primary/15 text-primary',
+          )}
+        >
+          {pct.toFixed(0)}%
+        </span>
+      </div>
+      <div className="mt-3 flex items-baseline gap-2">
+        <span
+          className={cn(
+            'text-3xl font-bold tracking-tight tabular-nums text-heading sm:text-[34px]',
+            'font-mono',
+          )}
+        >
+          {formatMoney(refundAmount, currency)}
+        </span>
+      </div>
+      <div className="mt-2 text-xs font-medium text-muted-foreground">
+        {word}
+      </div>
+    </div>
+  );
+}
+
 function SummaryCard({
   label,
   value,
   mono,
-  highlight,
-  badge,
+  helperText,
 }: {
   label: string;
   value: string;
   mono?: boolean;
-  highlight?: boolean;
-  badge?: string;
+  helperText?: string;
 }) {
   return (
-    <div className={cn(
-      'rounded-lg border p-4',
-      highlight ? 'border-primary/30 bg-primary/5' : 'border-border bg-surface',
-    )}>
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <span className={cn('text-lg font-semibold text-heading', mono && 'font-mono')}>
+    <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-3 flex items-baseline gap-2">
+        <span
+          className={cn(
+            'text-2xl font-semibold tracking-tight tabular-nums text-heading sm:text-[28px]',
+            mono && 'font-mono',
+          )}
+        >
           {value}
         </span>
-        {badge && (
-          <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-            {badge}
-          </span>
-        )}
       </div>
+      {helperText && (
+        <div className="mt-2 text-xs font-medium text-muted-foreground">
+          {helperText}
+        </div>
+      )}
     </div>
   );
 }
@@ -1005,20 +1127,23 @@ function Section({
   title,
   children,
   className,
+  action,
 }: {
   title: string;
   children: React.ReactNode;
   className?: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div
       className={cn(
-        'rounded-lg border border-border bg-surface overflow-hidden',
+        'rounded-xl border border-border bg-surface shadow-sm overflow-hidden',
         className,
       )}
     >
-      <div className="border-b border-border bg-surface-subtle/50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {title}
+      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+        <h3 className="text-sm font-semibold text-heading">{title}</h3>
+        {action}
       </div>
       {children}
     </div>
@@ -1035,8 +1160,10 @@ function FieldInline({ label, value }: { label: string; value: React.ReactNode }
 }
 
 /**
- * Labeled row for the People sidebar: plain text name (no avatar chip) —
- * keeps the sidebar visually quiet and readable at a glance.
+ * Labeled row for the People sidebar: small avatar chip + name. The
+ * avatar gives a quick visual anchor when scanning who created /
+ * approved / was assigned a case; falls back to a muted placeholder
+ * when the role isn't filled.
  */
 function PersonRow({
   label,
@@ -1048,13 +1175,27 @@ function PersonRow({
   fallback: string;
 }) {
   return (
-    <div>
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
+    <div className="flex items-center gap-3">
       {user ? (
-        <div className="mt-0.5 text-sm font-medium text-foreground">{user.name}</div>
+        <UserAvatar name={user.name} image={user.avatarUrl} size="sm" />
       ) : (
-        <div className="mt-0.5 text-sm text-muted-foreground">{fallback}</div>
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-border bg-surface-subtle/40 text-[10px] text-muted-foreground">
+          —
+        </span>
       )}
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        <div
+          className={cn(
+            'mt-0.5 truncate text-sm',
+            user ? 'font-medium text-foreground' : 'text-muted-foreground',
+          )}
+        >
+          {user ? user.name : fallback}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation';
+import { Mail, Phone, ShoppingBag } from 'lucide-react';
 import { prisma } from '@wow/db';
 import { auth } from '@/auth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CaseStatusBadge, ComponentStatusBadge } from '@/components/ui/case-status-badge';
+import { CaseStatusBadge } from '@/components/ui/case-status-badge';
 import { CopyButton } from '@/components/ui/copy-button';
-import { formatDate, formatDateTime, formatMoney, relativeTime } from '@/lib/format';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { formatDateTime, relativeTime } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { CaseTabs } from './case-tabs';
 
 export const dynamic = 'force-dynamic';
@@ -75,59 +77,88 @@ export default async function CaseDetailsPage({
       : refundCase.caseNumber;
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
-      {/* Page header card — case # + status on the left, country / brand
-          on the right, customer + order + refund laid out as one
-          consistent strip below. Reads as a single information block
-          in the same visual language as the rest of the page. */}
-      <Card className="mb-6">
-        <CardContent className="p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="mx-auto max-w-7xl px-6 py-8 space-y-6 lg:px-10">
+      {/* Hero — case identity + customer summary, one visual block.
+          The case number is the strongest typographic anchor on the
+          page; metadata (country/brand/created) sits as a quiet strip
+          above it, and the customer panel below is its own well-spaced
+          unit so contact info reads cleanly. */}
+      <header className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden">
+        <div className="flex flex-col gap-5 px-6 py-6 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div className="space-y-2 min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-subtle/60 px-2 py-0.5">
+                <span aria-hidden>{refundCase.country.registry.flag ?? '🌐'}</span>
+                <span>{refundCase.country.registry.nameEn}</span>
+              </span>
+              <span aria-hidden>·</span>
+              <span className="rounded-full border border-border bg-surface-subtle/60 px-2 py-0.5">
+                {refundCase.brand.name}
+              </span>
+              <span aria-hidden>·</span>
+              <span title={formatDateTime(refundCase.createdAt)}>
+                Created {relativeTime(refundCase.createdAt)}
+              </span>
+            </div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="flex items-center gap-1.5 text-display-sm font-semibold tracking-tight text-heading">
-                {heading}
-                <CopyButton
-                  value={heading}
-                  size="sm"
-                  label="Copy case number"
-                />
+              <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-heading sm:text-4xl">
+                <span className="break-all">{heading}</span>
+                <CopyButton value={heading} size="sm" label="Copy case number" />
               </h1>
-              <CaseStatusBadge status={refundCase.status} />
+              <CaseStatusBadge
+                status={refundCase.status}
+                className="text-sm px-3 py-1"
+              />
               {refundCase.isPartial && (
-                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                  Partial
+                <span className="inline-flex items-center rounded-full bg-teal-500/10 px-2.5 py-1 text-xs font-medium text-teal-700 dark:text-teal-400">
+                  Partial refund
                 </span>
               )}
             </div>
-            <div className="text-end text-xs text-muted-foreground">
-              <div className="text-sm text-body">
-                {refundCase.country.registry.flag ?? '🌐'}{' '}
-                {refundCase.country.registry.nameEn} · {refundCase.brand.name}
-              </div>
-              <div className="mt-0.5">
-                Created {formatDateTime(refundCase.createdAt)}
+          </div>
+        </div>
+
+        {/* Customer panel — embedded into the hero so identity stays
+            visually grouped with the case header. Avatar grounds the
+            customer name; contact chips are scannable + copyable. */}
+        <div className="border-t border-border bg-surface-subtle/30 px-6 py-5">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[auto_1fr]">
+            <div className="flex items-center gap-3">
+              <UserAvatar name={refundCase.customerName} size="md" className="h-12 w-12 text-sm" />
+              <div className="min-w-0">
+                <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Customer
+                </div>
+                <div className="text-base font-semibold text-heading truncate">
+                  {refundCase.customerName}
+                </div>
               </div>
             </div>
+            <dl className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <ContactChip
+                icon={<Mail className="h-3.5 w-3.5" />}
+                label="Email"
+                value={refundCase.customerEmail}
+                mono
+                truncate
+              />
+              <ContactChip
+                icon={<Phone className="h-3.5 w-3.5" />}
+                label="Phone"
+                value={refundCase.customerPhone}
+                mono
+                ltr
+              />
+              <ContactChip
+                icon={<ShoppingBag className="h-3.5 w-3.5" />}
+                label="Order #"
+                value={refundCase.orderNumber}
+                mono
+              />
+            </dl>
           </div>
-
-          <dl className="mt-5 grid gap-x-6 gap-y-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4">
-            <CaseHeaderField label="Customer" value={refundCase.customerName} />
-            <CaseHeaderField
-              label="Email"
-              value={refundCase.customerEmail}
-              mono
-              truncate
-            />
-            <CaseHeaderField
-              label="Phone"
-              value={refundCase.customerPhone ?? null}
-              mono
-              ltr
-            />
-            <CaseHeaderField label="Order #" value={refundCase.orderNumber} mono />
-          </dl>
-        </CardContent>
-      </Card>
+        </div>
+      </header>
 
       <CaseTabs
         locale={locale}
@@ -216,19 +247,20 @@ export default async function CaseDetailsPage({
 }
 
 /**
- * Single key/value cell used in the case-header info strip. Renders
- * the label as a small all-caps caption with the value below it, and
- * exposes a copy button on hover/focus so any of the values (email,
- * phone, order number, …) can be copied with one click. Uses the
- * same visual language as the Details / People sections below.
+ * Compact chip-style contact pill used in the customer panel of the
+ * case hero. Icon + label sit above the value, value is monospace +
+ * copyable on hover/focus. Empty values show as a muted em-dash so
+ * the layout never collapses.
  */
-function CaseHeaderField({
+function ContactChip({
+  icon,
   label,
   value,
   mono,
   ltr,
   truncate,
 }: {
+  icon: React.ReactNode;
   label: string;
   value: string | null;
   mono?: boolean;
@@ -237,23 +269,32 @@ function CaseHeaderField({
 }) {
   const hasValue = !!value && value.length > 0;
   return (
-    <div className="min-w-0">
-      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="mt-1 flex items-center gap-1.5">
-        <span
-          className={`min-w-0 text-sm text-foreground${mono ? ' font-mono' : ''}${
-            truncate ? ' truncate' : ''
-          }`}
-          dir={ltr ? 'ltr' : undefined}
-        >
-          {hasValue ? value : <span className="text-muted-foreground">—</span>}
-        </span>
-        {hasValue && (
-          <CopyButton value={value!} size="sm" label={`Copy ${label.toLowerCase()}`} />
-        )}
-      </dd>
+    <div className="group flex min-w-0 items-start gap-2.5 rounded-lg border border-border bg-surface px-3 py-2">
+      <span className="mt-0.5 flex-none text-muted-foreground" aria-hidden>
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        <div className="mt-0.5 flex items-center gap-1">
+          <span
+            className={cn(
+              'min-w-0 text-sm text-foreground',
+              mono && 'font-mono',
+              truncate && 'truncate',
+            )}
+            dir={ltr ? 'ltr' : undefined}
+          >
+            {hasValue ? value : <span className="text-muted-foreground">—</span>}
+          </span>
+          {hasValue && (
+            <span className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              <CopyButton value={value!} size="xs" label={`Copy ${label.toLowerCase()}`} />
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
