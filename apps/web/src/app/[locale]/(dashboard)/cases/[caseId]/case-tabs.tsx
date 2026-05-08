@@ -254,23 +254,24 @@ export function CaseTabs({
     canDelete;
 
   return (
-    <div className="space-y-5">
-      {/* Stepper — full-width horizontal progress card */}
+    <div className="space-y-4">
+      {/* Stepper — compact horizontal progress strip */}
       <CaseStatusStepper
         status={caseData.status as CaseStatus}
         locale={locale}
         deleted={isDeleted}
         orientation="horizontal"
+        className="!px-4 !py-3"
       />
 
       {/* Two-column layout: main content (tabs) on the left,
           metadata sidebar on the right (sticky on lg+ screens). */}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         {/* ── MAIN COLUMN ── */}
-        <div className="min-w-0 space-y-5">
+        <div className="min-w-0 space-y-4">
         {/* Action bar */}
         {showActionBar && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
             {canSubmit && (
               <Button
                 size="sm"
@@ -526,13 +527,13 @@ export function CaseTabs({
                   aria-selected={isActive}
                   onClick={() => setActive(tab.key)}
                   className={cn(
-                    'group relative inline-flex items-center gap-2 rounded-t-lg px-4 py-3 text-sm font-medium transition-all',
+                    'group relative inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-[13px] font-medium transition-all',
                     isActive
-                      ? 'bg-primary/5 text-primary'
-                      : 'text-muted-foreground hover:bg-surface-subtle/60 hover:text-foreground',
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
-                  <Icon className={cn('h-4 w-4', isActive && 'text-primary')} />
+                  <Icon className={cn('h-3.5 w-3.5', isActive && 'text-primary')} />
                   <span>{tab.label}</span>
                   {showNotesCount && (
                     <span
@@ -667,13 +668,13 @@ function SidebarCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface shadow-sm">
-      <div className="border-b border-border px-4 py-2.5">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-lg border border-border bg-surface">
+      <div className="border-b border-border px-3 py-1.5">
+        <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </h3>
       </div>
-      <dl className="divide-y divide-border">{children}</dl>
+      <dl>{children}</dl>
     </div>
   );
 }
@@ -694,18 +695,20 @@ function SidebarRow({
   muted?: boolean;
 }) {
   return (
-    <div className="group flex items-start justify-between gap-3 px-4 py-2.5">
-      <dt className="flex-none text-xs text-muted-foreground pt-0.5">{label}</dt>
+    <div className="group flex items-center justify-between gap-2 px-3 py-1.5">
+      <dt className="flex-none text-[11px] text-muted-foreground">{label}</dt>
       <dd
         className={cn(
-          'min-w-0 flex-1 text-right text-sm',
-          mono && 'font-mono text-[13px]',
+          'min-w-0 flex-1 text-right text-[12.5px]',
+          mono && 'font-mono text-[12px]',
           muted ? 'text-muted-foreground' : 'text-foreground',
         )}
         dir={ltr ? 'ltr' : undefined}
       >
-        <span className="inline-flex items-center gap-1.5 break-all">
-          <span className="truncate">{value}</span>
+        <span className="inline-flex items-center gap-1">
+          <span className="truncate" title={value}>
+            {value}
+          </span>
           {copy && (
             <span className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
               <CopyButton value={value} size="xs" label={`Copy ${label}`} />
@@ -731,14 +734,17 @@ function OverviewTab({
   inExecutionStage: boolean;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* ── Payment ──
           Most actionable info: which payment methods, how much, ARN
           entry for execution. Lives at top so operators see what
           needs to happen first. */}
-      <Section title="Payment" subtitle={`${components.length} component${components.length === 1 ? '' : 's'}`}>
+      <Section
+        title="Payment"
+        subtitle={`${components.length} component${components.length === 1 ? '' : 's'}`}
+      >
         {components.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+          <p className="px-3 py-4 text-center text-[12.5px] text-muted-foreground">
             No payment components.
           </p>
         ) : (
@@ -753,7 +759,7 @@ function OverviewTab({
               />
             ))}
             {caseData.auraPoints ? (
-              <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2 px-3 py-2">
                 <AuraPointsBadge points={caseData.auraPoints} />
                 <div className="ms-auto">
                   <AuraStatusBadge status={caseData.auraStatus} />
@@ -782,10 +788,10 @@ function OverviewTab({
       {(caseData.rootCause ||
         caseData.rootCauseNotes ||
         caseData.customerNotes) && (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2">
           {(caseData.rootCause || caseData.rootCauseNotes) && (
             <Section title="Root cause">
-              <dl className="space-y-3 px-4 py-3">
+              <dl className="space-y-2 px-3 py-2.5">
                 {caseData.rootCause && (
                   <FieldInline label="Category" value={caseData.rootCause} />
                 )}
@@ -797,7 +803,7 @@ function OverviewTab({
           )}
           {caseData.customerNotes && (
             <Section title="Agent notes">
-              <p className="whitespace-pre-wrap px-4 py-3 text-sm leading-relaxed text-foreground">
+              <p className="whitespace-pre-wrap px-3 py-2.5 text-[12.5px] leading-relaxed text-foreground">
                 {caseData.customerNotes}
               </p>
             </Section>
@@ -1025,8 +1031,10 @@ function ActivityTab({ activity }: { activity: Activity[] }) {
 function FieldInline({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-sm text-foreground">{value}</div>
+      <div className="text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-0.5 text-[12.5px] leading-relaxed text-foreground">{value}</div>
     </div>
   );
 }
@@ -1041,13 +1049,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-lg border border-border bg-surface overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </h3>
         {subtitle && (
-          <span className="text-xs text-muted-foreground">{subtitle}</span>
+          <span className="text-[11px] text-muted-foreground">{subtitle}</span>
         )}
       </div>
       {children}
@@ -1102,14 +1110,14 @@ function PaymentComponentRow({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-3 py-2.5">
       <div className="flex items-center gap-2">
         <PaymentMethodIcons
           methods={[{ key: component.paymentMethodKey, label: component.paymentMethodLabel }]}
           size="sm"
         />
       </div>
-      <div className="font-mono text-sm font-medium">
+      <div className="font-mono text-[13px] font-medium tabular-nums">
         {formatMoney(component.amount, component.currency)}
       </div>
       {component.authCode && (
