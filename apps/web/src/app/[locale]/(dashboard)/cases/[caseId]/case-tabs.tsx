@@ -34,7 +34,7 @@ import { CaseStatusStepper, type CaseStatus } from '@/components/ui/case-status-
 import { PaymentMethodIcons } from '@/components/ui/payment-method-icons';
 import { AuraPointsBadge } from '@/components/ui/aura-logo';
 import { CopyButton } from '@/components/ui/copy-button';
-import { UserAvatar } from '@/components/ui/user-avatar';
+
 import {
   Dialog,
   DialogContent,
@@ -254,22 +254,20 @@ export function CaseTabs({
     canDelete;
 
   return (
-    <div className="space-y-5">
-      {/* Horizontal status stepper — full-width band that anchors the
-          entire detail view: progress %, terminal/partial pills, and
-          the five-step refund journey are visible at a glance before
-          drilling into any tab. */}
+    <div className="space-y-6">
+      {/* Stepper — lightweight horizontal progress, no card wrapper */}
       <CaseStatusStepper
         status={caseData.status as CaseStatus}
         locale={locale}
         deleted={isDeleted}
         orientation="horizontal"
+        className="border-0 bg-transparent px-0 shadow-none"
       />
 
-      <div className="space-y-5">
+      <div className="space-y-6">
         {/* Action bar */}
         {showActionBar && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2.5 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-subtle/40 p-2.5">
             {canSubmit && (
               <Button
                 size="sm"
@@ -606,151 +604,36 @@ function OverviewTab({
   canExecute: boolean;
   inExecutionStage: boolean;
 }) {
-  // Subtle staggered entry — keeps the page calm but adds motion as
-  // sections come into view. Disabled at the user's request via
-  // prefers-reduced-motion (handled by `motion-safe:` variant).
-  const enter =
-    'motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-300';
-
   return (
-    <div className="space-y-5">
-      {/* Summary cards — refund amount is the visual hero (2x cell with
-          stronger primary tint, large display number, and a percentage
-          chip), order amount + ratio sit as supporting metrics on the
-          right. Communicates "what got refunded vs what was owed" in a
-          single glance. */}
-      <div className={cn('grid gap-3 lg:grid-cols-3', enter)}>
-        <RefundAmountCard
-          refundAmount={caseData.totalRefundAmount}
-          orderAmount={caseData.orderAmount}
-          currency={caseData.orderCurrency}
-          isPartial={caseData.isPartial}
-          terminal={
-            caseData.status === 'REFUNDED' || caseData.status === 'PARTIALLY_REFUNDED'
-          }
-        />
-        <SummaryCard
-          label="Order amount"
-          value={formatMoney(caseData.orderAmount, caseData.orderCurrency)}
-          mono
-          helperText="Original purchase total"
-        />
-        <SummaryCard
-          label="% of order"
-          value={
-            caseData.orderAmount > 0
-              ? `${((caseData.totalRefundAmount / caseData.orderAmount) * 100).toFixed(1)}%`
-              : '—'
-          }
-          mono
-          helperText={
-            caseData.totalRefundAmount >= caseData.orderAmount
-              ? 'Full refund'
-              : caseData.totalRefundAmount > 0
-                ? 'Partial refund'
-                : 'No amount yet'
-          }
-        />
-      </div>
-
-      {/* Main content grid */}
-      <div className="grid gap-5 lg:grid-cols-[3fr_2fr]">
-        <div className="space-y-5">
-          {/* Details — order + customer in a single section so the page
-              doesn't fragment six separate identity-sized cards. Phone
-              and agent notes are conditional. */}
-          <Section title="Details" className={enter}>
-            <dl className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
-              <FieldInline
-                label="Order #"
-                value={
-                  <CopyableValue
-                    value={caseData.orderNumber}
-                    label="Copy order #"
-                    mono
-                  />
-                }
-              />
+    <div className="space-y-8">
+      {/* ── Details + People ─────────────────────────────────────
+          Two-column on large screens. Details only shows info NOT
+          already visible in the hero (no order#, no phone, no
+          customer name/email — those are all in the header). */}
+      <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
+        <div className="space-y-6">
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Details
+            </h3>
+            <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
               <FieldInline label="Order date" value={formatDate(caseData.orderDate)} />
-              <FieldInline
-                label="Brand"
-                value={`${caseData.countryFlag} ${caseData.brandName}`}
-              />
-              <FieldInline label="Country" value={caseData.countryName} />
-              <FieldInline
-                label="Branch"
-                value={
-                  caseData.branchName ?? <span className="text-muted-foreground">—</span>
-                }
-              />
-              {caseData.customerPhone && (
-                <FieldInline
-                  label="Phone"
-                  value={
-                    <CopyableValue
-                      value={caseData.customerPhone}
-                      label="Copy phone"
-                      mono
-                    />
-                  }
-                />
-              )}
+              <FieldInline label="Branch" value={caseData.branchName ?? '—'} />
               {caseData.customerNotes && (
                 <div className="sm:col-span-2">
                   <FieldInline label="Agent notes" value={caseData.customerNotes} />
                 </div>
               )}
             </dl>
-          </Section>
+          </div>
 
-          {/* Payment + per-component ARN entry */}
-          <Section title="Payment" className={enter}>
-            {components.length === 0 ? (
-              <div className="p-4 text-sm text-muted-foreground">No payment components.</div>
-            ) : (
-              <div className="divide-y divide-border">
-                {components.map((c) => (
-                  <PaymentComponentRow
-                    key={c.id}
-                    component={c}
-                    caseId={caseData.id}
-                    canExecute={canExecute}
-                    inExecutionStage={inExecutionStage}
-                  />
-                ))}
-                {caseData.auraPoints ? (
-                  <div className="flex flex-wrap items-center gap-2 p-4">
-                    <AuraPointsBadge points={caseData.auraPoints} />
-                    <div className="ms-auto">
-                      <AuraStatusBadge status={caseData.auraStatus} />
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </Section>
-
-          {/* Customer call follow-up — persists once the case is
-              REFUNDED so the recorded outcome stays on the page just
-              like the saved ARN does for the payment row. PENDING
-              shows the action buttons; resolved states show what was
-              decided + a Change link to re-record. */}
-          {(caseData.status === 'REFUNDED' ||
-            caseData.status === 'PARTIALLY_REFUNDED') &&
-            caseData.customerCallStatus !== 'NOT_APPLICABLE' && (
-              <CustomerCallFollowUp
-                caseId={caseData.id}
-                status={caseData.customerCallStatus}
-                updatedAt={caseData.customerCallUpdatedAt}
-                locale={locale}
-              />
-            )}
-
-          {/* Root cause — collapsed to a single inline strip when no
-              free-text notes were captured. */}
+          {/* Root cause */}
           {(caseData.rootCause || caseData.rootCauseNotes) && (
-            <Section title="Root cause" className={enter}>
-              <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
+            <div>
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Root cause
+              </h3>
+              <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
                 {caseData.rootCause && (
                   <FieldInline label="Category" value={caseData.rootCause} />
                 )}
@@ -759,56 +642,79 @@ function OverviewTab({
                     <FieldInline label="Notes" value={caseData.rootCauseNotes} />
                   </div>
                 )}
-              </div>
-            </Section>
+              </dl>
+            </div>
           )}
         </div>
 
-        {/* Right column — people + customer history. PersonRow now
-            carries an avatar chip so the operator can scan the team
-            assignments visually; rows stack as a single dense list. */}
-        <div className="space-y-5">
-          <Section title="People" className={enter}>
-            <div className="divide-y divide-border">
-              <div className="px-4 py-3">
-                <PersonRow
-                  label="Created by"
-                  user={caseData.createdBy}
-                  fallback="—"
-                />
-              </div>
-              <div className="px-4 py-3">
-                <PersonRow
-                  label="Assigned to"
-                  user={caseData.assignedTo}
-                  fallback="Unassigned"
-                />
-              </div>
-              <div className="px-4 py-3">
-                <PersonRow
-                  label="Approved by"
-                  user={caseData.approvedBy}
-                  fallback="—"
-                />
-              </div>
-              {caseData.approvedAt && (
-                <div className="px-4 py-3">
-                  <FieldInline
-                    label="Approved at"
-                    value={formatDateTime(caseData.approvedAt)}
-                  />
-                </div>
-              )}
-            </div>
-          </Section>
-
-          <CustomerHistory
-            locale={locale}
-            customerEmail={caseData.customerEmail}
-            excludeCaseId={caseData.id}
-          />
+        {/* People — simple list, no card border */}
+        <div>
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            People
+          </h3>
+          <div className="space-y-3">
+            <PersonRow label="Created by" user={caseData.createdBy} fallback="—" />
+            <PersonRow label="Assigned to" user={caseData.assignedTo} fallback="Unassigned" />
+            <PersonRow label="Approved by" user={caseData.approvedBy} fallback="—" />
+            {caseData.approvedAt && (
+              <FieldInline label="Approved at" value={formatDateTime(caseData.approvedAt)} />
+            )}
+          </div>
         </div>
       </div>
+
+      {/* ── Divider ─────────────────────────────────────────────── */}
+      <hr className="border-border" />
+
+      {/* ── Payment ─────────────────────────────────────────────── */}
+      <div>
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Payment
+        </h3>
+        {components.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No payment components.</p>
+        ) : (
+          <div className="divide-y divide-border rounded-lg border border-border">
+            {components.map((c) => (
+              <PaymentComponentRow
+                key={c.id}
+                component={c}
+                caseId={caseData.id}
+                canExecute={canExecute}
+                inExecutionStage={inExecutionStage}
+              />
+            ))}
+            {caseData.auraPoints ? (
+              <div className="flex flex-wrap items-center gap-2 p-4">
+                <AuraPointsBadge points={caseData.auraPoints} />
+                <div className="ms-auto">
+                  <AuraStatusBadge status={caseData.auraStatus} />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {/* Customer call follow-up */}
+      {(caseData.status === 'REFUNDED' ||
+        caseData.status === 'PARTIALLY_REFUNDED') &&
+        caseData.customerCallStatus !== 'NOT_APPLICABLE' && (
+          <CustomerCallFollowUp
+            caseId={caseData.id}
+            status={caseData.customerCallStatus}
+            updatedAt={caseData.customerCallUpdatedAt}
+            locale={locale}
+          />
+        )}
+
+      {/* ── Customer history ──────────────────────────────────── */}
+      <hr className="border-border" />
+      <CustomerHistory
+        locale={locale}
+        customerEmail={caseData.customerEmail}
+        excludeCaseId={caseData.id}
+      />
     </div>
   );
 }
@@ -1020,136 +926,6 @@ function ActivityTab({ activity }: { activity: Activity[] }) {
 
 /* ── Shared UI helpers ── */
 
-/**
- * Hero refund-amount card. Visually the heaviest of the three summary
- * cards: emerald gradient when the case is in a refunded state (matches
- * the success accent used elsewhere on the page), neutral surface
- * otherwise. Shows the amount in display-size type with a percentage
- * chip + a status word ("Refunded" / "Partial refund" / "Pending").
- */
-function RefundAmountCard({
-  refundAmount,
-  orderAmount,
-  currency,
-  isPartial,
-  terminal,
-}: {
-  refundAmount: number;
-  orderAmount: number;
-  currency: string;
-  isPartial: boolean;
-  terminal: boolean;
-}) {
-  const pct =
-    orderAmount > 0 ? Math.min(100, (refundAmount / orderAmount) * 100) : 0;
-  const word = !terminal
-    ? 'In progress'
-    : isPartial
-      ? 'Partial refund'
-      : 'Refunded';
-  return (
-    <div
-      className={cn(
-        'relative overflow-hidden rounded-xl border p-5 shadow-sm transition-colors',
-        terminal
-          ? 'border-emerald-500/30 bg-gradient-to-br from-emerald-50 via-emerald-50/40 to-surface dark:from-emerald-950/40 dark:via-emerald-950/10 dark:to-surface'
-          : 'border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-surface',
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Refund amount
-        </span>
-        <span
-          className={cn(
-            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums',
-            terminal
-              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-              : 'bg-primary/15 text-primary',
-          )}
-        >
-          {pct.toFixed(0)}%
-        </span>
-      </div>
-      <div className="mt-3 flex items-baseline gap-2">
-        <span
-          className={cn(
-            'text-3xl font-bold tracking-tight tabular-nums text-heading sm:text-[34px]',
-            'font-mono',
-          )}
-        >
-          {formatMoney(refundAmount, currency)}
-        </span>
-      </div>
-      <div className="mt-2 text-xs font-medium text-muted-foreground">
-        {word}
-      </div>
-    </div>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  mono,
-  helperText,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-  helperText?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-3 flex items-baseline gap-2">
-        <span
-          className={cn(
-            'text-2xl font-semibold tracking-tight tabular-nums text-heading sm:text-[28px]',
-            mono && 'font-mono',
-          )}
-        >
-          {value}
-        </span>
-      </div>
-      {helperText && (
-        <div className="mt-2 text-xs font-medium text-muted-foreground">
-          {helperText}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Section({
-  title,
-  children,
-  className,
-  action,
-}: {
-  title: string;
-  children: React.ReactNode;
-  className?: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div
-      className={cn(
-        'rounded-xl border border-border bg-surface shadow-sm overflow-hidden',
-        className,
-      )}
-    >
-      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <h3 className="text-sm font-semibold text-heading">{title}</h3>
-        {action}
-      </div>
-      {children}
-    </div>
-  );
-}
-
 function FieldInline({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
@@ -1159,12 +935,6 @@ function FieldInline({ label, value }: { label: string; value: React.ReactNode }
   );
 }
 
-/**
- * Labeled row for the People sidebar: small avatar chip + name. The
- * avatar gives a quick visual anchor when scanning who created /
- * approved / was assigned a case; falls back to a muted placeholder
- * when the role isn't filled.
- */
 function PersonRow({
   label,
   user,
@@ -1175,52 +945,12 @@ function PersonRow({
   fallback: string;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      {user ? (
-        <UserAvatar name={user.name} image={user.avatarUrl} size="sm" />
-      ) : (
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-border bg-surface-subtle/40 text-[10px] text-muted-foreground">
-          —
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          {label}
-        </div>
-        <div
-          className={cn(
-            'mt-0.5 truncate text-sm',
-            user ? 'font-medium text-foreground' : 'text-muted-foreground',
-          )}
-        >
-          {user ? user.name : fallback}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Plain text + hover-revealed copy button. Used everywhere a value is
- * a useful identifier ops might paste into another system (email, phone,
- * order #, auth code).
- */
-function CopyableValue({
-  value,
-  label,
-  mono,
-}: {
-  value: string;
-  label: string;
-  mono?: boolean;
-}) {
-  return (
-    <span className="group inline-flex items-center gap-1">
-      <span className={cn('break-all', mono && 'font-mono')}>{value}</span>
-      <span className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-        <CopyButton value={value} size="xs" label={label} />
+    <div className="flex items-baseline gap-2">
+      <span className="text-xs text-muted-foreground w-24 flex-none">{label}</span>
+      <span className={cn('text-sm', user ? 'font-medium text-foreground' : 'text-muted-foreground')}>
+        {user ? user.name : fallback}
       </span>
-    </span>
+    </div>
   );
 }
 
