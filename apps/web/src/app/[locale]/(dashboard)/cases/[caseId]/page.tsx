@@ -75,16 +75,16 @@ export default async function CaseDetailsPage({
       : refundCase.caseNumber;
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
+    <div className="mx-auto max-w-[1280px] px-6 py-8 sm:px-8">
       {/* Page header card — case # + status on the left, country / brand
           on the right, customer + order + refund laid out as one
           consistent strip below. Reads as a single information block
           in the same visual language as the rest of the page. */}
-      <Card className="mb-6">
-        <CardContent className="p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+      <Card className="mb-5">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="flex items-center gap-1.5 text-display-sm font-semibold tracking-tight text-heading">
+              <h1 className="flex items-center gap-1.5 font-mono text-[22px] font-semibold tracking-tight text-heading sm:text-[24px]">
                 {heading}
                 <CopyButton
                   value={heading}
@@ -94,23 +94,23 @@ export default async function CaseDetailsPage({
               </h1>
               <CaseStatusBadge status={refundCase.status} />
               {refundCase.isPartial && (
-                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                   Partial
                 </span>
               )}
             </div>
             <div className="text-end text-xs text-muted-foreground">
-              <div className="text-sm text-body">
-                {refundCase.country.registry.flag ?? '🌐'}{' '}
+              <div className="text-sm font-medium text-body">
+                <span aria-hidden>{refundCase.country.registry.flag ?? '🌐'}</span>{' '}
                 {refundCase.country.registry.nameEn} · {refundCase.brand.name}
               </div>
-              <div className="mt-0.5">
+              <div className="mt-0.5 tabular-nums">
                 Created {formatDateTime(refundCase.createdAt)}
               </div>
             </div>
           </div>
 
-          <dl className="mt-5 grid gap-x-6 gap-y-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4">
+          <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4">
             <CaseHeaderField label="Customer" value={refundCase.customerName} />
             <CaseHeaderField
               label="Email"
@@ -238,7 +238,7 @@ function CaseHeaderField({
   const hasValue = !!value && value.length > 0;
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </dt>
       <dd className="mt-1 flex items-center gap-1.5">

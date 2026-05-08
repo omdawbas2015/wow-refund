@@ -253,7 +253,7 @@ export function CaseTabs({
     canDelete;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_220px]">
+    <div className="grid gap-5 lg:grid-cols-[1fr_240px]">
       <div className="space-y-5 lg:order-1 lg:col-start-1">
         {/* Action bar */}
         {showActionBar && (
@@ -613,21 +613,11 @@ function OverviewTab({
       {/* Main content grid */}
       <div className="grid gap-5 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-5">
-          {/* Details — order + customer in a single section so the page
-              doesn't fragment six separate identity-sized cards. Phone
-              and agent notes are conditional. */}
+          {/* Details — order context only. Order # / Phone live in the
+              page header strip, so we don't repeat them here. Agent
+              notes stay conditional. */}
           <Section title="Details" className={enter}>
             <dl className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
-              <FieldInline
-                label="Order #"
-                value={
-                  <CopyableValue
-                    value={caseData.orderNumber}
-                    label="Copy order #"
-                    mono
-                  />
-                }
-              />
               <FieldInline label="Order date" value={formatDate(caseData.orderDate)} />
               <FieldInline
                 label="Brand"
@@ -640,18 +630,6 @@ function OverviewTab({
                   caseData.branchName ?? <span className="text-muted-foreground">—</span>
                 }
               />
-              {caseData.customerPhone && (
-                <FieldInline
-                  label="Phone"
-                  value={
-                    <CopyableValue
-                      value={caseData.customerPhone}
-                      label="Copy phone"
-                      mono
-                    />
-                  }
-                />
-              )}
               {caseData.customerNotes && (
                 <div className="sm:col-span-2">
                   <FieldInline label="Agent notes" value={caseData.customerNotes} />
@@ -982,13 +960,25 @@ function SummaryCard({
   badge?: string;
 }) {
   return (
-    <div className={cn(
-      'rounded-lg border p-4',
-      highlight ? 'border-primary/30 bg-primary/5' : 'border-border bg-surface',
-    )}>
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <span className={cn('text-lg font-semibold text-heading', mono && 'font-mono')}>
+    <div
+      className={cn(
+        'rounded-lg border p-4 transition-colors',
+        highlight
+          ? 'border-primary/40 bg-primary/[0.06] shadow-[0_1px_0_rgba(0,0,0,0.02)]'
+          : 'border-border bg-surface',
+      )}
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-1.5 flex items-baseline gap-2">
+        <span
+          className={cn(
+            'text-[20px] font-semibold tabular-nums tracking-tight',
+            highlight ? 'text-primary' : 'text-heading',
+            mono && 'font-mono',
+          )}
+        >
           {value}
         </span>
         {badge && (
@@ -1027,9 +1017,11 @@ function Section({
 
 function FieldInline({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div>
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-sm text-foreground">{value}</div>
+    <div className="min-w-0">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-1 text-sm leading-relaxed text-foreground">{value}</div>
     </div>
   );
 }
@@ -1048,12 +1040,14 @@ function PersonRow({
   fallback: string;
 }) {
   return (
-    <div>
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
+    <div className="min-w-0">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
       {user ? (
-        <div className="mt-0.5 text-sm font-medium text-foreground">{user.name}</div>
+        <div className="mt-1 text-sm font-medium text-foreground">{user.name}</div>
       ) : (
-        <div className="mt-0.5 text-sm text-muted-foreground">{fallback}</div>
+        <div className="mt-1 text-sm text-muted-foreground">{fallback}</div>
       )}
     </div>
   );
