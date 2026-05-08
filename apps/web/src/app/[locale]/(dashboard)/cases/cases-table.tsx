@@ -13,6 +13,7 @@ import { ArrowUpRight, Trash2 } from 'lucide-react';
 export type CaseRow = {
   id: string;
   caseNumber: string;
+  externalCaseNumber: string | null;
   status: CaseStatus;
   customerName: string;
   customerEmail: string;
@@ -35,15 +36,9 @@ export type CaseRow = {
 };
 
 /**
- * Cases table redesign — Linear/Stripe-style data density:
- *   - Country and brand split into two cells; flag carries country alone,
- *     brand owns its column with branch as a muted subtitle.
- *   - Amount cell uses a leading muted currency code so the eye lines up
- *     on the digit, not the symbol; partial refunds add a tiny progress
- *     bar instead of a second money line.
- *   - Customer keeps name + email but with a tighter type ramp.
- *   - Headers are sentence case + medium weight; row hover is a faint
- *     primary tint, with a trailing ↗ that fades in on hover.
+ * Cases table — compact Linear/Stripe-style density.
+ * Identifies cases by the agent-typed case number only; the auto-generated
+ * REF-XX-YYYY-NNNNN is internal and never surfaced in the UI.
  */
 export function CasesTable({
   locale,
@@ -58,11 +53,13 @@ export function CasesTable({
 
   return (
     <>
-      {/* Desktop — clean data table */}
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[920px] text-sm">
+      {/* Desktop — airy data table with generous row spacing. Keeps Country
+          and Payment as dedicated columns (no cell-stacking) and tucks the
+          agent under the date so each cell does exactly one thing. */}
+      <div className="hidden md:block">
+        <table className="w-full text-[12.5px]">
           <thead>
-            <tr className="border-b border-border/50">
+            <tr className="border-b border-border/70 bg-surface-subtle/40">
               <Th>Case</Th>
               <Th>Customer</Th>
               <Th>Country</Th>
@@ -71,87 +68,77 @@ export function CasesTable({
               <Th>Payment</Th>
               <Th>Status</Th>
               <Th>Created</Th>
-              <th className="w-8 px-2 py-3" />
+              <th className="w-6 px-1 py-2" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/40">
+          <tbody className="divide-y divide-border/40 [&_td]:align-top">
             {cases.map((c) => (
               <tr
                 key={c.id}
                 onClick={() => openCase(c.id)}
                 className={cn(
-                  'group cursor-pointer transition-all duration-150 hover:bg-surface-subtle/60',
+                  'group cursor-pointer transition-colors duration-150 hover:bg-primary-subtle/50',
                   c.isDeleted && 'opacity-50',
                 )}
               >
-                <td className="whitespace-nowrap px-4 py-3.5">
-                  <div className="inline-flex items-center gap-1">
-                    <Link
-                      href={`/${locale}/cases/${c.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className={cn(
-                        'font-mono text-xs font-semibold tracking-tight',
-                        c.isDeleted
-                          ? 'text-muted-foreground line-through'
-                          : 'text-primary hover:underline',
-                      )}
-                    >
-                      {c.caseNumber}
-                    </Link>
-                    <span className="opacity-0 transition-opacity group-hover:opacity-100">
-                      <CopyButton
-                        value={c.caseNumber}
-                        size="xs"
-                        label="Copy case number"
-                      />
-                    </span>
+                <td className="whitespace-nowrap px-3 py-2">
+                  <Link
+                    href={`/${locale}/cases/${c.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className={cn(
+                      'block font-mono text-[12px] font-semibold tracking-tight',
+                      c.isDeleted
+                        ? 'text-muted-foreground line-through'
+                        : 'text-primary hover:underline',
+                    )}
+                  >
+                    {c.externalCaseNumber || c.caseNumber}
+                  </Link>
+                  <div className="mt-0.5 text-[10.5px] text-muted-foreground">
+                    <span className="uppercase tracking-wider">Order</span>{' '}
+                    <span className="font-mono">#{c.orderNumber}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3.5">
-                  <div className="max-w-[220px] truncate text-sm font-medium text-heading">
+                <td className="px-3 py-2">
+                  <div className="max-w-[200px] truncate font-medium text-heading">
                     {c.customerName}
                   </div>
-                  <div className="group/email mt-0.5 inline-flex max-w-[220px] items-center gap-1 text-xs text-muted-foreground">
-                    <span className="truncate">{c.customerEmail}</span>
-                    <span className="shrink-0 opacity-0 transition-opacity group-hover/email:opacity-100">
-                      <CopyButton
-                        value={c.customerEmail}
-                        size="xs"
-                        label="Copy email"
-                      />
-                    </span>
+                  <div className="max-w-[200px] truncate text-[10.5px] text-muted-foreground">
+                    {c.customerEmail}
                   </div>
                 </td>
-                <td className="whitespace-nowrap px-4 py-3.5">
+                <td className="whitespace-nowrap px-3 py-2">
                   <div className="inline-flex items-center gap-2">
-                    <span className="text-base leading-none" aria-hidden>
+                    <span className="text-sm leading-none" aria-hidden>
                       {c.countryFlag || '\uD83C\uDF10'}
                     </span>
-                    <span className="text-sm text-heading">{c.countryName}</span>
+                    <span className="text-[12px] text-heading">
+                      {c.countryName}
+                    </span>
                   </div>
                 </td>
-                <td className="whitespace-nowrap px-4 py-3.5">
-                  <div className="text-sm font-medium text-heading">
+                <td className="whitespace-nowrap px-3 py-2">
+                  <div className="max-w-[180px] truncate font-medium text-heading">
                     {c.brandName}
                   </div>
                   {c.branchName && (
-                    <div className="mt-0.5 max-w-[200px] truncate text-xs text-muted-foreground">
+                    <div className="mt-0.5 max-w-[180px] truncate text-[10.5px] text-muted-foreground">
                       {c.branchName}
                     </div>
                   )}
                 </td>
-                <td className="whitespace-nowrap px-4 py-3.5 text-end">
+                <td className="whitespace-nowrap px-3 py-2 text-end">
                   <AmountCell
                     refund={c.totalRefundAmount}
                     currency={c.orderCurrency}
                   />
                 </td>
-                <td className="px-4 py-3.5">
+                <td className="whitespace-nowrap px-3 py-2">
                   <PaymentMethodIcons methods={c.paymentMethods} size="sm" />
                 </td>
-                <td className="whitespace-nowrap px-4 py-3.5">
+                <td className="whitespace-nowrap px-3 py-2">
                   {c.isDeleted ? (
-                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 text-[10.5px] font-medium text-zinc-600">
                       <Trash2 className="h-3 w-3" />
                       Deleted
                     </span>
@@ -159,11 +146,16 @@ export function CasesTable({
                     <CaseStatusBadge status={c.status} />
                   )}
                 </td>
-                <td className="whitespace-nowrap px-4 py-3.5 text-xs text-muted-foreground">
-                  {formatDate(new Date(c.createdAt))}
+                <td className="whitespace-nowrap px-3 py-2">
+                  <div className="text-[11.5px] text-heading">
+                    {formatDate(new Date(c.createdAt))}
+                  </div>
+                  <div className="max-w-[150px] truncate text-[10.5px] text-muted-foreground">
+                    by {c.createdByName ?? '—'}
+                  </div>
                 </td>
-                <td className="px-2 py-3.5">
-                  <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                <td className="px-1 py-2">
+                  <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </td>
               </tr>
             ))}
@@ -180,14 +172,20 @@ export function CasesTable({
               className="block px-4 py-3.5 transition-colors hover:bg-surface-subtle/50"
             >
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span
-                  className={cn(
-                    'font-mono text-xs font-semibold',
-                    c.isDeleted ? 'text-muted-foreground line-through' : 'text-primary',
-                  )}
-                >
-                  {c.caseNumber}
-                </span>
+                <div className="flex min-w-0 flex-col">
+                  <span
+                    className={cn(
+                      'font-mono text-xs font-semibold',
+                      c.isDeleted ? 'text-muted-foreground line-through' : 'text-primary',
+                    )}
+                  >
+                    {c.externalCaseNumber || c.caseNumber}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/80">
+                    <span className="uppercase tracking-wider">Order</span>{' '}
+                    <span className="font-mono">#{c.orderNumber}</span>
+                  </span>
+                </div>
                 {c.isDeleted ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
                     <Trash2 className="h-3 w-3" />
@@ -230,7 +228,7 @@ function Th({
   return (
     <th
       className={cn(
-        'whitespace-nowrap px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60',
+        'whitespace-nowrap px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70',
         align === 'end' ? 'text-end' : 'text-start',
       )}
     >
@@ -252,7 +250,7 @@ function AmountCell({
   currency: string;
 }) {
   return (
-    <span className="font-mono text-sm font-semibold tabular-nums text-heading">
+    <span className="font-mono text-xs font-semibold tabular-nums text-heading">
       {formatMoney(refund, currency)}
     </span>
   );

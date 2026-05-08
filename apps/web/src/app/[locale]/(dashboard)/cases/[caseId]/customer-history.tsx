@@ -10,6 +10,7 @@ import { History, Ticket, Mail } from 'lucide-react';
 type HistoryPriorCase = {
   id: string;
   caseNumber: string;
+  externalCaseNumber: string | null;
   status: string;
   createdAt: string;
   totalRefundAmount: number;
@@ -77,14 +78,14 @@ export function CustomerHistory({
   const promoCount = data?.promos.length ?? 0;
 
   return (
-    <div className="rounded-md border border-border bg-surface">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-lg border border-border bg-surface overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border bg-surface-subtle/50 px-4 py-2.5">
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           <History className="h-3.5 w-3.5" />
           Customer history
         </span>
         {!loading && !error && (priorCount > 0 || promoCount > 0) && (
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground tabular-nums">
             {priorCount} {priorCount === 1 ? 'case' : 'cases'} · {promoCount}{' '}
             {promoCount === 1 ? 'promo' : 'promos'}
           </span>
@@ -94,122 +95,136 @@ export function CustomerHistory({
       {loading ? (
         <CustomerHistorySkeleton />
       ) : error ? (
-        <div className="p-3 text-xs text-destructive">
+        <div className="p-4 text-xs text-destructive">
           Couldn&apos;t load history: {error}
         </div>
       ) : (
-        <div className="space-y-4 p-3">
-          <Section
-            icon={<Ticket className="h-3.5 w-3.5" />}
-            title="Prior refund cases"
-            count={priorCount}
-          >
+        <div className="grid gap-px bg-border md:grid-cols-2">
+          {/* Prior refund cases column */}
+          <div className="bg-surface">
+            <SectionHeader
+              icon={<Ticket className="h-3.5 w-3.5" />}
+              title="Prior refund cases"
+              count={priorCount}
+            />
             {priorCount === 0 ? (
-              <EmptyHint>First-time customer — no prior cases on file.</EmptyHint>
+              <div className="px-4 py-3">
+                <EmptyHint>First-time customer — no prior cases on file.</EmptyHint>
+              </div>
             ) : (
-              <ul className="space-y-1.5">
+              <ul className="divide-y divide-border">
                 {data!.priorCases.slice(0, 5).map((pc) => (
-                  <li key={pc.id} className="space-y-0.5">
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <Link
-                        href={`/${locale}/cases/${pc.id}`}
-                        className="font-mono font-medium text-primary hover:underline"
-                      >
-                        {pc.caseNumber}
-                      </Link>
-                      <CaseStatusBadge status={pc.status} />
-                    </div>
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                      <span>{formatDate(pc.createdAt)}</span>
-                      <span className="font-mono">
-                        {formatMoney(pc.totalRefundAmount, pc.orderCurrency)}
-                      </span>
-                    </div>
+                  <li
+                    key={pc.id}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2"
+                  >
+                    <Link
+                      href={`/${locale}/cases/${pc.id}`}
+                      className="truncate font-mono text-[12.5px] font-medium text-primary hover:underline"
+                    >
+                      {pc.externalCaseNumber || pc.caseNumber}
+                    </Link>
+                    <CaseStatusBadge status={pc.status} />
+                    <span className="text-[11px] text-muted-foreground tabular-nums">
+                      {formatDate(pc.createdAt)}
+                    </span>
+                    <span className="text-end font-mono text-[11px] text-muted-foreground tabular-nums">
+                      {formatMoney(pc.totalRefundAmount, pc.orderCurrency)}
+                    </span>
                   </li>
                 ))}
                 {priorCount > 5 && (
-                  <li className="pt-1 text-[11px] text-muted-foreground">
+                  <li className="px-4 py-2 text-[11px] text-muted-foreground">
                     +{priorCount - 5} more in case list
                   </li>
                 )}
               </ul>
             )}
-          </Section>
+          </div>
 
-          <Section
-            icon={<Mail className="h-3.5 w-3.5" />}
-            title="Promos sent"
-            count={promoCount}
-          >
+          {/* Promos sent column */}
+          <div className="bg-surface">
+            <SectionHeader
+              icon={<Mail className="h-3.5 w-3.5" />}
+              title="Promos sent"
+              count={promoCount}
+            />
             {promoCount === 0 ? (
-              <EmptyHint>No promo codes have been sent to this customer.</EmptyHint>
+              <div className="px-4 py-3">
+                <EmptyHint>No promo codes have been sent to this customer.</EmptyHint>
+              </div>
             ) : (
-              <ul className="space-y-1.5">
+              <ul className="divide-y divide-border">
                 {data!.promos.slice(0, 5).map((p) => (
-                  <li key={p.id} className="space-y-0.5">
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <span className="flex items-center gap-1.5">
-                        {p.code ? (
-                          <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
-                            {p.code}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground italic">No code</span>
-                        )}
-                        <Badge variant="outline" className="text-[10px]">
-                          {p.type}
-                        </Badge>
+                  <li
+                    key={p.id}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2"
+                  >
+                    {p.code ? (
+                      <span className="truncate font-mono text-[12px] font-medium text-foreground">
+                        {p.code}
                       </span>
-                      {p.amount !== null && (
-                        <span className="font-mono text-[11px] text-muted-foreground">
-                          {p.currency
-                            ? formatMoney(p.amount, p.currency)
-                            : p.amount}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">
+                    ) : (
+                      <span className="text-[12px] italic text-muted-foreground">
+                        No code
+                      </span>
+                    )}
+                    {p.amount !== null ? (
+                      <span className="text-end font-mono text-[12px] tabular-nums text-foreground">
+                        {p.currency ? formatMoney(p.amount, p.currency) : p.amount}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="truncate text-[11px] text-muted-foreground">
+                      {formatPromoType(p.type)}
+                    </span>
+                    <span className="text-end text-[11px] text-muted-foreground tabular-nums">
                       {formatDate(p.createdAt)}
-                    </div>
+                    </span>
                   </li>
                 ))}
                 {promoCount > 5 && (
-                  <li className="pt-1 text-[11px] text-muted-foreground">
+                  <li className="px-4 py-2 text-[11px] text-muted-foreground">
                     +{promoCount - 5} more in promo log
                   </li>
                 )}
               </ul>
             )}
-          </Section>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function Section({
+/** Convert SCREAMING_SNAKE_CASE promo type to a human label. */
+function formatPromoType(type: string) {
+  return type
+    .toLowerCase()
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+function SectionHeader({
   icon,
   title,
   count,
-  children,
 }: {
   icon: React.ReactNode;
   title: string;
   count: number;
-  children: React.ReactNode;
 }) {
   return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1.5 text-muted-foreground">
-          {icon}
-          {title}
-        </span>
-        <Badge variant="outline" className="text-[10px]">
-          {count}
-        </Badge>
-      </div>
-      {children}
+    <div className="flex items-center justify-between border-b border-border bg-surface-subtle/40 px-4 py-2">
+      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {icon}
+        {title}
+      </span>
+      <Badge variant="outline" className="text-[10px] tabular-nums">
+        {count}
+      </Badge>
     </div>
   );
 }

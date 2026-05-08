@@ -3,7 +3,9 @@ import { prisma } from '@wow/db';
 import { caseListFiltersSchema } from '@wow/validators';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, FileText } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Plus, Download, Inbox } from 'lucide-react';
 import { CaseFiltersBar } from './case-filters-bar';
 import { STATUS_BUCKETS } from './case-status-buckets';
 import { CasesTable, type CaseRow } from './cases-table';
@@ -24,6 +26,7 @@ export default async function CasesPage({
   const session = await auth();
   const role = session?.user?.role ?? null;
   const canApprove = role === 'ADMIN' || role === 'MANAGER';
+  const canExport = role === 'ADMIN' || role === 'OPS_LEAD' || role === 'FINANCE_LEAD' || role === 'COUNTRY_MANAGER';
 
   const parsedFilters = caseListFiltersSchema.safeParse({
     q: sp['q'],
@@ -58,6 +61,7 @@ export default async function CasesPage({
       isPg ? { contains: value, mode: 'insensitive' as const } : { contains: value };
     where['OR'] = [
       { caseNumber: ciContains(filters.q) },
+      { externalCaseNumber: ciContains(filters.q) },
       { customerName: ciContains(filters.q) },
       { customerEmail: ciContains(filters.q) },
       { orderNumber: ciContains(filters.q) },
@@ -135,6 +139,7 @@ export default async function CasesPage({
   const rows: CaseRow[] = cases.map((c) => ({
     id: c.id,
     caseNumber: c.caseNumber,
+    externalCaseNumber: c.externalCaseNumber ?? null,
     status: c.status as CaseStatus,
     customerName: c.customerName,
     customerEmail: c.customerEmail,
@@ -161,24 +166,49 @@ export default async function CasesPage({
 
   const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
+  const exportQuery = new URLSearchParams(
+    Object.entries({
+      q: filters.q ?? '',
+      countryId: filters.countryId ?? '',
+      brandId: filters.brandId ?? '',
+      status: filters.status ?? '',
+      bucket: bucket !== 'all' ? bucket : '',
+      assignedToId: filters.assignedToId ?? '',
+      fromDate: filters.fromDate ? filters.fromDate.toISOString() : '',
+      toDate: filters.toDate ? filters.toDate.toISOString() : '',
+    }).filter(([, v]) => v !== ''),
+  ).toString();
+
   return (
-    <div className="mx-auto max-w-7xl px-8 py-10">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-display-md font-semibold tracking-tight text-heading">
+    <div className="mx-auto max-w-[1480px] space-y-3 px-4 py-4">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
             Refund cases
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage and track all refund requests across brands.
-          </p>
-        </div>
-        <Button asChild size="lg">
-          <Link href={`/${locale}/cases/new`}>
-            <Plus className="h-4 w-4" />
-            New case
-          </Link>
-        </Button>
-      </div>
+            <span className="inline-flex h-5 items-center rounded-pill bg-[hsl(var(--accent-cream))] px-2 text-[11px] font-semibold tabular-nums text-primary">
+              {total.toLocaleString()}
+            </span>
+          </span>
+        }
+        actions={
+          <>
+            {canExport && (
+              <Button asChild size="default" variant="outline">
+                <a href={`/api/export/cases?${exportQuery}`}>
+                  <Download className="h-4 w-4" />
+                  Export
+                </a>
+              </Button>
+            )}
+            <Button asChild size="default">
+              <Link href={`/${locale}/cases/new`}>
+                <Plus className="h-4 w-4" />
+                New case
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       <CaseFiltersBar
         countries={countries.map((c) => ({
@@ -193,22 +223,21 @@ export default async function CasesPage({
 
       {cases.length === 0 ? (
         <Card>
-          <CardContent className="py-16">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-subtle">
-                <FileText className="h-7 w-7 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold text-heading">No cases found</h3>
-              <p className="max-w-md text-sm text-muted-foreground">
-                Try adjusting your filters, or create a new refund case to get started.
-              </p>
-              <Button asChild className="mt-2">
-                <Link href={`/${locale}/cases/new`}>
-                  <Plus className="h-4 w-4" />
-                  New case
-                </Link>
-              </Button>
-            </div>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={Inbox}
+              tone="butter"
+              title="No cases match"
+              className="py-14"
+              action={
+                <Button asChild>
+                  <Link href={`/${locale}/cases/new`}>
+                    <Plus className="h-4 w-4" />
+                    New case
+                  </Link>
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       ) : (

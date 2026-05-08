@@ -26,6 +26,7 @@ export async function GET(request: Request) {
       select: {
         id: true,
         caseNumber: true,
+        externalCaseNumber: true,
         status: true,
         createdAt: true,
         totalRefundAmount: true,
@@ -52,6 +53,7 @@ export async function GET(request: Request) {
     priorCases: priorCases.map((pc) => ({
       id: pc.id,
       caseNumber: pc.caseNumber,
+      externalCaseNumber: pc.externalCaseNumber,
       status: pc.status,
       createdAt: pc.createdAt.toISOString(),
       totalRefundAmount: pc.totalRefundAmount,

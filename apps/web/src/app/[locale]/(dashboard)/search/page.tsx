@@ -56,6 +56,7 @@ export default async function GlobalSearchPage({
         deletedAt: null,
         OR: [
           { caseNumber: { contains: q } },
+          { externalCaseNumber: { contains: q } },
           { orderNumber: { contains: q } },
           { customerEmail: { contains: q } },
           { customerName: { contains: q } },
@@ -67,6 +68,7 @@ export default async function GlobalSearchPage({
       select: {
         id: true,
         caseNumber: true,
+        externalCaseNumber: true,
         status: true,
         customerName: true,
         customerEmail: true,
@@ -211,7 +213,7 @@ export default async function GlobalSearchPage({
                   <tr key={c.id} className="hover:bg-surface-subtle/40">
                     <td className="p-3">
                       <Link href={`/cases/${c.id}`} className="font-medium text-primary hover:underline">
-                        {c.caseNumber}
+                        {c.externalCaseNumber || c.caseNumber}
                       </Link>
                       <div className="text-xs text-muted-foreground">
                         {c.country.registryCode} · {c.brand.name}
@@ -369,15 +371,12 @@ export default async function GlobalSearchPage({
 
 function Wrapper({ q, children }: { q: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
-      <div className="mb-6">
-        <div className="text-xs uppercase text-muted-foreground">Search</div>
-        <h1 className="text-display-md font-normal tracking-tight text-heading">
-          Results for &ldquo;{q}&rdquo;
-        </h1>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-4 px-4 py-4">
+      <h1 className="font-semibold tracking-tight text-display-sm text-heading">
+        Results for &ldquo;{q}&rdquo;
+      </h1>
 
-      <form className="mb-6 flex gap-2">
+      <form className="flex gap-2">
         <Input
           name="q"
           defaultValue={q}
@@ -394,13 +393,10 @@ function Wrapper({ q, children }: { q: string; children: React.ReactNode }) {
 
 function EmptyState() {
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
-      <div className="mb-6">
-        <div className="text-xs uppercase text-muted-foreground">Search</div>
-        <h1 className="text-display-md font-normal tracking-tight text-heading">Global search</h1>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-4 px-4 py-4">
+      <h1 className="font-semibold tracking-tight text-display-sm text-heading">Search</h1>
 
-      <form className="mb-6 flex gap-2">
+      <form className="flex gap-2">
         <Input
           name="q"
           placeholder="Case number, order, customer email, batch…"
@@ -409,10 +405,6 @@ function EmptyState() {
         />
         <Button type="submit">Search</Button>
       </form>
-
-      <p className="text-sm text-muted-foreground">
-        Searches cases, customers, batches (approval / KNET / Aura), and users (admin).
-      </p>
     </div>
   );
 }

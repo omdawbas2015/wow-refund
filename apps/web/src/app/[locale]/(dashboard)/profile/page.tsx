@@ -4,10 +4,10 @@ import { prisma } from '@wow/db';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
 import { ProfileForm } from './form';
 import {
   MUTABLE_NOTIFICATION_KINDS,
@@ -44,21 +44,13 @@ export default async function ProfilePage() {
   if (!me) redirect('/login');
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-        <p className="text-sm text-muted-foreground">
-          Update your display name, contact info, and language / theme preferences.
-        </p>
-      </div>
+    <div className="space-y-5 px-4 py-4">
+      <PageHeader title="Profile" />
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Personal info</CardTitle>
-            <CardDescription>
-              These fields appear in case histories, mentions, and the topbar.
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-[14px]">Personal info</CardTitle>
           </CardHeader>
           <CardContent>
             <ProfileForm
@@ -77,11 +69,10 @@ export default async function ProfilePage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Account</CardTitle>
-            <CardDescription>Read-only — managed by an admin.</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-[14px]">Account</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
+          <CardContent className="space-y-3">
             <Field label="Email" value={me.email} />
             <Field label="Role" value={me.role?.name ?? '—'} />
             <Field
@@ -102,8 +93,8 @@ export default async function ProfilePage() {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-foreground">{value}</div>
+      <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
+      <div className="mt-0.5 break-words text-[12.5px] font-medium text-foreground">{value}</div>
     </div>
   );
 }

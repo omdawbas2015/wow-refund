@@ -40,6 +40,7 @@ export default async function CustomerPage({
     select: {
       id: true,
       caseNumber: true,
+      externalCaseNumber: true,
       status: true,
       orderNumber: true,
       orderDate: true,
@@ -191,7 +192,7 @@ export default async function CustomerPage({
                 <tr key={c.id} className="hover:bg-surface-subtle/40">
                   <td className="p-3">
                     <Link href={`/cases/${c.id}`} className="font-medium text-primary hover:underline">
-                      {c.caseNumber}
+                      {c.externalCaseNumber || c.caseNumber}
                     </Link>
                     <div className="text-xs text-muted-foreground">
                       {formatDateTime(c.createdAt, localeFmt)}

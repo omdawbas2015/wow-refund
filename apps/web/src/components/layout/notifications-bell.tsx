@@ -102,12 +102,17 @@ export function NotificationsBell({ locale }: { locale: string }) {
         variant="ghost"
         size="icon"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Notifications"
-        className="relative"
+        aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ''}`}
+        className={cn(
+          'relative h-8 w-8 rounded-pill border border-transparent transition-colors',
+          unread > 0
+            ? 'border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10'
+            : 'hover:border-border hover:bg-surface-muted',
+        )}
       >
-        <Bell className="h-4 w-4" />
+        <Bell className={cn('h-4 w-4', unread > 0 && 'animate-bell-shake')} />
         {unread > 0 && (
-          <span className="absolute -end-0.5 -top-0.5 inline-flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium leading-none text-destructive-foreground">
+          <span className="absolute -end-1 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground ring-2 ring-background">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -120,26 +125,41 @@ export function NotificationsBell({ locale }: { locale: string }) {
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute end-0 z-50 mt-2 w-[360px] overflow-hidden rounded-md border border-border bg-surface shadow-lg">
-            <div className="flex items-center justify-between border-b border-border px-3 py-2">
-              <h3 className="text-sm font-medium">Notifications</h3>
+          <div className="absolute end-0 z-50 mt-2 w-[380px] overflow-hidden rounded-2xl border border-border bg-surface shadow-popover animate-fade-in-up">
+            <div className="flex items-center justify-between border-b border-border bg-surface-subtle/40 px-3.5 py-2.5">
+              <div className="flex items-baseline gap-1.5">
+                <h3 className="text-[13px] font-semibold text-heading">Notifications</h3>
+                {unread > 0 && (
+                  <span className="text-[10.5px] font-medium text-muted-foreground">
+                    {unread} new
+                  </span>
+                )}
+              </div>
               {unread > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={markAllRead}
                   disabled={isPending}
-                  className="h-7 text-xs"
+                  className="h-7 text-[11px]"
                 >
                   <CheckCheck className="h-3.5 w-3.5" />
                   Mark all read
                 </Button>
               )}
             </div>
-            <div className="max-h-[420px] overflow-y-auto">
+            <div className="scrollbar-thin max-h-[420px] overflow-y-auto">
               {items.length === 0 ? (
-                <div className="p-6 text-center text-sm text-muted-foreground">
-                  You&apos;re all caught up.
+                <div className="flex flex-col items-center gap-2 p-8 text-center">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-pill chip-mint">
+                    <Bell className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <div className="text-[13px] font-semibold text-heading">You&apos;re all caught up</div>
+                    <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                      New maintenance and case alerts will appear here.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <ul>

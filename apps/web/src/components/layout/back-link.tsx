@@ -29,13 +29,13 @@ export function BackLink() {
   const label = labelMap[top] ?? top;
 
   return (
-    <div className="border-b border-border/40 bg-surface/40 py-1.5">
-      <div className="mx-auto w-full max-w-[1440px] px-6">
+    <div className="border-b border-border/50 bg-surface/40">
+      <div className="mx-auto w-full max-w-[1440px] px-4 py-1.5">
         <Link
           href={parentHref}
-          className="group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
           <span>Back to {label}</span>
         </Link>
       </div>

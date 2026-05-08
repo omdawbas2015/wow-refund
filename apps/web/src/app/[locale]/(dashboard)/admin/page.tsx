@@ -1,20 +1,22 @@
 import { redirect } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Link } from '@/i18n/routing';
 import { auth } from '@/auth';
-import { Globe, Tag, CreditCard, AlertTriangle, Mail, Users, Settings, ShieldAlert, Timer, ChevronRight } from 'lucide-react';
+import { Globe, Tag, CreditCard, AlertTriangle, Mail, Users, Settings, ShieldAlert, Timer, ChevronRight, Wrench } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
 
 const SECTIONS = [
-  { href: '/admin/countries', icon: Globe, title: 'Countries', desc: 'Manager email, cutoff time, sort order' },
-  { href: '/admin/brands', icon: Tag, title: 'Brands', desc: 'Brand catalog and per-country mapping' },
-  { href: '/admin/payment-methods', icon: CreditCard, title: 'Payment methods', desc: 'KNET, Cash, Apple Pay, …' },
-  { href: '/admin/root-causes', icon: AlertTriangle, title: 'Root causes', desc: 'Why refunds happen' },
-  { href: '/admin/email-templates', icon: Mail, title: 'Email templates', desc: 'Subjects, bodies, locales' },
-  { href: '/admin/users', icon: Users, title: 'Users & roles', desc: 'Manage staff access' },
-  { href: '/admin/pending-approvals', icon: Users, title: 'Pending signups', desc: 'Approve or reject new signups' },
-  { href: '/admin/settings', icon: Settings, title: 'Settings', desc: 'Feature flags and system settings' },
-  { href: '/admin/fraud-signals', icon: ShieldAlert, title: 'Fraud signals', desc: 'Heuristic alerts and detection sweeps' },
-  { href: '/admin/sla-rules', icon: Timer, title: 'SLA rules', desc: 'Per-country / brand / cause SLA thresholds' },
+  { href: '/admin/countries', icon: Globe, title: 'Countries' },
+  { href: '/admin/brands', icon: Tag, title: 'Brands' },
+  { href: '/admin/payment-methods', icon: CreditCard, title: 'Payment methods' },
+  { href: '/admin/root-causes', icon: AlertTriangle, title: 'Root causes' },
+  { href: '/admin/email-templates', icon: Mail, title: 'Email templates' },
+  { href: '/admin/users', icon: Users, title: 'Users & roles' },
+  { href: '/admin/pending-approvals', icon: Users, title: 'Pending signups' },
+  { href: '/admin/settings', icon: Settings, title: 'Settings' },
+  { href: '/admin/fraud-signals', icon: ShieldAlert, title: 'Fraud signals' },
+  { href: '/admin/sla-rules', icon: Timer, title: 'SLA rules' },
+  { href: '/admin/maintenance-supervisors', icon: Wrench, title: 'Branded Solutions supervisors' },
 ];
 
 export default async function AdminPage() {
@@ -23,28 +25,17 @@ export default async function AdminPage() {
   if (session.user.role !== 'ADMIN') redirect('/');
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-10">
-      <div className="mb-6">
-        <h1 className="text-display-md font-normal tracking-tight text-heading">Administration</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Static data, copy, and access control. Changes are audit-logged.
-        </p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="mx-auto max-w-5xl space-y-5 px-4 py-4">
+      <PageHeader title="Administration" />
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {SECTIONS.map((s) => (
           <Link key={s.href} href={s.href} className="block">
-            <Card className="transition-colors hover:border-primary/40">
-              <CardHeader className="flex-row items-center gap-3 space-y-0">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <s.icon className="h-4 w-4" />
-                </div>
-                <div className="flex-1">
-                  <CardTitle className="text-base">{s.title}</CardTitle>
-                  <CardDescription>{s.desc}</CardDescription>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent />
+            <Card className="group flex h-14 flex-row items-center gap-3 px-3 transition-all hover:-translate-y-px hover:border-primary/40 hover:shadow-card-hover">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--accent-cream))] text-primary">
+                <s.icon className="h-3.5 w-3.5" />
+              </div>
+              <span className="flex-1 truncate text-[13px] font-semibold text-heading">{s.title}</span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
             </Card>
           </Link>
         ))}

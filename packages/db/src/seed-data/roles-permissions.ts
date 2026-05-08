@@ -47,6 +47,9 @@ export const permissions: readonly PermissionSeed[] = [
   // Help Desk
   { key: 'store_message.send',  category: 'Help Desk', description: 'Send templated messages to stores' },
   { key: 'store_message.view',  category: 'Help Desk', description: 'View store messages history' },
+  { key: 'maintenance.view',    category: 'Help Desk', description: 'View Branded Solutions maintenance pool' },
+  { key: 'maintenance.handle',  category: 'Help Desk', description: 'Work maintenance tickets (assign, close, contact supervisor)' },
+  { key: 'maintenance.admin',   category: 'Help Desk', description: 'Configure country supervisors and webhook' },
 
   // Admin
   { key: 'admin.users.view',    category: 'Admin',    description: 'View user list' },
@@ -109,6 +112,7 @@ export const roles: readonly RoleSeed[] = [
       'case.view', 'case.create', 'case.edit', 'case.notes.create',
       'promo.view', 'promo.allocate.compensation', 'promo.allocate.service_recovery',
       'store_message.send', 'store_message.view',
+      'maintenance.view', 'maintenance.handle',
       'report.view',
     ],
   },

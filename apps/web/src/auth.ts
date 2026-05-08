@@ -94,14 +94,31 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // Reset counters on success
+        // Reset counters on success. Default to Available=true on
+        // every fresh login so cases get routed to anyone with the
+        // app open — the user can flip themselves Offline manually
+        // if they need a break, and closing the tab still fires
+        // sendBeacon → /api/me/availability so a stale session can't
+        // hold work.
+        const now = new Date();
+        // Close any dangling presence-log row from a previous
+        // session before we open a new one.
+        await prisma.agentPresenceLog.updateMany({
+          where: { userId: user.id, endedAt: null },
+          data: { endedAt: now },
+        });
         await prisma.user.update({
           where: { id: user.id },
           data: {
             failedLoginAttempts: 0,
             lockedUntil: null,
-            lastLoginAt: new Date(),
+            lastLoginAt: now,
+            isAvailable: true,
+            availableSince: now,
           },
+        });
+        await prisma.agentPresenceLog.create({
+          data: { userId: user.id, state: 'AVAILABLE', startedAt: now },
         });
 
         return {

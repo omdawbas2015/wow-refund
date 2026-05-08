@@ -1,0 +1,806 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Search as SearchIcon, ChevronRight, Copy as CopyIcon, Check, Mail, MessageSquare, CheckCircle2, Hand, Inbox } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
+
+type StatusKey =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'WAITING_FOR_SUPERVISOR'
+  | 'WAITING_FOR_CUSTOMER'
+  | 'CLOSED'
+  | 'CANCELLED';
+
+interface Row {
+  id: string;
+  ticketRef: string;
+  countryName: string;
+  cityName: string | null;
+  customerName: string;
+  storeName: string;
+  location: string | null;
+  submitterName: string;
+  contactNumber: string;
+  email: string;
+  machineModel: string;
+  issueType: string;
+  status: StatusKey;
+  mrNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignedAt: string | null;
+  closedAt: string | null;
+  assignmentReason: string | null;
+  assignedTo: { id: string; name: string; email: string; isAvailable: boolean } | null;
+  closedBy: { id: string; name: string } | null;
+}
+
+interface Supervisor {
+  id: string;
+  countryName: string;
+  name: string;
+  email: string;
+}
+
+interface CurrentUser {
+  id: string;
+  name: string;
+  isAvailable: boolean;
+  availableSince: string | null;
+}
+
+interface OnlineAgent {
+  id: string;
+  name: string;
+  email: string;
+  availableSince: string | null;
+}
+
+interface Props {
+  initialRows: Row[];
+  supervisors: Supervisor[];
+  currentUser: CurrentUser;
+}
+
+const STATUS_STYLE: Record<StatusKey, { label: string; tone: string; dot: string }> = {
+  PENDING: { label: 'Pending', tone: 'bg-amber-50 text-amber-900 border-amber-200', dot: 'bg-amber-500' },
+  IN_PROGRESS: { label: 'In progress', tone: 'bg-blue-50 text-blue-900 border-blue-200', dot: 'bg-blue-500' },
+  WAITING_FOR_SUPERVISOR: { label: 'Waiting · Supervisor', tone: 'bg-purple-50 text-purple-900 border-purple-200', dot: 'bg-purple-500' },
+  WAITING_FOR_CUSTOMER: { label: 'Waiting · Customer', tone: 'bg-orange-50 text-orange-900 border-orange-200', dot: 'bg-orange-500' },
+  CLOSED: { label: 'Closed', tone: 'bg-emerald-50 text-emerald-900 border-emerald-200', dot: 'bg-emerald-500' },
+  CANCELLED: { label: 'Cancelled', tone: 'bg-zinc-50 text-zinc-700 border-zinc-200', dot: 'bg-zinc-400' },
+};
+
+const QUICK_FILTERS: { key: 'OPEN' | 'MINE' | StatusKey | 'ALL'; label: string }[] = [
+  { key: 'OPEN', label: 'Open' },
+  { key: 'MINE', label: 'Mine' },
+  { key: 'PENDING', label: 'Pending' },
+  { key: 'IN_PROGRESS', label: 'In progress' },
+  { key: 'WAITING_FOR_SUPERVISOR', label: 'Waiting · Sup' },
+  { key: 'WAITING_FOR_CUSTOMER', label: 'Waiting · Cust' },
+  { key: 'CLOSED', label: 'Closed' },
+  { key: 'ALL', label: 'All' },
+];
+
+function timeAgo(iso: string, now: number): string {
+  const diffMs = now - new Date(iso).getTime();
+  const m = Math.floor(diffMs / 60_000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+export function BrandedSolutionsClient({ initialRows, supervisors, currentUser }: Props) {
+  const [rows, setRows] = useState<Row[]>(initialRows);
+  const [filter, setFilter] = useState<'ALL' | 'OPEN' | 'MINE' | StatusKey>('OPEN');
+  const [q, setQ] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(initialRows[0]?.id ?? null);
+  const [now, setNow] = useState(Date.now());
+  const [onlineAgents, setOnlineAgents] = useState<OnlineAgent[]>([]);
+
+  // ── Live updates via SSE ────────────────────────────────────────────
+  useEffect(() => {
+    const es = new EventSource('/api/branded-solutions/stream');
+    es.addEventListener('maintenance.created', () => refreshList().catch(() => {}));
+    es.addEventListener('maintenance.updated', () => refreshList().catch(() => {}));
+    es.addEventListener('agent.presence', () => loadOnline().catch(() => {}));
+    return () => es.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    void loadOnline();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function refreshList() {
+    const res = await fetch('/api/branded-solutions?limit=200', { cache: 'no-store' });
+    if (!res.ok) return;
+    const json = (await res.json()) as { rows: Row[] };
+    setRows(json.rows);
+  }
+
+  async function loadOnline() {
+    const res = await fetch('/api/branded-solutions/online-agents', { cache: 'no-store' });
+    if (!res.ok) return;
+    const json = (await res.json()) as { agents: OnlineAgent[] };
+    setOnlineAgents(json.agents);
+  }
+
+  // Filtering — server-side is unindexed for simplicity, so we filter
+  // in-memory across the 200-row cap. Counters drive the chip badges.
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {
+      OPEN: 0, MINE: 0, PENDING: 0, IN_PROGRESS: 0,
+      WAITING_FOR_SUPERVISOR: 0, WAITING_FOR_CUSTOMER: 0, CLOSED: 0, ALL: rows.length,
+    };
+    for (const r of rows) {
+      if (r.status !== 'CLOSED' && r.status !== 'CANCELLED') c['OPEN']! += 1;
+      if (r.assignedTo?.id === currentUser.id) c['MINE']! += 1;
+      c[r.status] = (c[r.status] ?? 0) + 1;
+    }
+    return c;
+  }, [rows, currentUser.id]);
+
+  const filtered = useMemo(() => {
+    let list = rows;
+    if (filter === 'OPEN') list = list.filter((r) => r.status !== 'CLOSED' && r.status !== 'CANCELLED');
+    else if (filter === 'MINE') list = list.filter((r) => r.assignedTo?.id === currentUser.id);
+    else if (filter !== 'ALL') list = list.filter((r) => r.status === filter);
+    if (q.trim()) {
+      const needle = q.trim().toLowerCase();
+      list = list.filter((r) =>
+        [r.ticketRef, r.customerName, r.storeName, r.email, r.contactNumber, r.machineModel, r.countryName, r.mrNumber ?? '']
+          .join(' ')
+          .toLowerCase()
+          .includes(needle),
+      );
+    }
+    return list;
+  }, [rows, filter, q, currentUser.id]);
+
+  // Auto-fix stale selection when filter excludes the selected ticket.
+  useEffect(() => {
+    if (!filtered.find((r) => r.id === selectedId)) {
+      setSelectedId(filtered[0]?.id ?? null);
+    }
+  }, [filtered, selectedId]);
+
+  const selected = filtered.find((r) => r.id === selectedId) ?? null;
+
+  return (
+    <div className="space-y-3 px-4 py-4">
+      <PageHeader
+        title="Branded Solutions"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <OnlineAgentsRow agents={onlineAgents} currentUserId={currentUser.id} />
+            <PageAvailabilityToggle initial={{ isAvailable: currentUser.isAvailable, availableSince: currentUser.availableSince }} />
+          </div>
+        }
+      />
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        <div className="border-b border-border bg-surface-subtle/40 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full max-w-sm flex-1 min-w-[220px]">
+              <SearchIcon className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search ticket, customer, store, MR #…"
+                className="h-9 min-w-0 ps-9"
+              />
+            </div>
+            <div className="ms-auto text-[11px] text-muted-foreground tabular-nums">
+              <span className="font-semibold text-foreground">{filtered.length}</span> of {rows.length}
+            </div>
+          </div>
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            {QUICK_FILTERS.map((f) => (
+              <FilterChip key={f.key} active={filter === f.key} onClick={() => setFilter(f.key)}>
+                {f.label}
+                <span
+                  className={cn(
+                    'ms-1.5 inline-flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums leading-none',
+                    filter === f.key ? 'bg-white/25 text-white' : 'bg-surface text-muted-foreground',
+                  )}
+                >
+                  {counts[f.key] ?? 0}
+                </span>
+              </FilterChip>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid min-h-[640px] md:grid-cols-[minmax(320px,380px)_1fr]">
+          <div className="border-b border-border md:border-b-0 md:border-e">
+            <div className="scrollbar-thin max-h-[calc(100vh-260px)] overflow-y-auto">
+              {filtered.length === 0 ? (
+                <EmptyState
+                  icon={Inbox}
+                  tone="neutral"
+                  title="No tickets match"
+                  description="Try a different filter chip or clear the search."
+                  className="py-10"
+                />
+              ) : (
+                filtered.map((r) => (
+                  <QueueRow key={r.id} r={r} active={selected?.id === r.id} onClick={() => setSelectedId(r.id)} now={now} />
+                ))
+              )}
+            </div>
+          </div>
+          <div>
+            {selected ? (
+              <Workbench
+                key={selected.id}
+                row={selected}
+                supervisors={supervisors}
+                currentUser={currentUser}
+                onChanged={() => refreshList()}
+              />
+            ) : (
+              <EmptyState
+                icon={Inbox}
+                title="No ticket selected"
+                description="Pick a ticket from the queue on the left to view its details and act on it."
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Page-level availability toggle — only used on Branded Solutions.
+// Heartbeat keeps the presence row warm while the page is open;
+// pagehide / beforeunload flips the user Offline so closed tabs
+// can't hold tickets.
+// ───────────────────────────────────────────────────────────────────
+
+function PageAvailabilityToggle({
+  initial,
+}: {
+  initial: { isAvailable: boolean; availableSince: string | null };
+}) {
+  const [isAvailable, setIsAvailable] = useState(initial.isAvailable);
+  const [availableSince, setAvailableSince] = useState<string | null>(initial.availableSince);
+  const [now, setNow] = useState(Date.now());
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      void fetch('/api/me/heartbeat', { method: 'POST', cache: 'no-store' }).catch(() => {});
+    }, 25_000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    function flipAwayBeacon() {
+      try {
+        const data = new Blob([JSON.stringify({ isAvailable: false })], { type: 'application/json' });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/me/availability', data);
+        }
+      } catch {
+        // best-effort
+      }
+    }
+    window.addEventListener('pagehide', flipAwayBeacon);
+    return () => window.removeEventListener('pagehide', flipAwayBeacon);
+  }, []);
+
+  async function flip(next: boolean) {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/me/availability', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ isAvailable: next }),
+      });
+      if (!res.ok) return;
+      const j = (await res.json()) as { isAvailable: boolean; availableSince: string | null };
+      setIsAvailable(j.isAvailable);
+      setAvailableSince(j.availableSince);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  let timer = '';
+  if (isAvailable && availableSince) {
+    const ms = Math.max(0, now - new Date(availableSince).getTime());
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    timer = `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => flip(!isAvailable)}
+      title={isAvailable ? 'Click to go Offline' : 'Click to go Available'}
+      className={cn(
+        'inline-flex h-8 items-center gap-2 rounded-pill border px-2.5 text-[12px] font-semibold leading-none transition-all disabled:opacity-50',
+        isAvailable
+          ? 'border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+          : 'border-border bg-surface text-muted-foreground hover:border-border-strong hover:bg-surface-muted',
+      )}
+    >
+      <span
+        className={cn(
+          'h-1.5 w-1.5 rounded-full',
+          isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400',
+        )}
+      />
+      <span className="tabular-nums">
+        {isAvailable ? `Available · ${timer}` : 'Offline'}
+      </span>
+    </button>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Online agents row — small avatars + green dot for everyone Available
+// ───────────────────────────────────────────────────────────────────
+
+function OnlineAgentsRow({ agents, currentUserId }: { agents: OnlineAgent[]; currentUserId: string }) {
+  if (agents.length === 0) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-pill border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-900">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+        No agents online — tickets will queue
+      </span>
+    );
+  }
+  return (
+    <div className="inline-flex items-center gap-2 rounded-pill border border-emerald-200 bg-emerald-50/70 px-2.5 py-1">
+      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold uppercase tracking-wide text-emerald-900">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+        {agents.length} online
+      </span>
+      <div className="hidden items-center gap-1 sm:flex">
+        {agents.slice(0, 5).map((a) => {
+          const isMe = a.id === currentUserId;
+          const firstName = (a.name || a.email).split(/[\s@]/)[0] ?? '?';
+          const initial = firstName.charAt(0).toUpperCase();
+          return (
+            <span
+              key={a.id}
+              title={`${a.name}${isMe ? ' (you)' : ''} — Available`}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-pill bg-white/80 py-0.5 pe-2 ps-0.5 text-[10.5px] font-medium ring-1',
+                isMe ? 'ring-emerald-300 text-emerald-900' : 'ring-border text-foreground',
+              )}
+            >
+              <span
+                className={cn(
+                  'flex h-4 w-4 items-center justify-center rounded-pill text-[9px] font-semibold leading-none',
+                  isMe ? 'bg-emerald-500 text-white' : 'bg-primary text-primary-foreground',
+                )}
+              >
+                {initial}
+              </span>
+              <span className="max-w-[80px] truncate">{firstName}{isMe ? ' (you)' : ''}</span>
+            </span>
+          );
+        })}
+        {agents.length > 5 && (
+          <span className="text-[10.5px] font-medium text-emerald-900">+{agents.length - 5}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Queue row — same shape as the Refund pool
+// ───────────────────────────────────────────────────────────────────
+
+function QueueRow({ r, active, onClick, now }: { r: Row; active: boolean; onClick: () => void; now: number }) {
+  const status = STATUS_STYLE[r.status];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'group relative block w-full border-b border-border/70 px-3 py-2.5 text-start transition-colors',
+        active
+          ? 'bg-primary/[0.06]'
+          : 'hover:bg-surface-muted/70 focus-visible:bg-surface-muted/70',
+      )}
+    >
+      {active && (
+        <span
+          aria-hidden
+          className="absolute inset-y-1.5 start-0 w-0.5 rounded-r-full bg-primary"
+        />
+      )}
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[11.5px] font-semibold text-heading">{r.ticketRef}</span>
+        <span className={cn('inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 text-[10px] font-semibold', status.tone)}>
+          <span className={cn('h-1 w-1 rounded-full', status.dot)} />
+          {status.label}
+        </span>
+      </div>
+      <div className="mt-1 truncate text-[12.5px] font-semibold text-foreground">{r.customerName}</div>
+      <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+        {r.storeName} · {r.countryName}
+      </div>
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1 text-[10.5px] text-muted-foreground">
+          {r.assignedTo ? (
+            <>
+              <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', r.assignedTo.isAvailable ? 'bg-emerald-500' : 'bg-zinc-300')} />
+              <span className="truncate">{r.assignedTo.name}</span>
+            </>
+          ) : (
+            <span className="font-medium text-amber-700">Unassigned</span>
+          )}
+        </span>
+        <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">{timeAgo(r.createdAt, now)}</span>
+      </div>
+    </button>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────
+// Workbench — selected ticket detail + 4 actions
+// ───────────────────────────────────────────────────────────────────
+
+function Workbench({
+  row,
+  supervisors,
+  currentUser,
+  onChanged,
+}: {
+  row: Row;
+  supervisors: Supervisor[];
+  currentUser: CurrentUser;
+  onChanged: () => void | Promise<void>;
+}) {
+  const status = STATUS_STYLE[row.status];
+  const canAct = currentUser.isAvailable;
+  const isMine = row.assignedTo?.id === currentUser.id;
+  const isClosed = row.status === 'CLOSED' || row.status === 'CANCELLED';
+
+  const [busy, setBusy] = useState<null | 'mr' | 'sup' | 'cust' | 'claim'>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  const [mrNumber, setMrNumber] = useState('');
+  const [supEmails, setSupEmails] = useState<string[]>(() => {
+    const country = row.countryName.trim().toLowerCase();
+    return supervisors
+      .filter((s) => s.countryName.trim().toLowerCase() === country)
+      .map((s) => s.email);
+  });
+  const [supEmailDraft, setSupEmailDraft] = useState('');
+  const [supNote, setSupNote] = useState('');
+  const [clarifyText, setClarifyText] = useState(
+    'Kindly please advise for the right location on Archibus to be able to raise the maintenance request.',
+  );
+  const [copied, setCopied] = useState(false);
+
+  async function call(path: string, body: Record<string, unknown>, label: typeof busy) {
+    setBusy(label);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch(`/api/branded-solutions/${row.id}/${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) throw new Error((j['message'] as string) ?? (j['error'] as string) ?? `HTTP ${res.status}`);
+      setInfo(label === 'mr' ? 'Closed and emailed customer.'
+        : label === 'sup' ? 'Sent to supervisor.'
+        : label === 'cust' ? 'Asked customer for clarification.'
+        : 'Claimed from pool.');
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function copyTicket() {
+    const text =
+      `Issue Description: ${row.issueType}\n` +
+      `Machine Model: ${row.machineModel}\n` +
+      `Contact Number: ${row.contactNumber}`;
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  function addSupEmail() {
+    const e = supEmailDraft.trim().toLowerCase();
+    if (!e || supEmails.includes(e)) return;
+    setSupEmails([...supEmails, e]);
+    setSupEmailDraft('');
+  }
+  function removeSupEmail(e: string) {
+    setSupEmails(supEmails.filter((x) => x !== e));
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 border-b border-border bg-surface-subtle/30 px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[13px] font-semibold text-heading">{row.ticketRef}</span>
+            <span className={cn('inline-flex items-center gap-1 rounded-pill border px-2 py-0.5 text-[10.5px] font-semibold', status.tone)}>
+              <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+              {status.label}
+            </span>
+            {row.mrNumber && (
+              <Badge variant="outline" className="font-mono text-[10.5px]">MR #{row.mrNumber}</Badge>
+            )}
+          </div>
+          <div className="mt-1.5 truncate text-[13.5px] font-semibold text-heading">{row.customerName}</div>
+          <div className="truncate text-[11.5px] text-muted-foreground">
+            {row.storeName} · {row.cityName ? `${row.cityName} · ` : ''}{row.countryName}
+          </div>
+        </div>
+        <Button size="sm" variant={copied ? 'success' : 'outline'} onClick={copyTicket} className="shrink-0 gap-1.5">
+          {copied ? <Check className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
+          {copied ? 'Copied!' : 'Copy for Archibus'}
+        </Button>
+      </div>
+
+      {/* Body */}
+      <div className="scrollbar-thin flex-1 space-y-4 overflow-y-auto px-4 py-4">
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-900 animate-fade-in">
+            <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+            <span>{error}</span>
+          </div>
+        )}
+        {info && (
+          <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-900 animate-fade-in">
+            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+            <span>{info}</span>
+          </div>
+        )}
+
+        {/* Form data — clean 2-column grid */}
+        <Card className="border-border/60 shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[13px]">Request details</CardTitle>
+          </CardHeader>
+          <div className="grid gap-x-6 gap-y-2 px-6 pb-4 text-[12.5px] sm:grid-cols-2">
+            <Field label="Submitter" value={row.submitterName} />
+            <Field label="Contact" value={row.contactNumber} mono />
+            <Field label="Email" value={row.email} mono />
+            <Field label="Machine model" value={row.machineModel} />
+            <Field label="Issue" value={row.issueType} wide />
+            <Field label="Location" value={row.location ?? '—'} wide link />
+          </div>
+        </Card>
+
+        {/* Assignment */}
+        <Card className="border-border/60 shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[13px]">Assignment</CardTitle>
+          </CardHeader>
+          <div className="grid gap-x-6 gap-y-2 px-6 pb-4 text-[12.5px] sm:grid-cols-2">
+            <Field label="Assigned to" value={row.assignedTo?.name ?? 'Unassigned'} />
+            <Field label="Reason" value={row.assignmentReason ?? '—'} wide />
+            <Field label="Created" value={new Date(row.createdAt).toLocaleString()} />
+            {row.closedAt && <Field label="Closed" value={new Date(row.closedAt).toLocaleString()} />}
+          </div>
+        </Card>
+
+        {/* Actions — only visible while open. Disabled when Away. */}
+        {!isClosed && (
+          <>
+            {!canAct && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                You are Offline. Click the Offline pill in the page header to go Available before sending or closing.
+              </div>
+            )}
+
+            {row.status === 'PENDING' && !isMine && (
+              <Card className="border-border/60 shadow-none">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-1.5 text-[13px]">
+                    <Hand className="h-3.5 w-3.5" /> Claim from pool
+                  </CardTitle>
+                </CardHeader>
+                <div className="space-y-2 px-6 pb-4 text-[12.5px]">
+                  <p className="text-muted-foreground">No agent is on this ticket yet — claim it to start working.</p>
+                  <Button size="sm" onClick={() => call('claim', {}, 'claim')} disabled={!canAct || busy !== null}>
+                    {busy === 'claim' ? 'Claiming…' : 'Claim'}
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            <Card className="border-border/60 shadow-none">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-1.5 text-[13px]">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Submit Archibus MR # &amp; close
+                </CardTitle>
+              </CardHeader>
+              <div className="space-y-2 px-6 pb-4 text-[12.5px]">
+                <p className="text-muted-foreground">
+                  Paste the MR # generated by Archibus. The ticket will close and a confirmation email will be
+                  sent to the customer at <span className="font-mono">{row.email}</span>.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={mrNumber}
+                    onChange={(e) => setMrNumber(e.target.value)}
+                    placeholder="e.g. 2014475035"
+                    className="h-8 max-w-xs text-[12.5px]"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => call('close', { mrNumber: mrNumber.trim() }, 'mr')}
+                    disabled={!canAct || !mrNumber.trim() || busy !== null}
+                  >
+                    {busy === 'mr' ? 'Closing…' : 'Submit & close'}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="border-border/60 shadow-none">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-1.5 text-[13px]">
+                  <Mail className="h-3.5 w-3.5" /> Send to country supervisor
+                </CardTitle>
+              </CardHeader>
+              <div className="space-y-2 px-6 pb-4 text-[12.5px]">
+                <p className="text-muted-foreground">
+                  Forwards the full request details to the maintenance supervisor for the country to confirm the right
+                  location on Archibus. You can address multiple supervisors — they will all be CC&apos;d.
+                </p>
+                {supEmails.length === 0 && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11.5px] text-amber-900">
+                    No supervisor configured for {row.countryName} — add one or type an email below.
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {supEmails.map((e) => (
+                    <span key={e} className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px]">
+                      {e}
+                      <button onClick={() => removeSupEmail(e)} className="text-muted-foreground hover:text-foreground" aria-label={`Remove ${e}`}>
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={supEmailDraft}
+                    onChange={(e) => setSupEmailDraft(e.target.value)}
+                    placeholder="Add another supervisor email"
+                    className="h-8 max-w-xs text-[12.5px]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addSupEmail();
+                      }
+                    }}
+                  />
+                  <Button size="sm" variant="outline" onClick={addSupEmail} disabled={!supEmailDraft.trim()}>Add</Button>
+                </div>
+                <Textarea
+                  value={supNote}
+                  onChange={(e) => setSupNote(e.target.value)}
+                  placeholder="Optional note to the supervisor (e.g. customer mentioned mall name but not store no.)"
+                  className="text-[12.5px]"
+                  rows={2}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => call('send-to-supervisor', { supervisorEmails: supEmails, note: supNote.trim() || null }, 'sup')}
+                  disabled={!canAct || supEmails.length === 0 || busy !== null}
+                >
+                  {busy === 'sup' ? 'Sending…' : 'Send to supervisor'}
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="border-border/60 shadow-none">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-1.5 text-[13px]">
+                  <MessageSquare className="h-3.5 w-3.5" /> Ask customer for clarification
+                </CardTitle>
+              </CardHeader>
+              <div className="space-y-2 px-6 pb-4 text-[12.5px]">
+                <p className="text-muted-foreground">
+                  Sends a polite email to the customer at <span className="font-mono">{row.email}</span> asking for more
+                  details on the location/store name. Status moves to <em>Waiting · Customer</em>.
+                </p>
+                <Textarea
+                  value={clarifyText}
+                  onChange={(e) => setClarifyText(e.target.value)}
+                  className="text-[12.5px]"
+                  rows={3}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => call('clarify-customer', { question: clarifyText.trim() }, 'cust')}
+                  disabled={!canAct || !clarifyText.trim() || busy !== null}
+                >
+                  {busy === 'cust' ? 'Sending…' : 'Send clarification'}
+                </Button>
+              </div>
+            </Card>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex h-7 items-center gap-1 rounded-pill border px-2.5 text-[11.5px] font-medium transition-colors',
+        active
+          ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+          : 'border-border bg-surface text-foreground hover:border-border-strong hover:bg-surface-muted',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Field({ label, value, mono, wide, link }: { label: string; value: string; mono?: boolean; wide?: boolean; link?: boolean }) {
+  return (
+    <div className={cn('min-w-0', wide && 'sm:col-span-2')}>
+      <div className="text-[10.5px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={cn('mt-0.5 break-words text-foreground', mono && 'font-mono')}>
+        {link && value !== '—' && /^https?:\/\//i.test(value) ? (
+          <a href={value} target="_blank" rel="noreferrer" className="text-blue-700 underline hover:text-blue-900">
+            {value}
+          </a>
+        ) : (
+          value
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Suppress unused-but-future-needed `ChevronRight` import (kept for tree-shake parity).
+void ChevronRight;

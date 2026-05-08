@@ -4,34 +4,35 @@
 
 /* ═══════════════════════════════════════════════════════════════════
    WOW Refund — design tokens
-   Alshaya-inspired professional admin dashboard.
-   - Cool near-white background
-   - Deep Alshaya navy as the single accent
-   - Tonal blue chip palette (no rainbow pastels) for icon backings
-   - Generous rounded surfaces (12-22px)
-   - Single subtle shadow; no glow, no aurora.
+   Palette (colorhunt 170c79-efe3ca-56b6c6-8acbd0):
+   - #170C79  deep indigo    → primary (buttons, links, active nav)
+   - #56B6C6  vivid teal     → accent (chips, highlights, info)
+   - #8ACBD0  soft teal      → secondary accent / subtle fills
+   - #EFE3CA  warm cream     → hero surfaces, chip butter, sidebar wash
+   Surfaces stay near-white for data readability; the cream is used as a
+   soft, premium wash on the sidebar and marketing/empty states.
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    /* ── Cool neutral scale ───────────────────────────────────────────
-       Page background + cards are pure white. The 25/100 steps stay just
-       perceptibly cool so input fills, hover wash, and muted headers are
-       still distinguishable on a white surface. */
-    --neutral-0:   0 0% 100%;          /* pure white card / surface */
-    --neutral-25:  214 14% 97.8%;      /* near-white wash (input bg, hover) */
-    --neutral-50:  0 0% 100%;          /* pure white page background */
-    --neutral-100: 214 16% 95.5%;      /* muted (table headers, chips) */
-    --neutral-150: 214 18% 92%;        /* hairline borders */
-    --neutral-200: 214 16% 88%;
-    --neutral-300: 214 14% 80%;
-    --neutral-400: 214 12% 60%;
-    --neutral-500: 215 14% 46%;
-    --neutral-600: 215 18% 34%;
-    --neutral-700: 215 22% 24%;
-    --neutral-800: 215 26% 16%;
-    --neutral-900: 215 30% 10%;
-    --neutral-950: 215 34% 6%;
+    /* ── Clean neutral scale — pure white surfaces ────────────────────
+       Backgrounds are pure white (#FFFFFF); borders and muted chips use
+       low-saturation cool grays so the indigo primary and teal accent
+       read cleanly on top. No warm tint on surfaces. */
+    --neutral-0:   0 0% 100%;           /* pure white card / surface */
+    --neutral-25:  0 0% 100%;           /* page background — pure white */
+    --neutral-50:  0 0% 100%;           /* pure white */
+    --neutral-100: 220 14% 96%;         /* muted chip / table header */
+    --neutral-150: 220 14% 93%;         /* hairline borders */
+    --neutral-200: 220 13% 89%;
+    --neutral-300: 220 12% 80%;
+    --neutral-400: 220 10% 58%;
+    --neutral-500: 220 10% 42%;         /* muted text — AA on white */
+    --neutral-600: 222 14% 30%;
+    --neutral-700: 224 20% 20%;
+    --neutral-800: 226 28% 14%;
+    --neutral-900: 228 36% 8%;
+    --neutral-950: 230 42% 5%;
 
     /* ── Surfaces ─────────────────────────────────────────────────── */
     --background:          var(--neutral-50);
@@ -53,13 +54,16 @@
     --border-strong:       var(--neutral-200);
     --input:               var(--neutral-200);
 
-    /* ── Single accent — Alshaya-inspired deep navy ───────────────── */
-    --primary:             215 70% 30%;          /* deep corporate navy */
-    --primary-foreground:  0 0% 100%;            /* white on navy */
-    --primary-hover:       215 76% 24%;
-    --primary-deep:        215 84% 18%;
-    --primary-subtle:      215 70% 95%;
-    --ring:                215 70% 40%;
+    /* ── Primary — #170C79 deep indigo ─────────────────────────────────
+       The darkest member of the palette; used for CTAs, links, active
+       nav items, focused inputs. Pairs beautifully with the teal accent
+       (#56B6C6) and the warm cream (#EFE3CA) wash. */
+    --primary:             245 82% 26%;          /* #170C79 */
+    --primary-foreground:  0 0% 100%;            /* white on indigo */
+    --primary-hover:       245 86% 20%;          /* slightly deeper */
+    --primary-deep:        246 90% 14%;
+    --primary-subtle:      245 60% 96%;          /* near-white indigo tint */
+    --ring:                245 70% 48%;
 
     --card:                var(--neutral-0);
     --card-foreground:     var(--neutral-900);
@@ -69,32 +73,38 @@
     --secondary:           var(--neutral-100);
     --secondary-foreground: var(--neutral-900);
 
-    --accent:              215 70% 30%;
-    --accent-foreground:   0 0% 100%;
+    /* ── Accent — #56B6C6 vivid teal ───────────────────────────────── */
+    --accent:              188 51% 56%;          /* #56B6C6 */
+    --accent-foreground:   246 44% 5%;           /* deep indigo on teal */
+    --accent-soft:         184 42% 68%;          /* #8ACBD0 light teal */
+    --accent-cream:         42 55% 86%;          /* #EFE3CA warm cream */
+    --accent-cream-fg:     245 82% 26%;          /* deep indigo on cream */
 
     /* ── Status — muted, never neon ───────────────────────────────── */
     --destructive:         358 70% 56%;
     --destructive-foreground: 0 0% 100%;
-    --success:             152 50% 42%;
+    --success:             168 48% 38%;          /* teal-leaning green */
     --success-foreground:  0 0% 100%;
-    --warning:             32 88% 50%;
+    --warning:             32 84% 48%;
     --warning-foreground:  0 0% 100%;
-    --info:                206 70% 52%;
+    --info:                188 51% 40%;          /* darker accent teal */
     --info-foreground:     0 0% 100%;
 
-    /* ── Chip palette — readable accents on pure white ────────────── */
-    --chip-butter:    214 80% 90%;   /* bright light navy */
-    --chip-butter-fg: 215 80% 28%;
-    --chip-mint:     172 60% 84%;    /* lively teal */
-    --chip-mint-fg:  178 70% 22%;
-    --chip-lavender: 248 70% 91%;    /* richer periwinkle */
-    --chip-lavender-fg: 248 50% 38%;
-    --chip-peach:     22 90% 88%;    /* warm peach */
-    --chip-peach-fg:  18 70% 36%;
-    --chip-sky:      200 92% 86%;    /* punchy sky */
-    --chip-sky-fg:   205 70% 28%;
-    --chip-rose:     342 78% 90%;    /* clearer rose */
-    --chip-rose-fg:  342 50% 36%;
+    /* ── Chip palette — derived from the 4-color set ────────────────
+       Each chip uses one of the palette tints as the background and a
+       deep indigo or saturated sibling as the foreground for AA. */
+    --chip-butter:       42 55% 88%;   /* #EFE3CA warm cream */
+    --chip-butter-fg:   245 82% 26%;   /* deep indigo */
+    --chip-mint:        184 42% 86%;   /* #8ACBD0 soft teal */
+    --chip-mint-fg:     188 62% 22%;
+    --chip-lavender:    245 60% 95%;   /* indigo subtle */
+    --chip-lavender-fg: 245 82% 30%;
+    --chip-peach:        42 70% 88%;   /* warmer cream */
+    --chip-peach-fg:     28 62% 32%;
+    --chip-sky:         188 55% 88%;   /* #56B6C6 pale wash */
+    --chip-sky-fg:      188 62% 26%;
+    --chip-rose:        346 60% 92%;   /* muted rose (destructive subtle) */
+    --chip-rose-fg:     346 48% 38%;
 
     /* ── Shape ────────────────────────────────────────────────────── */
     --radius:    0.875rem;   /* 14px — soft rounded */
@@ -119,6 +129,11 @@
 
 @layer base {
   html {
+    /* 14px root shrinks every rem-based Tailwind unit (spacing, gap,
+       text-sm/base/lg, etc.) by 12.5% vs the browser default 16px,
+       letting the entire app fit one viewport without a manual
+       browser zoom-out. Explicit-px overrides remain unchanged. */
+    font-size: 14px;
     font-family: var(--font-sans), 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-feature-settings: 'cv11', 'ss01', 'ss03';
     -webkit-font-smoothing: antialiased;
@@ -128,8 +143,8 @@
 
   body {
     @apply bg-background text-foreground;
-    font-size: 14px;
-    line-height: 1.55;
+    font-size: 12.5px;
+    line-height: 1.45;
   }
 
   h1, h2, h3, h4, h5, h6 {

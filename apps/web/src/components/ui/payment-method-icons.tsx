@@ -208,7 +208,7 @@ function AuraBadge({ label, size }: RendererProps) {
         />
         <span
           className={cn(
-            'font-semibold leading-none tracking-[0.04em] text-[#ee0677]',
+            'font-semibold leading-none tracking-[0.04em] text-[#194C5A]',
             size === 'md' ? 'text-[10px]' : 'text-[6px]',
           )}
         >
