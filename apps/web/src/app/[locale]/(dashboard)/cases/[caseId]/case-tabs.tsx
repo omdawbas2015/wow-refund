@@ -254,20 +254,23 @@ export function CaseTabs({
     canDelete;
 
   return (
-    <div className="space-y-6">
-      {/* Stepper — lightweight horizontal progress, no card wrapper */}
+    <div className="space-y-5">
+      {/* Stepper — full-width horizontal progress card */}
       <CaseStatusStepper
         status={caseData.status as CaseStatus}
         locale={locale}
         deleted={isDeleted}
         orientation="horizontal"
-        className="border-0 bg-transparent px-0 shadow-none"
       />
 
-      <div className="space-y-6">
+      {/* Two-column layout: main content (tabs) on the left,
+          metadata sidebar on the right (sticky on lg+ screens). */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* ── MAIN COLUMN ── */}
+        <div className="min-w-0 space-y-5">
         {/* Action bar */}
         {showActionBar && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-subtle/40 p-2.5">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm">
             {canSubmit && (
               <Button
                 size="sm"
@@ -586,7 +589,130 @@ export function CaseTabs({
           />
         )}
         {active === 'activity' && <ActivityTab activity={activity} />}
+        </div>
+        {/* ── SIDEBAR ── */}
+        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <SidebarCard title="Customer">
+            <SidebarRow label="Name" value={caseData.customerName} />
+            <SidebarRow
+              label="Email"
+              value={caseData.customerEmail}
+              copy
+              mono
+            />
+            {caseData.customerPhone && (
+              <SidebarRow
+                label="Phone"
+                value={caseData.customerPhone}
+                copy
+                mono
+                ltr
+              />
+            )}
+          </SidebarCard>
+
+          <SidebarCard title="Order">
+            <SidebarRow
+              label="Order #"
+              value={caseData.orderNumber}
+              copy
+              mono
+            />
+            <SidebarRow label="Date" value={formatDate(caseData.orderDate)} />
+            <SidebarRow
+              label="Brand"
+              value={`${caseData.countryFlag} ${caseData.brandName}`}
+            />
+            <SidebarRow label="Country" value={caseData.countryName} />
+            {caseData.branchName && (
+              <SidebarRow label="Branch" value={caseData.branchName} />
+            )}
+          </SidebarCard>
+
+          <SidebarCard title="People">
+            <SidebarRow
+              label="Created by"
+              value={caseData.createdBy?.name ?? '—'}
+            />
+            <SidebarRow
+              label="Assigned to"
+              value={caseData.assignedTo?.name ?? 'Unassigned'}
+              muted={!caseData.assignedTo}
+            />
+            <SidebarRow
+              label="Approved by"
+              value={caseData.approvedBy?.name ?? '—'}
+              muted={!caseData.approvedBy}
+            />
+            {caseData.approvedAt && (
+              <SidebarRow
+                label="Approved at"
+                value={formatDateTime(caseData.approvedAt)}
+              />
+            )}
+          </SidebarCard>
+        </aside>
       </div>
+    </div>
+  );
+}
+
+/* ── Sidebar primitives ── */
+
+function SidebarCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-surface shadow-sm">
+      <div className="border-b border-border px-4 py-2.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </h3>
+      </div>
+      <dl className="divide-y divide-border">{children}</dl>
+    </div>
+  );
+}
+
+function SidebarRow({
+  label,
+  value,
+  copy,
+  mono,
+  ltr,
+  muted,
+}: {
+  label: string;
+  value: string;
+  copy?: boolean;
+  mono?: boolean;
+  ltr?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div className="group flex items-start justify-between gap-3 px-4 py-2.5">
+      <dt className="flex-none text-xs text-muted-foreground pt-0.5">{label}</dt>
+      <dd
+        className={cn(
+          'min-w-0 flex-1 text-right text-sm',
+          mono && 'font-mono text-[13px]',
+          muted ? 'text-muted-foreground' : 'text-foreground',
+        )}
+        dir={ltr ? 'ltr' : undefined}
+      >
+        <span className="inline-flex items-center gap-1.5 break-all">
+          <span className="truncate">{value}</span>
+          {copy && (
+            <span className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              <CopyButton value={value} size="xs" label={`Copy ${label}`} />
+            </span>
+          )}
+        </span>
+      </dd>
     </div>
   );
 }
@@ -605,76 +731,18 @@ function OverviewTab({
   inExecutionStage: boolean;
 }) {
   return (
-    <div className="space-y-8">
-      {/* ── Details + People ─────────────────────────────────────
-          Two-column on large screens. Details only shows info NOT
-          already visible in the hero (no order#, no phone, no
-          customer name/email — those are all in the header). */}
-      <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
-        <div className="space-y-6">
-          <div>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Details
-            </h3>
-            <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
-              <FieldInline label="Order date" value={formatDate(caseData.orderDate)} />
-              <FieldInline label="Branch" value={caseData.branchName ?? '—'} />
-              {caseData.customerNotes && (
-                <div className="sm:col-span-2">
-                  <FieldInline label="Agent notes" value={caseData.customerNotes} />
-                </div>
-              )}
-            </dl>
-          </div>
-
-          {/* Root cause */}
-          {(caseData.rootCause || caseData.rootCauseNotes) && (
-            <div>
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Root cause
-              </h3>
-              <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
-                {caseData.rootCause && (
-                  <FieldInline label="Category" value={caseData.rootCause} />
-                )}
-                {caseData.rootCauseNotes && (
-                  <div className="sm:col-span-2">
-                    <FieldInline label="Notes" value={caseData.rootCauseNotes} />
-                  </div>
-                )}
-              </dl>
-            </div>
-          )}
-        </div>
-
-        {/* People — simple list, no card border */}
-        <div>
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            People
-          </h3>
-          <div className="space-y-3">
-            <PersonRow label="Created by" user={caseData.createdBy} fallback="—" />
-            <PersonRow label="Assigned to" user={caseData.assignedTo} fallback="Unassigned" />
-            <PersonRow label="Approved by" user={caseData.approvedBy} fallback="—" />
-            {caseData.approvedAt && (
-              <FieldInline label="Approved at" value={formatDateTime(caseData.approvedAt)} />
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Divider ─────────────────────────────────────────────── */}
-      <hr className="border-border" />
-
-      {/* ── Payment ─────────────────────────────────────────────── */}
-      <div>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Payment
-        </h3>
+    <div className="space-y-5">
+      {/* ── Payment ──
+          Most actionable info: which payment methods, how much, ARN
+          entry for execution. Lives at top so operators see what
+          needs to happen first. */}
+      <Section title="Payment" subtitle={`${components.length} component${components.length === 1 ? '' : 's'}`}>
         {components.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No payment components.</p>
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+            No payment components.
+          </p>
         ) : (
-          <div className="divide-y divide-border rounded-lg border border-border">
+          <div className="divide-y divide-border">
             {components.map((c) => (
               <PaymentComponentRow
                 key={c.id}
@@ -685,7 +753,7 @@ function OverviewTab({
               />
             ))}
             {caseData.auraPoints ? (
-              <div className="flex flex-wrap items-center gap-2 p-4">
+              <div className="flex flex-wrap items-center gap-2 px-4 py-3">
                 <AuraPointsBadge points={caseData.auraPoints} />
                 <div className="ms-auto">
                   <AuraStatusBadge status={caseData.auraStatus} />
@@ -694,9 +762,9 @@ function OverviewTab({
             ) : null}
           </div>
         )}
-      </div>
+      </Section>
 
-      {/* Customer call follow-up */}
+      {/* ── Customer call follow-up ── */}
       {(caseData.status === 'REFUNDED' ||
         caseData.status === 'PARTIALLY_REFUNDED') &&
         caseData.customerCallStatus !== 'NOT_APPLICABLE' && (
@@ -708,8 +776,36 @@ function OverviewTab({
           />
         )}
 
-      {/* ── Customer history ──────────────────────────────────── */}
-      <hr className="border-border" />
+      {/* ── Root cause + Agent notes ──
+          Side-by-side on lg+: root cause categorisation on the left,
+          free-form agent notes on the right. Either is optional. */}
+      {(caseData.rootCause ||
+        caseData.rootCauseNotes ||
+        caseData.customerNotes) && (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {(caseData.rootCause || caseData.rootCauseNotes) && (
+            <Section title="Root cause">
+              <dl className="space-y-3 px-4 py-3">
+                {caseData.rootCause && (
+                  <FieldInline label="Category" value={caseData.rootCause} />
+                )}
+                {caseData.rootCauseNotes && (
+                  <FieldInline label="Notes" value={caseData.rootCauseNotes} />
+                )}
+              </dl>
+            </Section>
+          )}
+          {caseData.customerNotes && (
+            <Section title="Agent notes">
+              <p className="whitespace-pre-wrap px-4 py-3 text-sm leading-relaxed text-foreground">
+                {caseData.customerNotes}
+              </p>
+            </Section>
+          )}
+        </div>
+      )}
+
+      {/* ── Customer history ── */}
       <CustomerHistory
         locale={locale}
         customerEmail={caseData.customerEmail}
@@ -935,21 +1031,26 @@ function FieldInline({ label, value }: { label: string; value: React.ReactNode }
   );
 }
 
-function PersonRow({
-  label,
-  user,
-  fallback,
+function Section({
+  title,
+  subtitle,
+  children,
 }: {
-  label: string;
-  user: { name: string; avatarUrl: string | null } | null;
-  fallback: string;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-baseline gap-2">
-      <span className="text-xs text-muted-foreground w-24 flex-none">{label}</span>
-      <span className={cn('text-sm', user ? 'font-medium text-foreground' : 'text-muted-foreground')}>
-        {user ? user.name : fallback}
-      </span>
+    <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </h3>
+        {subtitle && (
+          <span className="text-xs text-muted-foreground">{subtitle}</span>
+        )}
+      </div>
+      {children}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { prisma } from '@wow/db';
 import { auth } from '@/auth';
 import { CaseStatusBadge } from '@/components/ui/case-status-badge';
 import { CopyButton } from '@/components/ui/copy-button';
-import { formatDate, formatDateTime, formatMoney, relativeTime } from '@/lib/format';
+import { formatDateTime, formatMoney, relativeTime } from '@/lib/format';
 import { CaseTabs } from './case-tabs';
 
 export const dynamic = 'force-dynamic';
@@ -70,71 +70,73 @@ export default async function CaseDetailsPage({
     refundCase.orderAmount > 0
       ? ((refundCase.totalRefundAmount / refundCase.orderAmount) * 100).toFixed(1)
       : '0';
+  const isTerminal =
+    refundCase.status === 'REFUNDED' || refundCase.status === 'PARTIALLY_REFUNDED';
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8 lg:px-8">
-      {/* ── Hero ───────────────────────────────────────────────────
-          Minimal: case# as the single visual anchor, status next to
-          it, one line of metadata, one line of customer info. No
-          card, no border — just clean type on white. */}
-      <header className="mb-8">
-        <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
-          <span>
-            {refundCase.country.registry.flag ?? '🌐'}{' '}
-            {refundCase.country.registry.nameEn}
-          </span>
-          <span aria-hidden className="text-border">·</span>
-          <span>{refundCase.brand.name}</span>
-          <span aria-hidden className="text-border">·</span>
-          <span title={formatDateTime(refundCase.createdAt)}>
-            {formatDate(refundCase.createdAt)}
-          </span>
-        </div>
-
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-heading sm:text-3xl">
-            {heading}
-            <CopyButton value={heading} size="sm" label="Copy case number" />
-          </h1>
-          <CaseStatusBadge status={refundCase.status} />
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-foreground">
-          <span className="font-medium">{refundCase.customerName}</span>
-          <CopyInline value={refundCase.customerEmail} label="email" />
-          {refundCase.customerPhone && (
-            <CopyInline value={refundCase.customerPhone} label="phone" mono ltr />
-          )}
-          <CopyInline value={refundCase.orderNumber} label="order #" mono />
-        </div>
-      </header>
-
-      {/* ── Numbers ────────────────────────────────────────────────
-          Three key figures in a single clean row. No cards, no
-          borders — just big numbers with tiny labels underneath. */}
-      <div className="mb-8 grid grid-cols-3 gap-6">
-        <div>
-          <div className="text-2xl font-semibold tabular-nums tracking-tight text-heading font-mono sm:text-[28px]">
-            {formatMoney(refundCase.totalRefundAmount, refundCase.orderCurrency)}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">Refund amount</div>
-        </div>
-        <div>
-          <div className="text-2xl font-semibold tabular-nums tracking-tight text-muted-foreground/80 font-mono sm:text-[28px]">
-            {formatMoney(refundCase.orderAmount, refundCase.orderCurrency)}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">Order amount</div>
-        </div>
-        <div>
-          <div className="text-2xl font-semibold tabular-nums tracking-tight text-heading sm:text-[28px]">
-            {pct}%
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {Number(pct) >= 100 ? 'Full refund' : 'of order'}
-          </div>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* ── Hero ──
+          Single quiet header: case number is the anchor, status pill
+          right next to it, metadata strip below in muted micro-text. */}
+      <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h1 className="flex items-center gap-2 text-[28px] font-semibold tracking-tight text-heading sm:text-[32px]">
+          {heading}
+          <CopyButton value={heading} size="sm" label="Copy case number" />
+        </h1>
+        <CaseStatusBadge status={refundCase.status} className="text-sm" />
+      </div>
+      <div className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden>{refundCase.country.registry.flag ?? '🌐'}</span>
+          {refundCase.country.registry.nameEn}
+        </span>
+        <Dot />
+        <span>{refundCase.brand.name}</span>
+        {refundCase.branch?.name && (
+          <>
+            <Dot />
+            <span>{refundCase.branch.name}</span>
+          </>
+        )}
+        <Dot />
+        <span title={formatDateTime(refundCase.createdAt)}>
+          Created {relativeTime(refundCase.createdAt)}
+        </span>
       </div>
 
+      {/* ── Money strip ──
+          Three figures in one bordered card with vertical dividers.
+          Refund amount gets a subtle emerald accent when the case
+          finished refunding. */}
+      <div className="mb-6 grid grid-cols-1 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <Stat
+          label="Refund amount"
+          value={formatMoney(refundCase.totalRefundAmount, refundCase.orderCurrency)}
+          accent={isTerminal ? 'emerald' : refundCase.totalRefundAmount > 0 ? 'primary' : undefined}
+        />
+        <Stat
+          label="Order amount"
+          value={formatMoney(refundCase.orderAmount, refundCase.orderCurrency)}
+          muted
+        />
+        <Stat
+          label="% of order"
+          value={`${pct}%`}
+          sub={
+            Number(pct) >= 100
+              ? 'Full refund'
+              : Number(pct) > 0
+                ? 'Partial'
+                : 'No amount yet'
+          }
+        />
+      </div>
+
+      {/* ── Two-column layout ──
+          Main column (left, 2fr): tabs (Overview/Notes/Activity).
+          Sidebar (right, 1fr): all metadata grouped into clean cards.
+          Sidebar sticks on large screens so info stays visible while
+          the operator scrolls through notes/activity. */}
       <CaseTabs
         locale={locale}
         caseData={{
@@ -221,25 +223,47 @@ export default async function CaseDetailsPage({
   );
 }
 
-function CopyInline({
-  value,
+function Dot() {
+  return (
+    <span aria-hidden className="text-border">
+      ·
+    </span>
+  );
+}
+
+function Stat({
   label,
-  mono,
-  ltr,
+  value,
+  sub,
+  accent,
+  muted,
 }: {
-  value: string;
   label: string;
-  mono?: boolean;
-  ltr?: boolean;
+  value: string;
+  sub?: string;
+  accent?: 'emerald' | 'primary';
+  muted?: boolean;
 }) {
   return (
-    <span className="group inline-flex items-center gap-1 text-muted-foreground">
-      <span className={mono ? 'font-mono text-[13px]' : ''} dir={ltr ? 'ltr' : undefined}>
+    <div className="px-5 py-4 sm:px-6 sm:py-5">
+      <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div
+        className={
+          'mt-1 font-mono text-2xl font-semibold tabular-nums tracking-tight sm:text-[28px] ' +
+          (accent === 'emerald'
+            ? 'text-emerald-700 dark:text-emerald-300'
+            : accent === 'primary'
+              ? 'text-primary'
+              : muted
+                ? 'text-muted-foreground/80'
+                : 'text-heading')
+        }
+      >
         {value}
-      </span>
-      <span className="opacity-0 transition-opacity group-hover:opacity-100">
-        <CopyButton value={value} size="xs" label={`Copy ${label}`} />
-      </span>
-    </span>
+      </div>
+      {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
+    </div>
   );
 }
