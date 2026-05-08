@@ -699,8 +699,9 @@ function OverviewTab({
           )}
         </div>
 
-        {/* Right column — people + customer history. People is compact:
-            dense list with row labels, no avatars per design feedback. */}
+        {/* Right column — people. Customer history moved below to a
+            full-width band so its prior-cases + promos rows have room
+            to breathe. */}
         <div className="space-y-5">
           <Section title="People" className={enter}>
             <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2 lg:grid-cols-1">
@@ -727,14 +728,16 @@ function OverviewTab({
               )}
             </div>
           </Section>
-
-          <CustomerHistory
-            locale={locale}
-            customerEmail={caseData.customerEmail}
-            excludeCaseId={caseData.id}
-          />
         </div>
       </div>
+
+      {/* Full-width customer history band — splits prior cases / promos
+          into two columns at lg+ so the rows don't get squeezed. */}
+      <CustomerHistory
+        locale={locale}
+        customerEmail={caseData.customerEmail}
+        excludeCaseId={caseData.id}
+      />
     </div>
   );
 }
