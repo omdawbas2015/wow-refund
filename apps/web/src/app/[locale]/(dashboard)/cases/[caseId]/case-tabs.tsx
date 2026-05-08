@@ -253,8 +253,8 @@ export function CaseTabs({
     canDelete;
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_240px]">
-      <div className="space-y-5 lg:order-1 lg:col-start-1">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0 space-y-5 lg:order-1 lg:col-start-1">
         {/* Action bar */}
         {showActionBar && (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2.5 shadow-sm">
@@ -545,18 +545,138 @@ export function CaseTabs({
         {active === 'activity' && <ActivityTab activity={activity} />}
       </div>
 
-      {/* Right rail: vertical status stepper. The stepper renders its
-          own "Progress" header + percentage, so we don't double-up the
-          label here. */}
-      <aside className="lg:order-2 lg:col-start-2">
-        <div className="lg:sticky lg:top-24">
-          <CaseStatusStepper
-            status={caseData.status as CaseStatus}
-            locale={locale}
-            deleted={isDeleted}
+      {/* Right rail: Properties sidebar — Status, Customer, Order,
+          Workflow. Sticky on lg+ so context follows the user as they
+          scroll the work column. */}
+      <aside className="space-y-4 lg:order-2 lg:col-start-2 lg:self-start lg:sticky lg:top-24">
+        <CaseStatusStepper
+          status={caseData.status as CaseStatus}
+          locale={locale}
+          orientation="vertical"
+          deleted={isDeleted}
+        />
+        <PropertyCard title="Customer">
+          <PropertyRow label="Name" value={caseData.customerName} />
+          <PropertyRow
+            label="Email"
+            value={caseData.customerEmail}
+            mono
+            truncate
+            copyable
           />
-        </div>
+          <PropertyRow
+            label="Phone"
+            value={caseData.customerPhone ?? null}
+            mono
+            ltr
+            copyable
+          />
+        </PropertyCard>
+        <PropertyCard title="Order">
+          <PropertyRow
+            label="Order #"
+            value={caseData.orderNumber}
+            mono
+            copyable
+          />
+          <PropertyRow label="Date" value={formatDate(caseData.orderDate)} />
+          <PropertyRow
+            label="Brand"
+            value={`${caseData.countryFlag} ${caseData.brandName}`}
+          />
+          <PropertyRow label="Country" value={caseData.countryName} />
+          <PropertyRow label="Branch" value={caseData.branchName ?? '—'} />
+        </PropertyCard>
+        <PropertyCard title="Workflow">
+          <PropertyRow
+            label="Created by"
+            value={caseData.createdBy?.name ?? '—'}
+          />
+          <PropertyRow
+            label="Assigned to"
+            value={caseData.assignedTo?.name ?? 'Unassigned'}
+          />
+          <PropertyRow
+            label="Approved by"
+            value={caseData.approvedBy?.name ?? '—'}
+          />
+          {caseData.approvedAt && (
+            <PropertyRow
+              label="Approved at"
+              value={formatDateTime(caseData.approvedAt)}
+            />
+          )}
+        </PropertyCard>
       </aside>
+    </div>
+  );
+}
+
+/* ── Properties sidebar primitives ───────────────────────────────────── */
+
+function PropertyCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-xl border border-border bg-surface">
+      <header className="border-b border-border bg-surface-subtle/40 px-4 py-2">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </h3>
+      </header>
+      <dl className="divide-y divide-border">{children}</dl>
+    </section>
+  );
+}
+
+function PropertyRow({
+  label,
+  value,
+  mono,
+  ltr,
+  truncate,
+  copyable,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+  ltr?: boolean;
+  truncate?: boolean;
+  copyable?: boolean;
+}) {
+  const isString = typeof value === 'string';
+  const empty =
+    value === null || value === undefined || value === '' || value === '—';
+  return (
+    <div className="grid grid-cols-[88px_minmax(0,1fr)] items-start gap-3 px-4 py-2.5 text-[13px]">
+      <dt className="pt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="flex min-w-0 items-center justify-end gap-1.5 text-end">
+        <span
+          className={cn(
+            'min-w-0 text-foreground',
+            mono && 'font-mono text-[12.5px]',
+            truncate && 'truncate',
+            empty && 'text-muted-foreground',
+          )}
+          dir={ltr ? 'ltr' : undefined}
+          title={isString ? (value as string) : undefined}
+        >
+          {empty ? '—' : value}
+        </span>
+        {copyable && isString && !empty && (
+          <CopyButton
+            value={value as string}
+            size="sm"
+            label={`Copy ${label.toLowerCase()}`}
+          />
+        )}
+      </dd>
     </div>
   );
 }
@@ -610,126 +730,75 @@ function OverviewTab({
         />
       </div>
 
-      {/* Main content grid */}
-      <div className="grid gap-5 lg:grid-cols-[3fr_2fr]">
-        <div className="space-y-5">
-          {/* Details — order context only. Order # / Phone live in the
-              page header strip, so we don't repeat them here. Agent
-              notes stay conditional. */}
-          <Section title="Details" className={enter}>
-            <dl className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
-              <FieldInline label="Order date" value={formatDate(caseData.orderDate)} />
-              <FieldInline
-                label="Brand"
-                value={`${caseData.countryFlag} ${caseData.brandName}`}
-              />
-              <FieldInline label="Country" value={caseData.countryName} />
-              <FieldInline
-                label="Branch"
-                value={
-                  caseData.branchName ?? <span className="text-muted-foreground">—</span>
-                }
-              />
-              {caseData.customerNotes && (
-                <div className="sm:col-span-2">
-                  <FieldInline label="Agent notes" value={caseData.customerNotes} />
-                </div>
-              )}
-            </dl>
-          </Section>
+      {/* Single-column work area — properties live in the right rail
+          so the work column has full width to breathe. */}
 
-          {/* Payment + per-component ARN entry */}
-          <Section title="Payment" className={enter}>
-            {components.length === 0 ? (
-              <div className="p-4 text-sm text-muted-foreground">No payment components.</div>
-            ) : (
-              <div className="divide-y divide-border">
-                {components.map((c) => (
-                  <PaymentComponentRow
-                    key={c.id}
-                    component={c}
-                    caseId={caseData.id}
-                    canExecute={canExecute}
-                    inExecutionStage={inExecutionStage}
-                  />
-                ))}
-                {caseData.auraPoints ? (
-                  <div className="flex flex-wrap items-center gap-2 p-4">
-                    <AuraPointsBadge points={caseData.auraPoints} />
-                    <div className="ms-auto">
-                      <AuraStatusBadge status={caseData.auraStatus} />
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </Section>
-
-          {/* Customer call follow-up — persists once the case is
-              REFUNDED so the recorded outcome stays on the page just
-              like the saved ARN does for the payment row. PENDING
-              shows the action buttons; resolved states show what was
-              decided + a Change link to re-record. */}
-          {(caseData.status === 'REFUNDED' ||
-            caseData.status === 'PARTIALLY_REFUNDED') &&
-            caseData.customerCallStatus !== 'NOT_APPLICABLE' && (
-              <CustomerCallFollowUp
+      {/* Payment + per-component ARN entry */}
+      <Section title="Payment" className={enter}>
+        {components.length === 0 ? (
+          <div className="p-4 text-sm text-muted-foreground">
+            No payment components.
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {components.map((c) => (
+              <PaymentComponentRow
+                key={c.id}
+                component={c}
                 caseId={caseData.id}
-                status={caseData.customerCallStatus}
-                updatedAt={caseData.customerCallUpdatedAt}
-                locale={locale}
+                canExecute={canExecute}
+                inExecutionStage={inExecutionStage}
               />
-            )}
-
-          {/* Root cause — collapsed to a single inline strip when no
-              free-text notes were captured. */}
-          {(caseData.rootCause || caseData.rootCauseNotes) && (
-            <Section title="Root cause" className={enter}>
-              <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2">
-                {caseData.rootCause && (
-                  <FieldInline label="Category" value={caseData.rootCause} />
-                )}
-                {caseData.rootCauseNotes && (
-                  <div className="sm:col-span-2">
-                    <FieldInline label="Notes" value={caseData.rootCauseNotes} />
-                  </div>
-                )}
+            ))}
+            {caseData.auraPoints ? (
+              <div className="flex flex-wrap items-center gap-2 p-4">
+                <AuraPointsBadge points={caseData.auraPoints} />
+                <div className="ms-auto">
+                  <AuraStatusBadge status={caseData.auraStatus} />
+                </div>
               </div>
-            </Section>
-          )}
-        </div>
+            ) : null}
+          </div>
+        )}
+      </Section>
 
-        {/* Right column — people. Customer history moved below to a
-            full-width band so its prior-cases + promos rows have room
-            to breathe. */}
-        <div className="space-y-5">
-          <Section title="People" className={enter}>
-            <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-2 lg:grid-cols-1">
-              <PersonRow
-                label="Created by"
-                user={caseData.createdBy}
-                fallback="—"
-              />
-              <PersonRow
-                label="Assigned to"
-                user={caseData.assignedTo}
-                fallback="Unassigned"
-              />
-              <PersonRow
-                label="Approved by"
-                user={caseData.approvedBy}
-                fallback="—"
-              />
-              {caseData.approvedAt && (
-                <FieldInline
-                  label="Approved at"
-                  value={formatDateTime(caseData.approvedAt)}
-                />
-              )}
-            </div>
-          </Section>
-        </div>
-      </div>
+      {/* Customer call follow-up — persists once the case is REFUNDED
+          so the recorded outcome stays on the page just like the saved
+          ARN does for the payment row. */}
+      {(caseData.status === 'REFUNDED' ||
+        caseData.status === 'PARTIALLY_REFUNDED') &&
+        caseData.customerCallStatus !== 'NOT_APPLICABLE' && (
+          <CustomerCallFollowUp
+            caseId={caseData.id}
+            status={caseData.customerCallStatus}
+            updatedAt={caseData.customerCallUpdatedAt}
+            locale={locale}
+          />
+        )}
+
+      {/* Root cause — only when populated. */}
+      {(caseData.rootCause || caseData.rootCauseNotes) && (
+        <Section title="Root cause" className={enter}>
+          <div className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-[200px_minmax(0,1fr)]">
+            {caseData.rootCause && (
+              <FieldInline label="Category" value={caseData.rootCause} />
+            )}
+            {caseData.rootCauseNotes && (
+              <FieldInline label="Notes" value={caseData.rootCauseNotes} />
+            )}
+          </div>
+        </Section>
+      )}
+
+      {/* Agent-captured notes from intake — keeps a permanent record of
+          why the agent thought this needed a refund. */}
+      {caseData.customerNotes && (
+        <Section title="Agent notes" className={enter}>
+          <div className="px-4 py-3 text-sm leading-relaxed text-foreground">
+            {caseData.customerNotes}
+          </div>
+        </Section>
+      )}
 
       {/* Full-width customer history band — splits prior cases / promos
           into two columns at lg+ so the rows don't get squeezed. */}
@@ -965,30 +1034,38 @@ function SummaryCard({
   return (
     <div
       className={cn(
-        'rounded-lg border p-4 transition-colors',
+        'relative overflow-hidden rounded-xl border p-5 transition-colors',
         highlight
-          ? 'border-primary/40 bg-primary/[0.06] shadow-[0_1px_0_rgba(0,0,0,0.02)]'
+          ? 'border-primary/40 bg-primary/[0.06]'
           : 'border-border bg-surface',
       )}
     >
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
+      {highlight && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-[3px] bg-primary/80"
+        />
+      )}
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        {badge && (
+          <span className="rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">
+            {badge}
+          </span>
+        )}
       </div>
-      <div className="mt-1.5 flex items-baseline gap-2">
+      <div className="mt-2">
         <span
           className={cn(
-            'text-[20px] font-semibold tabular-nums tracking-tight',
+            'text-[26px] font-semibold leading-none tabular-nums tracking-tight',
             highlight ? 'text-primary' : 'text-heading',
             mono && 'font-mono',
           )}
         >
           {value}
         </span>
-        {badge && (
-          <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-            {badge}
-          </span>
-        )}
       </div>
     </div>
   );
@@ -998,23 +1075,28 @@ function Section({
   title,
   children,
   className,
+  action,
 }: {
   title: string;
   children: React.ReactNode;
   className?: string;
+  action?: React.ReactNode;
 }) {
   return (
-    <div
+    <section
       className={cn(
-        'rounded-lg border border-border bg-surface overflow-hidden',
+        'overflow-hidden rounded-xl border border-border bg-surface',
         className,
       )}
     >
-      <div className="border-b border-border bg-surface-subtle/50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {title}
-      </div>
+      <header className="flex items-center justify-between gap-3 border-b border-border bg-surface-subtle/40 px-4 py-2.5">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </h3>
+        {action}
+      </header>
       {children}
-    </div>
+    </section>
   );
 }
 
@@ -1025,33 +1107,6 @@ function FieldInline({ label, value }: { label: string; value: React.ReactNode }
         {label}
       </div>
       <div className="mt-1 text-sm leading-relaxed text-foreground">{value}</div>
-    </div>
-  );
-}
-
-/**
- * Labeled row for the People sidebar: plain text name (no avatar chip) —
- * keeps the sidebar visually quiet and readable at a glance.
- */
-function PersonRow({
-  label,
-  user,
-  fallback,
-}: {
-  label: string;
-  user: { name: string; avatarUrl: string | null } | null;
-  fallback: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
-      {user ? (
-        <div className="mt-1 text-sm font-medium text-foreground">{user.name}</div>
-      ) : (
-        <div className="mt-1 text-sm text-muted-foreground">{fallback}</div>
-      )}
     </div>
   );
 }
