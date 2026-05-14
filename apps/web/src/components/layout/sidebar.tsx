@@ -153,27 +153,19 @@ export function Sidebar({
   }
 
   return (
-    <aside className="sidebar-dark relative flex h-full w-[244px] shrink-0 flex-col">
+    <aside className="sidebar-brand relative flex h-full w-[244px] shrink-0 flex-col">
       <Link
         href="/"
-        className="flex h-16 items-center gap-3 px-5 transition-opacity hover:opacity-90"
+        className="flex h-[72px] items-center gap-3 px-5 transition-opacity hover:opacity-90"
       >
         <Image
-          src="/brand/alshaya-mark.png"
+          src="/brand/alshaya-group.png"
           alt="Alshaya Group"
-          width={36}
-          height={36}
-          className="h-9 w-9 shrink-0 object-contain brightness-0 invert"
+          width={140}
+          height={48}
+          className="h-10 w-auto shrink-0 object-contain brightness-0 invert"
           priority
         />
-        <div className="min-w-0 leading-tight">
-          <div className="text-[14px] font-semibold tracking-tight text-white">
-            Alshaya
-          </div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">
-            Operations
-          </div>
-        </div>
       </Link>
 
       <nav className="scrollbar-thin flex-1 min-h-0 overflow-y-auto px-3 pt-0.5 pb-1">
@@ -190,7 +182,7 @@ export function Sidebar({
           if (items.length === 0) return null;
           return (
             <div key={i}>
-              <div className="mt-4 mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">
+              <div className="mt-4 mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
                 {section.label}
               </div>
               <ul className="space-y-0.5">
@@ -207,7 +199,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-white/10 px-3 pb-3 pt-2">
+      <div className="border-t border-white/15 px-3 pb-3 pt-2">
         <ul className="space-y-0.5">
           {footerItems
             .filter((item) => !item.adminOnly || role === 'ADMIN')
@@ -245,8 +237,8 @@ function SidebarRow({ item, isActive }: { item: NavItem; isActive: boolean }) {
         className={cn(
           'group relative flex h-9 items-center gap-2.5 rounded-lg px-2 text-[12.5px] font-medium transition-all',
           isActive
-            ? 'bg-white/15 text-white shadow-sm'
-            : 'text-white/65 hover:bg-white/8 hover:text-white/90',
+            ? 'bg-white/20 text-white shadow-sm'
+            : 'text-white/70 hover:bg-white/10 hover:text-white/90',
         )}
       >
         <Icon

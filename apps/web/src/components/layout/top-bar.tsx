@@ -69,7 +69,7 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
           >
             <span
               aria-hidden
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-[#0f1629] text-[11px] font-semibold text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-[#170C79] text-[11px] font-semibold text-white"
             >
               {initial}
             </span>
