@@ -23,7 +23,7 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-white">
+    <header className="sticky top-0 z-30 bg-[#170C79] shadow-md">
       <div className="mx-auto flex h-12 w-full max-w-[1440px] items-center gap-3 px-5">
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px]">
           {crumbs.map((c, i) => {
@@ -33,14 +33,14 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
                 <span
                   className={
                     isLast
-                      ? 'truncate font-semibold text-heading'
-                      : 'truncate text-muted-foreground'
+                      ? 'truncate font-semibold text-white'
+                      : 'truncate text-white/60'
                   }
                 >
                   {c}
                 </span>
                 {!isLast && (
-                  <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+                  <ChevronRight className="h-3 w-3 shrink-0 text-white/30" />
                 )}
               </span>
             );
@@ -51,12 +51,12 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
           <button
             type="button"
             onClick={openSearch}
-            className="hidden h-8 items-center gap-2 rounded-lg border border-border bg-neutral-50 px-3 text-[12px] text-muted-foreground transition-all hover:border-border-strong hover:bg-white hover:shadow-sm md:inline-flex"
+            className="hidden h-8 items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 text-[12px] text-white/70 transition-all hover:bg-white/20 hover:text-white md:inline-flex"
             aria-label="Search"
           >
             <Search className="h-3.5 w-3.5" />
             <span className="hidden lg:inline">Search...</span>
-            <kbd className="kbd ms-2 hidden text-[9.5px] lg:inline-flex">⌘K</kbd>
+            <kbd className="kbd ms-2 hidden border-white/20 text-[9.5px] text-white/50 lg:inline-flex">⌘K</kbd>
           </button>
 
           <NotificationsBell locale={currentLocale} />
@@ -64,16 +64,16 @@ export function TopBar({ userName, userEmail, currentLocale }: TopBarProps) {
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: '/login' })}
-            className="ms-1 flex items-center gap-2 rounded-lg border border-border bg-white py-1 ps-1 pe-3 transition-all hover:border-border-strong hover:shadow-sm"
+            className="ms-1 flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 py-1 ps-1 pe-3 transition-all hover:bg-white/20"
             title={userEmail}
           >
             <span
               aria-hidden
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-[#170C79] text-[11px] font-semibold text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-[11px] font-semibold text-[#170C79]"
             >
               {initial}
             </span>
-            <span className="hidden max-w-[140px] truncate text-[12px] font-medium text-foreground sm:inline">
+            <span className="hidden max-w-[140px] truncate text-[12px] font-medium text-white sm:inline">
               {userName || userEmail}
             </span>
           </button>

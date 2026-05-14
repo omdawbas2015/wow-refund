@@ -156,17 +156,18 @@ export function Sidebar({
     <aside className="sidebar-brand relative flex h-full w-[244px] shrink-0 flex-col">
       <Link
         href="/"
-        className="flex h-[72px] items-center gap-3 px-5 transition-opacity hover:opacity-90"
+        className="flex h-[72px] items-center justify-center px-5 transition-opacity hover:opacity-90"
       >
         <Image
           src="/brand/alshaya-group.png"
           alt="Alshaya Group"
-          width={140}
+          width={160}
           height={48}
           className="h-10 w-auto shrink-0 object-contain brightness-0 invert"
           priority
         />
       </Link>
+      <div className="mx-4 mb-3 border-b border-white/10" />
 
       <nav className="scrollbar-thin flex-1 min-h-0 overflow-y-auto px-3 pt-0.5 pb-1">
         <ul className="space-y-0.5">

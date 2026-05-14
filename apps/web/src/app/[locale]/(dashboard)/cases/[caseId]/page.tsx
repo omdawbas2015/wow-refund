@@ -68,48 +68,45 @@ export default async function CaseDetailsPage({
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-6 py-6 sm:px-8 sm:py-8">
-      {/* Hero header */}
-      <div className="mb-6 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-r from-[#170C79] to-[#2A1BA8] p-6 text-white shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <h1 className="flex items-center gap-2 font-mono text-2xl font-bold tracking-tight sm:text-3xl">
-                {heading}
-                <CopyButton
-                  value={heading}
-                  size="sm"
-                  label="Copy case number"
-                />
-              </h1>
-              <CaseStatusBadge status={refundCase.status} />
-              {refundCase.isPartial && (
-                <span className="rounded-full border border-teal-400/30 bg-teal-400/15 px-2.5 py-0.5 text-[11px] font-medium text-teal-300">
-                  Partial
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/60">
-              <span className="inline-flex items-center gap-1.5 font-medium text-white/80">
-                <span aria-hidden className="text-base leading-none">
-                  {refundCase.country.registry.flag ?? '\uD83C\uDF10'}
-                </span>
-                {refundCase.country.registry.nameEn}
-              </span>
-              <span aria-hidden className="text-white/20">|</span>
-              <span className="font-medium text-white/80">{refundCase.brand.name}</span>
-              {refundCase.branch?.name && (
-                <>
-                  <span aria-hidden className="text-white/20">|</span>
-                  <span className="text-white/60">{refundCase.branch.name}</span>
-                </>
-              )}
-              <span aria-hidden className="text-white/20">|</span>
-              <span className="tabular-nums text-white/60" title={formatDateTime(refundCase.createdAt)}>
-                Created {relativeTime(refundCase.createdAt)}
-              </span>
-            </div>
-          </div>
+      {/* Page header */}
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="flex items-center gap-2 font-mono text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {heading}
+            <CopyButton
+              value={heading}
+              size="sm"
+              label="Copy case number"
+            />
+          </h1>
+          <CaseStatusBadge status={refundCase.status} />
+          {refundCase.isPartial && (
+            <span className="rounded-full border border-teal-500/30 bg-teal-50 px-2.5 py-0.5 text-[11px] font-medium text-teal-700">
+              Partial
+            </span>
+          )}
         </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+            <span aria-hidden className="text-base leading-none">
+              {refundCase.country.registry.flag ?? '\uD83C\uDF10'}
+            </span>
+            {refundCase.country.registry.nameEn}
+          </span>
+          <span aria-hidden className="text-border">·</span>
+          <span className="font-medium text-foreground">{refundCase.brand.name}</span>
+          {refundCase.branch?.name && (
+            <>
+              <span aria-hidden className="text-border">·</span>
+              <span>{refundCase.branch.name}</span>
+            </>
+          )}
+          <span aria-hidden className="text-border">·</span>
+          <span className="tabular-nums" title={formatDateTime(refundCase.createdAt)}>
+            Created {relativeTime(refundCase.createdAt)}
+          </span>
+        </div>
+        <div className="border-b border-border" />
       </div>
 
       <CaseTabs
