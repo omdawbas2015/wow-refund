@@ -51,12 +51,9 @@ export default async function CaseDetailsPage({
 
   const role = session?.user?.role ?? null;
   const canApprove = role === 'ADMIN' || role === 'MANAGER';
-  // Refund-Operations workflow (record ARN, complete refund, customer
-  // call follow-up). Mirrors EXECUTE_ROLES on the server.
   const canExecute = role === 'ADMIN' || role === 'REFUND_AGENT' || role === 'OPERATIONS';
   const isDeleted = !!refundCase.deletedAt;
 
-  // For @mention picker: list active users
   const mentionableUsers = await prisma.user.findMany({
     where: { status: 'ACTIVE', deletedAt: null, id: { not: session?.user?.id } },
     select: { id: true, name: true, email: true },
@@ -64,10 +61,6 @@ export default async function CaseDetailsPage({
     take: 100,
   });
 
-  // We identify cases solely by the agent-typed Case # (the
-  // externalCaseNumber field). The auto-generated REF-XX-YYYY-NNNNN
-  // is no longer surfaced in the UI — it stays only as an internal id
-  // for batch / ARN integrations that still parse it.
   const heading =
     refundCase.externalCaseNumber && refundCase.externalCaseNumber.length > 0
       ? refundCase.externalCaseNumber
@@ -75,12 +68,10 @@ export default async function CaseDetailsPage({
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-6 py-6 sm:px-8 sm:py-8">
-      {/* Page header — single compact strip. Customer / Order / People
-          metadata lives in the right Properties sidebar so the header
-          can stay focused on identifying the case at a glance. */}
-      <header className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <h1 className="flex items-center gap-1.5 font-mono text-[22px] font-semibold leading-none tracking-tight text-heading sm:text-[26px]">
+      {/* Page header */}
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="flex items-center gap-2 font-mono text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             {heading}
             <CopyButton
               value={heading}
@@ -90,20 +81,20 @@ export default async function CaseDetailsPage({
           </h1>
           <CaseStatusBadge status={refundCase.status} />
           {refundCase.isPartial && (
-            <span className="rounded-full border border-teal-500/30 bg-teal-500/10 px-2 py-0.5 text-[11px] font-medium text-teal-700 dark:text-teal-300">
+            <span className="rounded-full border border-teal-500/30 bg-teal-50 px-2.5 py-0.5 text-[11px] font-medium text-teal-700">
               Partial
             </span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5 font-medium text-body">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
             <span aria-hidden className="text-base leading-none">
-              {refundCase.country.registry.flag ?? '🌐'}
+              {refundCase.country.registry.flag ?? '\uD83C\uDF10'}
             </span>
             {refundCase.country.registry.nameEn}
           </span>
           <span aria-hidden className="text-border">·</span>
-          <span className="font-medium text-body">{refundCase.brand.name}</span>
+          <span className="font-medium text-foreground">{refundCase.brand.name}</span>
           {refundCase.branch?.name && (
             <>
               <span aria-hidden className="text-border">·</span>
@@ -115,7 +106,8 @@ export default async function CaseDetailsPage({
             Created {relativeTime(refundCase.createdAt)}
           </span>
         </div>
-      </header>
+        <div className="border-b border-border" />
+      </div>
 
       <CaseTabs
         locale={locale}
@@ -202,5 +194,3 @@ export default async function CaseDetailsPage({
     </div>
   );
 }
-
-
