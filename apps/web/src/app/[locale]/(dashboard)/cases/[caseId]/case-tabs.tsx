@@ -253,11 +253,11 @@ export function CaseTabs({
     canDelete;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-5 lg:order-1 lg:col-start-1">
         {/* Action bar */}
         {showActionBar && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2.5 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white p-3 shadow-sm">
             {canSubmit && (
               <Button
                 size="sm"
@@ -496,7 +496,7 @@ export function CaseTabs({
         )}
 
         {/* Tab bar */}
-        <div className="flex border-b border-border">
+        <div className="flex gap-1 rounded-xl bg-neutral-100 p-1">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = active === tab.key;
@@ -506,16 +506,19 @@ export function CaseTabs({
                 type="button"
                 onClick={() => setActive(tab.key)}
                 className={cn(
-                  'flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
                   isActive
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground',
+                    ? 'bg-white text-heading shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Icon className="h-4 w-4" />
                 {tab.label}
                 {tab.key === 'notes' && notes.length > 0 && (
-                  <span className="rounded-full bg-surface-subtle px-1.5 py-0.5 text-xs">
+                  <span className={cn(
+                    'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+                    isActive ? 'bg-primary/10 text-primary' : 'bg-neutral-200 text-muted-foreground',
+                  )}>
                     {notes.length}
                   </span>
                 )}
@@ -548,7 +551,7 @@ export function CaseTabs({
       {/* Right rail: Properties sidebar — Status, Customer, Order,
           Workflow. Sticky on lg+ so context follows the user as they
           scroll the work column. */}
-      <aside className="space-y-4 lg:order-2 lg:col-start-2 lg:self-start lg:sticky lg:top-24">
+      <aside className="space-y-3 lg:order-2 lg:col-start-2 lg:self-start lg:sticky lg:top-16">
         <CaseStatusStepper
           status={caseData.status as CaseStatus}
           locale={locale}
@@ -622,13 +625,13 @@ function PropertyCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-surface">
-      <header className="border-b border-border bg-surface-subtle/40 px-4 py-2">
+    <section className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+      <header className="border-b border-border bg-neutral-50/80 px-4 py-2.5">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </h3>
       </header>
-      <dl className="divide-y divide-border">{children}</dl>
+      <dl className="divide-y divide-border/60">{children}</dl>
     </section>
   );
 }
@@ -867,7 +870,7 @@ function NotesTab({
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          className="min-h-[96px] w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="min-h-[96px] w-full resize-y rounded-lg border border-border bg-neutral-50 px-3 py-2.5 text-sm transition-colors focus:bg-white focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Write a note... use @ to mention teammates"
           maxLength={4000}
         />
@@ -994,18 +997,18 @@ function ActivityTab({ activity }: { activity: Activity[] }) {
   }
 
   return (
-    <ol className="space-y-3">
+    <ol className="relative space-y-0 border-l-2 border-border/60 ms-2">
       {activity.map((a) => (
-        <li key={a.id} className="flex gap-3">
-          <div className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-primary/50" />
-          <div className="flex-1 rounded-md border border-border bg-surface p-3">
+        <li key={a.id} className="relative ps-6 pb-5 last:pb-0">
+          <div className="absolute -start-[5px] top-1.5 h-2 w-2 rounded-full bg-primary/60 ring-2 ring-white" />
+          <div className="rounded-lg border border-border bg-white p-3 shadow-sm">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-mono text-muted-foreground">{a.kind}</span>
+              <span className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-muted-foreground">{a.kind}</span>
               <span className="text-muted-foreground" title={formatDateTime(a.createdAt)}>
                 {relativeTime(a.createdAt)}
               </span>
             </div>
-            <div className="mt-1 text-sm">
+            <div className="mt-1.5 text-sm">
               {a.actorLabel && <span className="font-medium">{a.actorLabel} </span>}
               <span>{a.message}</span>
             </div>
@@ -1034,16 +1037,16 @@ function SummaryCard({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl border p-5 transition-colors',
+        'relative overflow-hidden rounded-xl border p-5 transition-all bg-white shadow-sm',
         highlight
-          ? 'border-primary/40 bg-primary/[0.06]'
-          : 'border-border bg-surface',
+          ? 'border-primary/30 ring-1 ring-primary/10'
+          : 'border-border',
       )}
     >
       {highlight && (
         <span
           aria-hidden
-          className="absolute inset-x-0 top-0 h-[3px] bg-primary/80"
+          className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-primary/90 to-primary/50"
         />
       )}
       <div className="flex items-center justify-between gap-2">
@@ -1051,7 +1054,7 @@ function SummaryCard({
           {label}
         </div>
         {badge && (
-          <span className="rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">
+          <span className="rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-700">
             {badge}
           </span>
         )}
@@ -1085,11 +1088,11 @@ function Section({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-xl border border-border bg-surface',
+        'overflow-hidden rounded-xl border border-border bg-white shadow-sm',
         className,
       )}
     >
-      <header className="flex items-center justify-between gap-3 border-b border-border bg-surface-subtle/40 px-4 py-2.5">
+      <header className="flex items-center justify-between gap-3 border-b border-border bg-neutral-50/80 px-4 py-2.5">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </h3>

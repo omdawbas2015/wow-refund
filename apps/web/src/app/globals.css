@@ -249,6 +249,24 @@
   .animate-fade-in-up { animation: fade-in-up 240ms ease-out both; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   Dark sidebar — deep navy gradient for professional look.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  .sidebar-dark {
+    background: linear-gradient(180deg, #0f1629 0%, #141d35 100%);
+  }
+
+  .sidebar-dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .sidebar-dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
